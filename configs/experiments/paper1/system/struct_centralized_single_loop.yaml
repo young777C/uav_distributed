@@ -1,0 +1,46 @@
+# Paper1 structure axis: CDSL (center-dominant single-loop)
+# Slow-loop modeling identical to WCDL/FDLC (comm_energy_aware_decision); architecture
+# conservatism comes from StructAxisProfile thresholds + coupling/fast-loop only.
+experiment:
+  paper1:
+    struct: cdsl
+    modeling: comm_energy_aware_decision
+    coupling: full_coupling
+
+paper1_loops:
+  slow_policy: periodic_or_event_replan
+  slow_backend: heuristic
+  allow_waypoint_delta: false
+  allow_mode_switching: false
+  coupling_mode: periodic_goal
+  modeling_mode: completion_comm_energy
+  modeling:
+    comm_objective: true
+    comm_constraint: true
+    energy_objective: false
+    energy_constraint: full
+  slow_loop:
+    replan_trigger_policy: periodic
+    periodic_replan_scope: repeat
+    event_triggers:
+      on_safety_event: true
+      on_energy_low: true
+      on_link_drop: false
+      on_control_link_lost: false
+      on_goal_spatial_complete: true
+      on_goal_effective_complete: true
+  fast_to_slow:
+    send_completion: true
+    send_link_stats: none
+    send_backlog: false
+    send_mode: false
+    send_safety_events: false
+  semantics:
+    structure: cdsl
+    enable_event_feedback: false
+    enable_goal_lock: true
+    enable_fast_mode_switch: false
+    use_comm_in_fast: false
+    use_energy_in_fast: false
+    use_comm_in_slow: true
+    use_energy_in_slow: true

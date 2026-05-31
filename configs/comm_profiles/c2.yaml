@@ -1,0 +1,16 @@
+# Layer-2: Comm profile C2 = F2 + F3
+# - local shadow/abrupt drop via scene blackholes + stochastic fading
+train:
+  comm_mode: degraded
+
+comm:
+  enable_distance_decay: false
+  use_scene_blackholes: true
+  # Extra loss inside scene blackholes (F2). Keep below ~0.65 with default base_loss
+  # so worst-case loss stays < 1.0 (strong degradation but not a hard “link = 0” floor).
+  blackhole_extra_loss: 0.15
+
+  # stochastic fading
+  loss_jitter_sigma: 0.08
+  data_chunk_bits: 1000000.0
+

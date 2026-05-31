@@ -1,0 +1,12 @@
+# Layer-2: Comm profile C2-hard — stronger local shadow + jitter + payload for coupling axis.
+extends:
+  - ./c2.yaml
+
+train:
+  comm_mode: degraded
+
+comm:
+  blackhole_extra_loss: 0.30
+  loss_jitter_sigma: 0.12
+  data_chunk_bits: 20000.0
+  base_loss: 0.18

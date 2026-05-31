@@ -1,0 +1,53 @@
+# Paper1 structure axis: FDLC (full dual-loop collaboration)
+# Slow-loop modeling identical to CDSL/WCDL; differs in struct thresholds, coupling, fast loop.
+experiment:
+  paper1:
+    struct: fdlc
+    modeling: comm_energy_aware_decision
+    coupling: full_coupling
+
+paper1_loops:
+  slow_policy: periodic_or_event_replan
+  slow_backend: heuristic
+  allow_waypoint_delta: true
+  allow_mode_switching: true
+  coupling_mode: full_coupling
+  modeling_mode: completion_comm_energy
+  modeling:
+    comm_objective: true
+    comm_constraint: true
+    energy_objective: false
+    energy_constraint: full
+  slow_loop:
+    replan_trigger_policy: hybrid
+    periodic_replan_scope: repeat
+    replan_cooldown_s: 15.0
+    suppress_link_interrupt_in_back: true
+    event_levels:
+      on_safety_event: critical
+      on_energy_low: critical
+      on_link_drop: warning
+      on_control_link_lost: warning
+      on_post_cover_upload_stuck: warning
+    event_triggers:
+      on_safety_event: true
+      on_energy_low: true
+      on_link_drop: true
+      on_control_link_lost: true
+      on_goal_spatial_complete: true
+      on_goal_effective_complete: true
+  fast_to_slow:
+    send_completion: true
+    send_link_stats: full
+    send_backlog: true
+    send_mode: true
+    send_safety_events: true
+  semantics:
+    structure: fdlc
+    enable_event_feedback: true
+    enable_goal_lock: true
+    enable_fast_mode_switch: true
+    use_comm_in_fast: true
+    use_energy_in_fast: true
+    use_comm_in_slow: true
+    use_energy_in_slow: true

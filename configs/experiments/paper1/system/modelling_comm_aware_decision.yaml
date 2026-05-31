@@ -1,0 +1,19 @@
+# Paper1 §4: Communication-aware decision (FDLC + full_coupling fixed when sweeping modeling)
+experiment:
+  paper1:
+    struct: fdlc
+    modeling: comm_aware_decision
+    coupling: full_coupling
+
+paper1_loops:
+  modeling_mode: comm_aware_decision
+  semantics:
+    use_comm_in_slow: true
+    use_energy_in_slow: false
+    use_comm_in_fast: true
+    use_energy_in_fast: false
+  modeling:
+    comm_objective: true
+    comm_constraint: true
+    energy_objective: false
+    energy_constraint: none

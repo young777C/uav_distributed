@@ -1,0 +1,13 @@
+# Paper1 environment case: (C2, G1)
+extends:
+  - ../../../base.yaml
+  - ../../../comm_profiles/c2.yaml
+
+scene_file: configs/scenes/g1_uniform.yaml
+
+experiment:
+  env_case:
+    comm_case: C2
+    task_case: G1
+    conflict_level: null
+

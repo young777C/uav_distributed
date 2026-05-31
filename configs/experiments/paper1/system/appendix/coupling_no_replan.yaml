@@ -1,0 +1,24 @@
+# Appendix — legacy ``no_replan`` (slow advance_on_poi_done only).
+experiment:
+  paper1:
+    struct: fdlc
+    modeling: comm_energy_aware_decision
+    coupling: no_replan
+
+paper1_loops:
+  coupling_mode: no_replan
+  slow_policy: advance_on_poi_done
+  allow_mode_switching: true
+  semantics:
+    enable_event_feedback: true
+    enable_fast_mode_switch: true
+  slow_loop:
+    periodic_replan_scope: init_only
+
+slow_loop:
+  replan_observation_mode: full
+  policy: advance_on_poi_done
+  periodic_replan_scope: init_only
+
+env:
+  fast_upload_mode: policy

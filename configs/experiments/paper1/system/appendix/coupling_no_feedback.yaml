@@ -1,0 +1,27 @@
+# Appendix — legacy ``no_feedback`` (not §4.2.2 PeriodicGoal).
+experiment:
+  paper1:
+    struct: fdlc
+    modeling: comm_energy_aware_decision
+    coupling: no_feedback
+
+paper1_loops:
+  coupling_mode: no_feedback
+  slow_policy: periodic_or_event_replan
+  allow_mode_switching: true
+  semantics:
+    coupling_mechanism: no_feedback
+    enable_event_feedback: false
+    enable_fast_mode_switch: true
+  slow_loop:
+    replan_trigger_policy: event
+    periodic_replan_scope: repeat
+  fast_to_slow:
+    send_completion: false
+    send_link_stats: none
+    send_backlog: false
+    send_mode: false
+    send_safety_events: false
+
+env:
+  fast_upload_mode: policy

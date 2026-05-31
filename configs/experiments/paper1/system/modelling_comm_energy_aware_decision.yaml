@@ -1,0 +1,19 @@
+# Paper1 §4: Communication & Energy-aware decision (joint; main-setting modeling for struct/coupling sweeps)
+experiment:
+  paper1:
+    struct: fdlc
+    modeling: comm_energy_aware_decision
+    coupling: full_coupling
+
+paper1_loops:
+  modeling_mode: comm_energy_aware_decision
+  semantics:
+    use_comm_in_slow: true
+    use_energy_in_slow: true
+    use_comm_in_fast: true
+    use_energy_in_fast: true
+  modeling:
+    comm_objective: true
+    comm_constraint: true
+    energy_objective: false
+    energy_constraint: full

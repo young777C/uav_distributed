@@ -1,0 +1,22 @@
+# Axis-grid sweep: Paper1 §6.3.2 modeling ablations across env cases.
+#
+# This plan composes:
+# - cases (Layer-1/2): configs/experiments/paper1/cases/*.yaml
+# - systems (Layer-3 axes): §4 information-utilization ablation (3 profiles)
+#
+# It runs a Cartesian product over (case × modelling × seeds × slow_interval_steps).
+
+axis_grid:
+  cases: configs/experiments/paper1/cases/*.yaml
+  systems:
+    - configs/experiments/paper1/system/modelling_comm_aware_decision.yaml
+    - configs/experiments/paper1/system/modelling_energy_aware_decision.yaml
+    - configs/experiments/paper1/system/modelling_comm_energy_aware_decision.yaml
+
+episodes: 10
+seeds: [0, 1, 2, 3]
+slow_interval_steps_list: [40]
+comm_mode: ""   # empty => use cfg.train.comm_mode
+runs_root: runs/sweeps
+runner_module: uavlab.paper1.runner.run_vis
+

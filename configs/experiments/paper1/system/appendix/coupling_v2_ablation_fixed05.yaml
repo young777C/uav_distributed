@@ -1,0 +1,44 @@
+# Ablation: periodic + event with legacy fixed_send_ratio=0.5 (coupling_v2 §10.2)
+experiment:
+  paper1:
+    struct: fdlc
+    modeling: comm_energy_aware_decision
+    coupling: event_driven_goal
+
+paper1_loops:
+  coupling_mode: event_driven_goal
+  slow_policy: periodic_or_event_replan
+  allow_mode_switching: false
+  semantics:
+    coupling_mechanism: event_driven_goal
+    enable_event_feedback: true
+    enable_fast_mode_switch: false
+    enable_goal_lock: true
+  slow_loop:
+    replan_trigger_policy: hybrid
+    periodic_replan_scope: repeat
+    replan_cooldown_s: 15.0
+    suppress_link_interrupt_in_back: true
+    event_levels:
+      on_safety_event: critical
+      on_energy_low: critical
+      on_link_drop: warning
+      on_control_link_lost: warning
+      on_post_cover_upload_stuck: warning
+    event_triggers:
+      on_safety_event: true
+      on_energy_low: true
+      on_link_drop: true
+      on_control_link_lost: true
+      on_goal_spatial_complete: true
+      on_goal_effective_complete: true
+  fast_to_slow:
+    send_completion: true
+    send_link_stats: full
+    send_backlog: false
+    send_mode: false
+    send_safety_events: true
+
+env:
+  fast_upload_mode: fixed
+  fixed_send_ratio: 0.5

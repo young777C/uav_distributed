@@ -1,0 +1,28 @@
+# Paper1 switchboard example: Proposed (full) defaults.
+#
+# This file is optional. It shows how to declare all major toggles in one place.
+# You can still use the existing axis files (struct_*/modelling_*/coupling_*).
+
+paper1_loops:
+  slow_policy: periodic_or_event_replan
+  slow_sequence_horizon: 999
+  slow_backend: heuristic
+
+  allow_waypoint_delta: true
+  allow_mode_switching: true
+
+  coupling_mode: full_coupling
+  fast_to_slow:
+    send_completion: true
+    send_link_stats: full
+    send_backlog: true
+    send_mode: true
+    send_safety_events: true
+
+  modeling_mode: completion_comm_energy
+  modeling:
+    comm_objective: true
+    comm_constraint: true
+    energy_objective: false
+    energy_constraint: full
+

@@ -1,0 +1,33 @@
+# Paper §4.2.2 — PeriodicGoal (coupling_v2)
+# Slow: periodic replan only; no fast→slow events. Ts=200 via experiment.sweep override.
+# Fast: weak fixed upload (0.2).
+experiment:
+  paper1:
+    struct: fdlc
+    modeling: comm_energy_aware_decision
+    coupling: periodic_goal
+  # sweep:
+  #   slow_interval_steps: 200
+
+paper1_loops:
+  coupling_mode: periodic_goal
+  slow_policy: periodic_or_event_replan
+  allow_mode_switching: false
+  semantics:
+    coupling_mechanism: periodic_goal
+    enable_event_feedback: false
+    enable_fast_mode_switch: false
+    enable_goal_lock: false
+  slow_loop:
+    replan_trigger_policy: periodic
+    periodic_replan_scope: repeat
+  fast_to_slow:
+    send_completion: false
+    send_link_stats: none
+    send_backlog: false
+    send_mode: false
+    send_safety_events: false
+
+env:
+  fast_upload_mode: fixed
+  fixed_send_ratio: 0.2

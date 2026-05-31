@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+runs/
+logs/
+log/
+*.log
+wandb/
+data/
+.DS_Store
+.vscode/
+.idea/
+*.pdf
+*:Zone.Identifier
+all_scenes.png
+paper1_all_scenes.png

@@ -1,0 +1,243 @@
+# Base config (Layer-0)
+#
+# - Put only DEFAULT simulator parameters here.
+# - Do NOT encode experiment axes here (struct/modeling/coupling, C/G/M, etc.).
+#
+# Experiments should extend this file and then specify:
+# - scene_file (Layer-1: configs/scenes/*.yaml), and
+# - optional comm profile (Layer-2: configs/comm_profiles/*.yaml),
+# - paper axes under experiment.paper1 / paper2 (Layer-3: configs/experiments/*.yaml).
+
+env:
+  step_hz: 5
+  # Mission wall-clock cap (s). When > 0, sets episode_steps = round(mission_time_s * step_hz).
+  mission_time_s: 2000.0
+  # episode_steps: ****   # equivalent to 1800 s @ 5 Hz (optional if mission_time_s is set)
+  # v_xy_cruise: average cruise speed for energy model (P_fly/v_c) and nominal en-route flight (m/s).
+  # Pursuit is slower near POI (approach_slowdown_radius_m) and zero inside cover for dwell — not fixed 10 m/s every step.
+  v_xy_cruise: 10.0
+  # v_xy_max: hard ceiling for explicit velocity commands (e.g. PID); not the default waypoint pursuit speed.
+  v_xy_max: 20.0
+  approach_slowdown_radius_m: 50.0
+  append_comm_to_obs: true
+  # Paper1Lite: spatial risk is no-fly (scene ``nofly_circles``), not obstacle collision.
+  collision_energy_penalty: 0.02
+  terminate_on_collision: false
+  # Paper1Lite termination options
+  terminate_on_oob: true
+  boundary_buffer_m: 0.0
+  terminate_on_energy_depleted: true
+  energy_depleted_threshold: 0.0
+  return_radius_m: 8.0
+  # Wall-clock reserve before mission end to switch slow-loop goal to GCS (return phase).
+  return_reserve_s: 300.0
+  terminate_on_returned_home: true
+  # Paper1Lite fast loop: policy = link-adaptive FSM (Srec/Stx); fixed = duty-cycled Stx entry (fixed_send_ratio)
+  fast_upload_mode: policy
+  fixed_send_ratio: 0.5
+
+comm:
+  enable_comm: true
+
+  # Dual-link thresholds (UAV_GCS_通信阈值设置说明.md §9; Paper1 only)
+  control_link:
+    max_loss_p: 0.05
+    max_delay_s: 1.0
+    max_jitter_s: 0.20
+  data_link:
+    max_loss_p: 0.20
+    max_return_time_s: 10.0
+    max_jitter_s: 1.0
+    weak_loss_p: 0.50
+
+  # baseline continuous knobs (may be overridden by comm profiles)
+  base_loss: 0.15
+  delay_mean_s: 0.10
+  delay_jitter_s: 0.08
+
+  # geometry-based shadowing (blackholes defined in scene YAML)
+  use_scene_blackholes: false
+  blackhole_extra_loss: 0.5
+
+  # distance-decay loss (Paper family F1)
+  enable_distance_decay: false
+  distance_d0_m: 0.0
+  distance_d1_m: 2500.0
+  distance_loss_min: 0.05
+  distance_loss_max: 0.60
+
+  # stochastic fading (Paper family F3)
+  loss_jitter_sigma: 0.0
+
+  # data size default (also used by Paper1Lite as key bits proxy)
+  data_chunk_bits: 16_000_000.0
+
+reset:
+  reset_pos_jitter_m: 0.0
+  reset_vel_jitter_mps: 0.0
+  ignore_nofly_termination: false
+
+# Default scene (Layer-1 can override this).
+scene_file: configs/scenes/g1_uniform.yaml
+
+# -----------------------------------------------------------------------------
+# Paper1 loops + switchboard (canonical: ``paper1_loops``; legacy ``paper1_switchboard`` merged in code)
+#
+# - ``semantics`` maps to 快慢环决策要点与仓库实现细节.md (structure, coupling_mechanism, info toggles).
+# - Presets in `src/uavlab/experiments/presets.py` merge into ``paper1_loops``.
+# -----------------------------------------------------------------------------
+paper1_loops:
+  semantics:
+    structure: fdlc
+    coupling_mechanism: full_coupling
+    use_comm_in_slow: true
+    use_energy_in_slow: true
+    use_comm_in_fast: true
+    use_energy_in_fast: true
+    enable_event_feedback: true
+    enable_fast_mode_switch: true
+    enable_goal_lock: true
+
+  # --- struct / control plane ---
+
+  slow_policy: periodic_or_event_replan   # periodic_or_event_replan | advance_on_poi_done
+  slow_sequence_horizon: 999
+  slow_backend: heuristic        # Paper1Lite: only heuristic (GCS window + OR-Tools / advance pickers)
+
+  # --- fast loop knobs ---
+  allow_waypoint_delta: true     # false => treat waypoint_delta_max as 0
+  allow_mode_switching: true     # false => freeze comm_mode (no FSM switching)
+  fast_loop:
+    enable_fsm: true
+    enable_back_mode: true
+    enable_safety_mode: false
+    enable_recovery_mode: true
+    fsm_thresholds:
+      link_loss_safe: 0.05
+      link_loss_recover: 0.20
+      safe_hover_steps: 10
+      control_link_loss_cmd_s: 3.0  # legacy alias; FSM no longer uses link→BACK (v3 P0-a)
+      control_link_loss_report_s: 4.0  # debounced Warning to slow loop (v3 P0-b)
+
+  # --- fast guidance (local reference generation) ---
+  fast_guidance:
+    enable_obstacle_filter: true
+    enable_smooth_cost: true
+    link_cost_mode: current      # current | candidate_proxy
+    n_candidates: 8
+    candidate_radius_m: 6.0
+    # 0 = auto: max(2 * visit_radius_m, 1.5 * candidate_radius_m)
+    terminal_homing_radius_m: 0.0
+    # S_safe: step outward from no-fly boundary (not GCS); 0 = auto from candidate_radius_m
+    nofly_escape_step_m: 0.0
+    nofly_escape_max_step_m: 0.0
+    w_dist: 1.0
+    w_link: 2.0
+    w_smooth: 0.25
+    w_goal: 0.5
+
+  # --- fast tracker (tracking the local reference) ---
+  fast_tracker:
+    type: pure_pursuit   # pure_pursuit | pid
+    # Lookahead along pos->waypoint: ld = min(dist, v_c*dt*lookahead_steps); not the 8 m cap.
+    lookahead_steps: 25
+    pid_gains:
+      kp: 1.0
+      ki: 0.0
+      kd: 0.0
+
+  # --- coupling axis (placeholders; will be used by CouplingPolicy later) ---
+  coupling_mode: full_coupling   # §4.2.2: periodic_goal | event_driven_goal | full_coupling (legacy no_* normalized in code)
+  fast_to_slow:
+    send_completion: true
+    send_link_stats: full        # full | none
+    send_backlog: true
+    send_mode: true
+    send_safety_events: true
+
+  # --- modeling axis (slow-loop ablations; explicit preferred over legacy) ---
+  modeling_mode: completion_comm_energy
+  modeling:
+    # Slow-loop ablation (four switches; parsed in Paper1ContractConfig.from_cfg):
+    # comm_objective, comm_constraint, energy_objective, energy_constraint
+    comm_objective: true
+    comm_constraint: true
+    energy_objective: false
+    energy_constraint: full
+
+  slow_loop:
+    replan_trigger_policy: periodic    # periodic | event | hybrid
+    periodic_replan_scope: repeat       # repeat | init_only
+    # 防抖：仅作用于 safety / energy_low / link_drop 等中断类事件，不用于挡住「目标 POI 已完成」。
+    min_replan_interval_steps: 5
+    link_drop_loss_p: 0.50
+    # slow-loop optimizer knobs (paper: base window K, horizon H; prefetch |Ŵ_t| = min(mult*K,|U_t|))
+    window_k: 12
+    prefetch_k_multiplier: 3
+    horizon_h: 4
+    # path sampling points for q_path_min (odd number recommended, includes endpoints)
+    path_samples: 9
+    # After spatial cover: release goal_lock if Srec/backlog persists this long (wall-clock s).
+    goal_lock_stuck_s: 60.0
+    # v3 P0-c: replan cooldown (s) for Critical interrupts; link/control are Warning-only.
+    replan_cooldown_s: 15.0
+    suppress_link_interrupt_in_back: true
+    event_levels:
+      on_safety_event: critical
+      on_energy_low: critical
+      on_link_drop: warning
+      on_control_link_lost: warning
+      on_post_cover_upload_stuck: warning
+    event_triggers:
+      on_safety_event: true
+      on_energy_low: true
+      on_link_drop: true
+      # Goal edges (decoupled): spatial = covered+dwell; effective = key returned (R_task).
+      on_goal_spatial_complete: true
+      on_goal_effective_complete: true
+      # Legacy alias for effective-only when the two keys above are omitted.
+      on_goal_completed: true
+
+# Legacy alias (optional). ``Paper1ContractConfig`` deep-merges ``paper1_switchboard`` then ``paper1_loops``.
+paper1_switchboard: {}
+
+slow_loop:
+  backend: heuristic
+  comm_lout_weight: 1.0
+  enforce_energy_hard_constraint: true
+  # periodic_or_event_replan | advance_on_poi_done (legacy: rolling | open_loop_sequence)
+  policy: periodic_or_event_replan
+  sequence_horizon: 999
+  # coupling axis may override these (TaskA hierarchical runner reads this block)
+  periodic_replan_scope: repeat   # repeat | init_only
+  replan_observation_mode: full
+  poi_dwell_s: 5.0
+
+fast_loop:
+  backend: random
+  checkpoint: ""
+
+energy:
+  # UAV_GCS_能量建模计算说明.md §8 — physical parameters (normalized in code via E_0).
+  use_power_speed_model: true
+  E_0_Wh: 236.8
+  P_fly_W: 400.0
+  P_hov_W: 450.0
+  eta_safe: 0.20
+  t_hov_s: 10.0
+  # Paper1Env: speed < threshold => P_hov * dt; else (P_fly/v_c) * distance (see energy_model.deduct_step_energy).
+  hover_speed_threshold_mps: 0.5
+  segment_max_extra_detour_m: 8.0
+  segment_max_wait_s: 3.0
+  segment_min_battery_ratio: 0.0
+
+train:
+  # baseline | degraded (comm profiles may override)
+  comm_mode: degraded
+  total_timesteps: 300000
+  learning_rate: 0.0003
+  batch_size: 256
+  n_steps: 2048
+  gamma: 0.99
+  device: cpu
+

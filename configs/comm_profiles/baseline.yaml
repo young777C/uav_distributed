@@ -1,0 +1,9 @@
+# Layer-2: Comm profile (baseline / ideal)
+train:
+  comm_mode: baseline
+
+comm:
+  use_scene_blackholes: false
+  enable_distance_decay: false
+  loss_jitter_sigma: 0.0
+

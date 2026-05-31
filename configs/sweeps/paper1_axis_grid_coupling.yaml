@@ -1,0 +1,18 @@
+# Axis-grid sweep: Paper §4.2.2 coupling mechanism (three profiles only).
+#
+# Composes case × system × seeds × slow_interval_steps.
+# Systems are listed explicitly — do NOT use coupling_*.yaml glob (appendix engineering files live elsewhere).
+
+axis_grid:
+  cases: configs/experiments/paper1/cases/*.yaml
+  systems:
+    - configs/experiments/paper1/system/coupling_periodic_goal.yaml
+    - configs/experiments/paper1/system/coupling_event_driven_goal.yaml
+    - configs/experiments/paper1/system/coupling_full_coupling.yaml
+
+episodes: 10
+seeds: [0, 1, 2, 3]
+slow_interval_steps_list: [40]
+comm_mode: ""   # empty => use cfg.train.comm_mode
+runs_root: runs/sweeps
+runner_module: uavlab.paper1.runner.run_vis

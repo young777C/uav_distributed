@@ -1,0 +1,48 @@
+# Layer-1: Scene base (shared geometry) — 2500 m × 2500 m workspace (legacy 250 m scaled ×10).
+#
+# Spatial risk is modeled as **no-fly zones** (not solid obstacles). Paper1 does not
+# terminate on collision with these circles; fast loop avoids them and metrics track
+# no-fly dwell time. Communication degradation uses ``communication_blackholes`` only.
+
+n_min: 0.0
+n_max: 2500.0
+e_min: 0.0
+e_max: 2500.0
+
+start_ne: [1250.0, 1250.0]
+goal_ne: [1250.0, 1250.0]
+goal_radius_m: 1.0
+gcs_ne: [1250.0, 1250.0]
+
+visit_radius_m: 15.0
+key_data_radius_m: 1.0
+
+# Former obstacles_circles (solid collision) — now no-fly disks (same centers/radii).
+nofly_circles:
+  - [320.0, 1250.0, 130.0]
+  - [1250.0, 280.0, 210.0]
+  - [1250.0, 2220.0, 180.0]
+  - [560.0, 870.0, 110.0]
+  - [2100.0, 2000.0, 240.0]
+  - [1800.0, 550.0, 150.0]
+  - [750.0, 1700.0, 100.0]
+  - [2000.0, 900.0, 250.0]
+  - [580.0, 2200.0, 200.0]
+
+obstacles_circles: []
+
+# Communication degradation zones (independent of no-fly geometry; enable via comm profile)
+communication_blackholes:
+  - [320.0, 1250.0, 180.0]
+  - [1250.0, 280.0, 290.0]
+  - [1250.0, 2220.0, 260.0]
+  - [560.0, 870.0, 160.0]
+  - [2100.0, 2000.0, 340.0]
+  - [1800.0, 550.0, 220.0]
+  - [750.0, 1700.0, 160.0]
+  - [2000.0, 900.0, 300.0]
+  - [580.0, 2200.0, 280.0]
+
+collision_margin_m: 0.5
+boundary_as_nofly: true
+boundary_buffer_m: 50.0

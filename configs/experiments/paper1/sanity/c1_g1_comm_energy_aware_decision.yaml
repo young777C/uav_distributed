@@ -1,0 +1,5 @@
+extends:
+  - ../cases/c1_g1.yaml
+  - ../system/struct_full_dual_loop_distributed.yaml
+  - ../system/coupling_full_coupling.yaml
+  - ../system/modelling_comm_energy_aware_decision.yaml

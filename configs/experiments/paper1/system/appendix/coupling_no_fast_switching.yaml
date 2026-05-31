@@ -1,0 +1,28 @@
+# Appendix — legacy ``no_fast_switching`` (not §4.2.2 EventDrivenGoal).
+experiment:
+  paper1:
+    struct: fdlc
+    modeling: comm_energy_aware_decision
+    coupling: no_fast_switching
+
+paper1_loops:
+  coupling_mode: no_fast_switching
+  slow_policy: periodic_or_event_replan
+  allow_mode_switching: false
+  semantics:
+    coupling_mechanism: no_fast_switching
+    enable_event_feedback: true
+    enable_fast_mode_switch: false
+  slow_loop:
+    replan_trigger_policy: event
+    periodic_replan_scope: repeat
+  fast_to_slow:
+    send_completion: true
+    send_link_stats: full
+    send_backlog: false
+    send_mode: false
+    send_safety_events: true
+
+env:
+  fast_upload_mode: fixed
+  fixed_send_ratio: 0.5

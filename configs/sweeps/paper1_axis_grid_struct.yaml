@@ -1,0 +1,20 @@
+# Axis-grid sweep: Paper1 §6.3.1 structure comparison across env cases.
+#
+# This plan composes:
+# - cases (Layer-1/2): configs/experiments/paper1/cases/*.yaml
+# - systems (Layer-3 axes): configs/experiments/paper1/system/struct_*.yaml
+#
+# It runs a Cartesian product over (case × system × seeds × slow_interval_steps).
+
+axis_grid:
+  cases: configs/experiments/paper1/cases/*.yaml
+  # systems: configs/experiments/paper1/system/struct_*.yaml
+  systems: configs/experiments/paper1/system/struct_full_dual_loop_distributed.yaml
+
+episodes: 2
+seeds: [0]
+slow_interval_steps_list: [40]
+comm_mode: ""   # empty => use cfg.train.comm_mode
+runs_root: runs/sweeps
+runner_module: uavlab.paper1.runner.run_vis
+

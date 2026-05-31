@@ -1,0 +1,19 @@
+# Paper1 §4: Energy-aware decision (FDLC + full_coupling fixed when sweeping modeling)
+experiment:
+  paper1:
+    struct: fdlc
+    modeling: energy_aware_decision
+    coupling: full_coupling
+
+paper1_loops:
+  modeling_mode: energy_aware_decision
+  semantics:
+    use_comm_in_slow: false
+    use_energy_in_slow: true
+    use_comm_in_fast: false
+    use_energy_in_fast: true
+  modeling:
+    comm_objective: false
+    comm_constraint: false
+    energy_objective: false
+    energy_constraint: full
