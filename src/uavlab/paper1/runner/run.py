@@ -91,7 +91,7 @@ def main() -> None:
         # Main-loop order (parallel-friendly):
         # 1) Bootstrap slow once at env.t==0 so the first fast step has a real goal.
         # 2) Each iteration: fast uses the plan from the *end of the previous* iteration, then physics
-        #    and try_return_key, then build a fast→slow packet from the *post-step* env so
+        #    and progress_key_return, then build a fast→slow packet from the *post-step* env so
         #    CompletionStatus.spatial_complete reflects dwell/coverage updated by step_fast.
         exec_plan = SlowPlan(goal_id=None, goal_ne=(float(env.cfg.gcs_ne[0]), float(env.cfg.gcs_ne[1])))
         link0 = env.observe_link_state()
@@ -137,7 +137,7 @@ def main() -> None:
                 spatial_complete=goal_spatial_complete(env=env, goal_id=exec_plan.goal_id),
                 return_phase=exec_plan.goal_id is None,
             ):
-                env.try_return_key(params=ret_params)
+                env.progress_key_return(dt_s=float(dt), params=ret_params)
 
             pkt = coupling.build_fast_to_slow_packet(
                 contract=contract,

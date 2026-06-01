@@ -253,7 +253,7 @@ def main() -> None:
                 spatial_complete=goal_spatial_complete(env=env, goal_id=exec_plan.goal_id),
                 return_phase=exec_plan.goal_id is None,
             ):
-                env.try_return_key(params=ret_params)
+                env.progress_key_return(dt_s=float(dt), params=ret_params)
 
             seq_before = list(slow._last_sequence)
             goal_before = exec_plan.goal_id

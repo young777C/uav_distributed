@@ -35,12 +35,12 @@ R_{task}=\frac{1}{N}\sum_i e_i,\quad e_i=c_i\cdot r_i
 - **操作化**：
   - `r_i=1` 当且仅当 POI \(i\) 的关键数据已回传（`env.returned`）。
   - 覆盖时将该 POI 的 `key_bits` 记入 `poi_pending_bits` 并累加 `backlog_bits`。
-  - `try_return_key` 在**任务数据链路**可行时（`ReturnDecisionParams`：ρ≤`data_link.max_loss_p`，\(T^{ret}\)≤`max_return_time_s`）**一次性清空当前 pending backlog**，并将所有 pending POI 标记为 `returned`（批量回传模型）。
-  - **何时调用** `try_return_key` 由 `uavlab.paper1.runner.return_scheduling.should_attempt_key_return` 决定：`fast_upload_mode=policy` 时，目标 POI **空间覆盖完成**后每步可尝试（struct 公平比较）；`fast_upload_mode=fixed` 时按 `env.fixed_send_ratio` **确定性占空**门控（如 0.2 → 每 5 步 1 次），返航阶段（`goal_id is None`）不门控以便清空 backlog。耦合轴 periodic/event 使用 fixed；full 使用 policy FSM。
+  - `progress_key_return`（别名 `try_return_key`）按步以 \(b^{eff}\cdot\Delta t\) **分片传输**各 POI 的 `ReturnBuffer`（FCFS）；`remaining_bits→0` 时标记 `returned`；超过 `max_return_time_s` 未传完则该 POI 超时（`covered` 但非 `effective`）。
+  - **何时调用** `progress_key_return` 由 `uavlab.paper1.runner.return_scheduling.should_attempt_key_return` 决定：`fast_upload_mode=policy` 时，目标 POI **空间覆盖完成**后每步可尝试（struct 公平比较）；`fast_upload_mode=fixed` 时按 `env.fixed_send_ratio` **确定性占空**门控（如 0.2 → 每 5 步 1 次），返航阶段（`goal_id is None`）不门控以便清空 backlog。耦合轴 periodic/event 使用 fixed；full 使用 policy FSM。
   - `env.effective` 与 `returned` 同步，供慢环/耦合包中的 `CompletionStatus.effective` 使用。
 - **字段**：`R_task`（主键）、`effective_ratio`（别名）。
 
-若审稿要求**独立** \(r_i\)（单 POI 成功回传），可在 `try_return_key` 中改为按 POI 粒度尝试 `return_success`；当前实现与论文式 (10)–(12) 的“积压比特一次交付”一致。
+实现为 **per-POI 分片回传**（`uavlab.paper1.sim.return_queue`），与式 (10) 的传输时间语义一致，但不再对 backlog 总和做二元 bulk 判定。
 
 ## 3. 覆盖后失败率 \(R_{fail|cov}\)（式 59）
 

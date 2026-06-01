@@ -8,7 +8,8 @@ from typing import Any, Dict, List, Optional, Tuple
 from uavlab.paper1.sim.config import Paper1SimConfig
 from uavlab.paper1.types import CommState, EpisodeLog, FastCommState, FastState, Poi, SlowGoal
 from uavlab.related_models.comm_link_state import LinkState
-from uavlab.related_models.key_data_return import ReturnDecisionParams, key_return_time_s, return_success
+from uavlab.paper1.sim.return_queue import ReturnProgressResult, ReturnQueue
+from uavlab.related_models.key_data_return import ReturnDecisionParams
 from uavlab.paper1.metrics.paper_metrics import compute_paper_episode_metrics
 from uavlab.paper1.sim.energy_model import deduct_step_energy
 from uavlab.scene.geometry import in_nofly as _geom_in_nofly
@@ -68,7 +69,7 @@ class Paper1Env:
     covered: set[int] = None  # type: ignore[assignment]  # c_i: spatial observation complete
     returned: set[int] = None  # type: ignore[assignment]  # r_i: key data returned (e_i = c_i * r_i)
     effective: set[int] = None  # type: ignore[assignment]  # mirror of ``returned`` for legacy callers
-    poi_pending_bits: Dict[int, float] = None  # type: ignore[assignment]  # POI key bits not yet returned
+    return_queue: ReturnQueue = None  # type: ignore[assignment]
     backlog_bits: float = 0.0
     poi_dwell_steps: List[int] = None  # type: ignore[assignment]
     poi_entered: List[bool] = None  # type: ignore[assignment]
@@ -98,7 +99,7 @@ class Paper1Env:
         self.covered = set()
         self.returned = set()
         self.effective = set()
-        self.poi_pending_bits = {}
+        self.return_queue = ReturnQueue()
         self.backlog_bits = 0.0
         self.poi_dwell_steps = [0 for _ in range(len(self.pois))]
         self.poi_entered = [False for _ in range(len(self.pois))]
@@ -338,8 +339,13 @@ class Paper1Env:
                     self.covered.add(pid)
                     bits = float(poi.key_bits)
                     if pid not in self.returned:
-                        self.poi_pending_bits[int(pid)] = bits
-                        self.backlog_bits += bits
+                        t_cov = float(self.poi_cov_time_s.get(int(pid), float(self.t) * self._dt_s()))
+                        self.return_queue.enqueue(
+                            poi_id=int(pid),
+                            bits=bits,
+                            covered_time_s=t_cov,
+                        )
+                        self._sync_backlog_from_queue()
 
         self.t += 1
 
@@ -348,31 +354,55 @@ class Paper1Env:
 
         self.effective = set(self.returned)
 
-    def try_return_key(self, *, params: ReturnDecisionParams) -> None:
-        """
-        Attempt to return pending key data if the link is feasible (paper Eq. 10-12).
+    @property
+    def poi_pending_bits(self) -> Dict[int, float]:
+        """Legacy view: POI id → remaining bits (for diagnostics / tests)."""
 
-        On success, every POI with bits still in ``poi_pending_bits`` is marked ``returned``
-        (bulk return of the current backlog). POIs covered later enqueue new pending bits.
+        q = self.return_queue
+        if q is None:
+            return {}
+        return dict(q.remaining_bits_by_poi())
+
+    def _sync_backlog_from_queue(self) -> None:
+        self.backlog_bits = float(self.return_queue.pending_bits) if self.return_queue else 0.0
+
+    def progress_key_return(
+        self,
+        *,
+        dt_s: float | None = None,
+        params: ReturnDecisionParams | None = None,
+    ) -> ReturnProgressResult:
         """
-        if self.backlog_bits <= 0 or not self.poi_pending_bits:
-            return
-        link = self.observe_link_state()
-        pending_total = float(sum(self.poi_pending_bits.values()))
-        if pending_total <= 0:
-            return
-        if not return_success(link=link, key_bits=pending_total, params=params):
-            return
-        _ = key_return_time_s(link=link, key_bits=pending_total, params=params)
+        Incrementally return pending key data (per-POI FCFS, ``b_eff * dt`` per step).
+
+        Replaces bulk ``return_success`` on the full backlog sum.
+        """
+        if self.return_queue is None or self.return_queue.pending_count <= 0:
+            return ReturnProgressResult()
+
+        dt = float(self._dt_s() if dt_s is None else dt_s)
         t_now = float(self.t) * self._dt_s()
-        for pid in list(self.poi_pending_bits.keys()):
+        link = self.observe_link_state()
+        result = self.return_queue.progress_step(
+            link=link,
+            dt_s=dt,
+            now_s=t_now,
+            params=params,
+        )
+        for pid in result.completed_ids:
             ip = int(pid)
             self.returned.add(ip)
             if ip not in self.poi_return_time_s:
-                self.poi_return_time_s[ip] = t_now
-        self.poi_pending_bits.clear()
-        self.backlog_bits = 0.0
+                ret_t = self.return_queue.returned_time_s_for(ip)
+                self.poi_return_time_s[ip] = float(ret_t if ret_t is not None else t_now)
+        self._sync_backlog_from_queue()
         self._sync_effective_from_returned()
+        return result
+
+    def try_return_key(self, *, params: ReturnDecisionParams | None = None) -> ReturnProgressResult:
+        """Backward-compatible alias for one progress step."""
+
+        return self.progress_key_return(params=params)
 
     def done(self) -> bool:
         if self.terminated_by_collision:

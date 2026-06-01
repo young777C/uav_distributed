@@ -136,7 +136,8 @@ def test_goal_lock_stuck_timeout_releases_on_periodic_replan():
     gid = 0
     slow._goal_id = gid
     slow.env.covered.add(gid)
-    slow.env.return_queue.enqueue(poi_id=gid, total_bits=1000.0, covered_time_s=0.0)
+    slow.env.return_queue.enqueue(poi_id=gid, bits=1000.0, covered_time_s=0.0)
+    slow.env._sync_backlog_from_queue()
     stuck_obs = SlowObservation(
         step=10,
         fast_to_slow=FastToSlowPacket(

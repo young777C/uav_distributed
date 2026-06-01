@@ -46,7 +46,7 @@ comm:
     max_jitter_s: 0.20
   data_link:
     max_loss_p: 0.20
-    max_return_time_s: 10.0
+    max_return_time_s: 15.0
     max_jitter_s: 1.0
     weak_loss_p: 0.50
 
