@@ -107,6 +107,24 @@ class ReturnQueue:
             return None
         return buf.returned_time_s
 
+    def is_poi_return_stalled(self, poi_id: int, *, now_s: float, stall_s: float) -> bool:
+        """
+        True when POI key-data return has made no progress for ``stall_s`` seconds.
+
+        Before the first byte is sent, stall is measured from ``covered_time_s``.
+        After the first byte, stall is measured from ``last_progress_time_s``.
+        """
+
+        buf = self._buffers.get(int(poi_id))
+        if buf is None or buf.expired or buf.remaining_bits <= 0.0:
+            return False
+        if buf.first_tx_time_s is None:
+            return float(now_s) - float(buf.covered_time_s) >= float(stall_s)
+        last = buf.last_progress_time_s
+        if last is None:
+            return False
+        return float(now_s) - float(last) >= float(stall_s)
+
     def _mark_progress(self, buf: ReturnBuffer, *, now_s: float, delta_bits: float) -> None:
         if delta_bits <= 0.0:
             return

@@ -42,13 +42,19 @@ def should_attempt_key_return(
     fast_upload_mode: str = "policy",
     fixed_send_ratio: float = 0.5,
     step: int = 0,
+    return_during_ins_transit: bool | None = None,
 ) -> bool:
     """
     When to call ``env.progress_key_return`` in the main loop.
 
-    **Policy mode (struct fair comparison):** once the current goal is spatially complete and
+    **Policy mode (struct FDLC):** once the current goal is spatially complete and
     key data is pending (``backlog_bits > 0``), attempt return **regardless of**
     fast FSM mode (``Sins`` / ``Srec`` / ``Stx``).
+
+    **Policy mode + pending backlog (P2):** while transiting to the next uncovered POI
+    in ``Sins``, still attempt incremental return when ``return_during_ins_transit``
+    is true (default for ``fast_upload_mode=policy``). Matches WCDL ``S_tx``-while-flying
+    behaviour without forcing the FSM out of ``Sins`` in explore phase.
 
     **Fixed mode (coupling axis):** gate attempts by ``fixed_send_ratio`` duty cycle except
     during return phase (``goal_id is None``), where backlog must still be cleared.
@@ -66,6 +72,11 @@ def should_attempt_key_return(
         return True
 
     mode_fixed = str(fast_upload_mode).strip().lower() == "fixed"
+    ins_transit_ok = (
+        bool(return_during_ins_transit)
+        if return_during_ins_transit is not None
+        else not mode_fixed
+    )
 
     if bool(spatial_complete):
         if mode_fixed:
@@ -81,5 +92,7 @@ def should_attempt_key_return(
     if not bool(enable_fast_mode_switch):
         if mode_fixed:
             return fixed_upload_tx_gate(step=int(step), fixed_send_ratio=fixed_send_ratio)
+        return True
+    if ins_transit_ok and mode in ("Sins", "ins", "INS"):
         return True
     return False

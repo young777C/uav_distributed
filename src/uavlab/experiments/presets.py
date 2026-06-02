@@ -1,34 +1,6 @@
-"""
-实验预设：论文一 `experiment.paper1`（结构 struct × 建模 modeling + 可选耦合 coupling）
-+ 论文二 `experiment.paper2.ablation`。
-
-目标框架（论文主设定）：双环决策 + Task+Comm+Energy 联合建模 + full coupling。
-对比消融采用控制变量：每次只扫一条轴，另两条轴固定在「主设定」上，因此主实验规模是
-**3 + 3 + 3（结构 CDSL/WCDL/FDLC + 信息利用三档 + 耦合 §4.2.2 三档）**，而不是全因子网格。
-
-字段：
-- `experiment.paper1.struct`：结构对比（§4 / §6.3.1），取值为 **`cdsl` | `wcdl` | `fdlc`**（论文 CDSL/WCDL/FDLC）。
-  旧键 ``b1_centralized_single_loop`` / ``b3_decouple_dual_loop`` / ``full_architecture`` 仍会被归一化接受。
-- `experiment.paper1.modeling`：信息利用消融（§4），取值为 **`comm_aware_decision` | `energy_aware_decision` | `comm_energy_aware_decision`**。
-  旧键 ``task_comm`` / ``task_energy`` / ``full_model`` 等由 ``normalize_paper1_modeling`` 映射。扫该轴时固定 ``struct=fdlc``、``coupling=full_coupling``。
-- `experiment.paper1.coupling`：耦合机制（§4.2.2），取值为 **`periodic_goal` | `event_driven_goal` | `full_coupling`**。
-  旧键 ``no_feedback`` / ``no_fast_switching`` 在 ``Paper1ContractConfig.from_cfg`` 中分别映射到前两档。
-- `experiment.paper2.ablation`：附录/第二篇工程消融（**不可**与 `paper1` 预设轴同时出现）。
-
-加载 YAML 后调用 `apply_experiment_presets(cfg)`，按顺序深度合并：
-1) ARCH_VARIANT_PRESETS[paper1.struct]
-2) MODEL_VARIANT_PRESETS[paper1.modeling]
-3)（可选）COUPLING_VARIANT_PRESETS 或 COUPLING_APPENDIX_PRESETS[paper1.coupling]
-4)（可选）LEGACY_ABLATION_PRESETS[paper2.ablation]
-
-预设写入 ``paper1_loops``（与 ``configs/base.yaml`` 对齐）；``Paper1ContractConfig`` 会再合并遗留 ``paper1_switchboard``。
-
-注意：`experiment.planner_variant` 与扁平的 `arch_variant`/`model_variant`/`coupling_variant`/
-`legacy_ablation` 已弃用。
-"""
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 from uavlab.common.config import ConfigDict, _deep_merge  # noqa: SLF001
 
@@ -74,7 +46,7 @@ def normalize_paper1_modeling(raw: Any) -> str:
 #
 # Operational contract (2026-05): struct-axis slow-loop profiles default from
 # ``Paper1ContractConfig.struct_profile`` (CDSL ⊂ WCDL ⊂ FDLC feasible sets).
-# Experiment YAML ``paper1_loops`` re-applied after preset merge overrides below.
+# ``apply_experiment_presets``: preset layers fill *unset* fields; experiment YAML wins on conflict.
 # =============================================================================
 _ARCH_STRUCTURE_SLOW_SHARED: ConfigDict = {
     "paper1_loops": {
@@ -100,11 +72,15 @@ ARCH_VARIANT_PRESETS: Dict[str, ConfigDict] = {
     "cdsl": _deep_merge(
         _ARCH_STRUCTURE_SLOW_SHARED,
         {
-            "env": {"fast_upload_mode": "fixed", "fixed_send_ratio": 0.5},
+            "env": {"fast_upload_mode": "fixed", "fixed_send_ratio": 0.7},
             "comm": {"waypoint_delta_max": 0.0},
             "paper1_loops": {
                 "allow_waypoint_delta": False,
                 "allow_mode_switching": False,
+                "return_policy": {
+                    "enable_backlog_gates": False,
+                    "enable_upload_stuck_recovery": False,
+                },
                 "semantics": {
                     "structure": "cdsl",
                     "enable_fast_mode_switch": False,
@@ -125,10 +101,18 @@ ARCH_VARIANT_PRESETS: Dict[str, ConfigDict] = {
     "wcdl": _deep_merge(
         _ARCH_STRUCTURE_SLOW_SHARED,
         {
-            "env": {"fast_upload_mode": "fixed", "fixed_send_ratio": 0.5},
+            "env": {"fast_upload_mode": "fixed", "fixed_send_ratio": 0.7},
             "paper1_loops": {
                 "allow_waypoint_delta": True,
                 "allow_mode_switching": True,
+                "return_policy": {
+                    "enable_backlog_gates": False,
+                    "enable_upload_stuck_recovery": False,
+                },
+                "fast_to_slow": {
+                    "send_backlog": False,
+                    "send_mode": False,
+                },
                 "semantics": {
                     "structure": "wcdl",
                     "enable_fast_mode_switch": True,
@@ -153,6 +137,16 @@ ARCH_VARIANT_PRESETS: Dict[str, ConfigDict] = {
             "paper1_loops": {
                 "allow_waypoint_delta": True,
                 "allow_mode_switching": True,
+                "return_policy": {
+                    "enable_backlog_gates": True,
+                    "enable_upload_stuck_recovery": True,
+                    "backlog_soft_poi_count": 2,
+                    "backlog_hard_poi_count": 5,
+                },
+                "fast_to_slow": {
+                    "send_backlog": True,
+                    "send_mode": True,
+                },
                 "semantics": {
                     "structure": "fdlc",
                     "enable_fast_mode_switch": True,
@@ -478,9 +472,21 @@ def _norm_key(x: Any) -> str:
     return str(x).strip()
 
 
+def _merge_preset_defaults(*layers: ConfigDict) -> ConfigDict:
+    """Stack preset layers (earlier → lower priority; later layers override on conflict)."""
+    out: ConfigDict = {}
+    for layer in layers:
+        if layer:
+            out = _deep_merge(out, layer)
+    return out
+
+
 def apply_experiment_presets(cfg: ConfigDict) -> ConfigDict:
     """
     论文一 paper1（struct × modeling + 可选 coupling）+ 论文二 paper2.ablation 预设合并入口。
+
+    Merge order (low → high priority): ARCH → MODEL → COUPLING → (varying axis re-layer)
+    → **experiment YAML (``cfg``)**. Presets only supply defaults for keys not declared in YAML.
     """
     exp = cfg.get("experiment")
     if not isinstance(exp, dict):
@@ -529,7 +535,7 @@ def apply_experiment_presets(cfg: ConfigDict) -> ConfigDict:
             raise ValueError(
                 f"Unknown paper2.ablation {key!r}. Known: {sorted(LEGACY_ABLATION_PRESETS.keys())}"
             )
-        return _deep_merge(cfg, preset)
+        return _deep_merge(preset, cfg)
 
     if coupling is not None and (struct is None or modeling is None):
         raise ValueError(
@@ -585,9 +591,6 @@ def apply_experiment_presets(cfg: ConfigDict) -> ConfigDict:
             f"Unknown paper1.modeling {mkey!r}. Known: {sorted(MODEL_VARIANT_PRESETS.keys())}"
         )
 
-    out = _deep_merge(cfg, ap)
-    out = _deep_merge(out, mp)
-
     cp = COUPLING_VARIANT_PRESETS.get(ckey) or COUPLING_APPENDIX_PRESETS.get(ckey)
     if cp is None:
         main = sorted(COUPLING_VARIANT_PRESETS.keys())
@@ -603,20 +606,15 @@ def apply_experiment_presets(cfg: ConfigDict) -> ConfigDict:
             f"paper1.coupling={ckey!r} is only defined under "
             f"`paper1.struct={_FULL_STRUCT}` and `paper1.modeling={_FULL_MODELING}` (control-variable sweep)."
         )
-    out = _deep_merge(out, cp)
 
-    # Re-apply the *varying* axis after coupling (not ``vary_coupling`` sweeps).
-    # - Struct sweep: ARCH must win on fast-loop semantics (``use_comm_in_fast``, etc.).
-    #   Re-applying modeling last incorrectly turned WCDL into FDLC-like FSM.
-    # - Modeling sweep: MODEL must win on slow+fast information gating (struct fixed to fdlc).
+    # Preset stack (defaults only). Re-layer the *varying* axis so unset keys keep axis identity:
+    # - Struct sweep: ARCH defaults over MODEL (avoid WCDL picking FDLC-like fast FSM).
+    # - Modeling sweep: MODEL defaults over fixed FDLC struct.
+    preset_layers: List[ConfigDict] = [ap, mp, cp]
     if struct is not None and not vary_coupling and vary_struct:
-        out = _deep_merge(out, ap)
+        preset_layers.append(ap)
     if modeling is not None and not vary_coupling and vary_modeling:
-        out = _deep_merge(out, mp)
+        preset_layers.append(mp)
 
-    # Experiment YAML ``paper1_loops`` wins over preset merges (struct/modeling axis details).
-    orig_pl = cfg.get("paper1_loops")
-    if isinstance(orig_pl, dict) and orig_pl:
-        out = _deep_merge(out, {"paper1_loops": orig_pl})
-
-    return out
+    defaults = _merge_preset_defaults(*preset_layers)
+    return _deep_merge(defaults, cfg)

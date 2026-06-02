@@ -146,6 +146,21 @@ paper1_loops:
       ki: 0.0
       kd: 0.0
 
+  # --- backlog-aware return (struct P1; FDLC enables gates via struct preset / YAML) ---
+  return_policy:
+    backlog_soft_mult: 2.0       # soft = mult * comm.data_chunk_bits
+    backlog_hard_mult: 3.0
+    min_tx_gain_bits: 0          # 0 = auto max(1e3, 0.001 * data_chunk_bits)
+    balance_beta_ret_mult: 1.5
+    balance_mu_dist_mult: 1.25
+    upload_stuck_s: 30.0
+    backlog_soft_poi_count: 0     # 0 = bits-only; FDLC preset sets 2
+    backlog_hard_poi_count: 0
+    upload_stuck_min_pending_count: 0
+    upload_stuck_requires_soft_backlog: false
+    enable_backlog_gates: false
+    enable_upload_stuck_recovery: false
+
   # --- coupling axis (placeholders; will be used by CouplingPolicy later) ---
   coupling_mode: full_coupling   # §4.2.2: periodic_goal | event_driven_goal | full_coupling (legacy no_* normalized in code)
   fast_to_slow:
