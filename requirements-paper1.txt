@@ -1,0 +1,4 @@
+# Paper1Lite CI + local dev (see .github/workflows/ci.yml)
+ortools>=9.8
+PyYAML>=6.0
+numpy>=1.24
