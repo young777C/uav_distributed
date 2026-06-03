@@ -6,6 +6,7 @@ from typing import Any, Dict, Literal, TypedDict, cast
 
 from uavlab.common.config import _deep_merge
 from uavlab.paper1.comm.dual_link import Paper1DualLinkThresholds, dual_link_thresholds_from_comm
+from uavlab.paper1.contracts.return_policy import ReturnPolicyConfig, return_policy_from_cfg
 from uavlab.paper1.contracts.struct_profile import StructAxisProfile, struct_axis_profile_from_mapping
 
 
@@ -57,18 +58,21 @@ _STRUCTURE_SEMANTICS_DEFAULTS: Dict[str, Dict[str, Any]] = {
         "enable_fast_mode_switch": False,
         "use_comm_in_fast": False,
         "use_energy_in_fast": False,
+        "use_jitter_in_slow_comm": False,
     },
     "wcdl": {
         "structure": "wcdl",
         "enable_fast_mode_switch": True,
         "use_comm_in_fast": False,
         "use_energy_in_fast": False,
+        "use_jitter_in_slow_comm": True,
     },
     "fdlc": {
         "structure": "fdlc",
         "enable_fast_mode_switch": True,
         "use_comm_in_fast": True,
         "use_energy_in_fast": True,
+        "use_jitter_in_slow_comm": True,
     },
 }
 
@@ -322,8 +326,10 @@ class Paper1ContractConfig:
     enable_event_feedback: bool
     enable_fast_mode_switch: bool
     enable_goal_lock: bool
+    use_jitter_in_slow_comm: bool
     dual_link: Paper1DualLinkThresholds
     struct_profile: StructAxisProfile
+    return_policy: ReturnPolicyConfig
 
     @staticmethod
     def from_cfg(cfg: Dict[str, Any], *, waypoint_delta_max_m: float) -> "Paper1ContractConfig":
@@ -603,6 +609,11 @@ class Paper1ContractConfig:
         else:
             enable_event_feedback = str(coupling_mode).strip().lower() not in ("periodic_goal", "no_replan", "no_feedback")
 
+        if "use_jitter_in_slow_comm" in sem:
+            use_jitter_in_slow_comm = bool(sem.get("use_jitter_in_slow_comm"))
+        else:
+            use_jitter_in_slow_comm = bool(_STRUCTURE_SEMANTICS_DEFAULTS.get(structure, {}).get("use_jitter_in_slow_comm", True))
+
         if "enable_fast_mode_switch" in sem:
             enable_fast_mode_switch = bool(sem.get("enable_fast_mode_switch"))
         elif cm_eff == "periodic_goal":
@@ -628,6 +639,7 @@ class Paper1ContractConfig:
         struct_prof_raw = modeling.get("struct_profile")
         struct_prof_raw = struct_prof_raw if isinstance(struct_prof_raw, dict) else {}
         struct_profile = struct_axis_profile_from_mapping(structure, struct_prof_raw)
+        return_policy = return_policy_from_cfg(cfg, struct_key=structure)
 
         # Structure-specific event trigger defaults (explicit ``slow_loop.event_triggers`` wins).
         st_ev_explicit = st_raw.get("event_triggers")
@@ -674,7 +686,9 @@ class Paper1ContractConfig:
             enable_event_feedback=enable_event_feedback,
             enable_fast_mode_switch=enable_fast_mode_switch,
             enable_goal_lock=enable_goal_lock,
+            use_jitter_in_slow_comm=use_jitter_in_slow_comm,
             dual_link=dual_link,
             struct_profile=struct_profile,
+            return_policy=return_policy,
         )
 

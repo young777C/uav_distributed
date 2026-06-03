@@ -38,13 +38,27 @@ def link_proxy_at(env: Paper1Env, p: Point2D, *, jitter: bool = False) -> LinkSt
     )
 
 
-def control_link_ok(link: LinkState, th: Paper1DualLinkThresholds) -> bool:
+def _jitter_ok(link: LinkState, max_jitter_s: float) -> bool:
+    j = float(getattr(link, "jitter_s", 0.0))
+    j_max = float(max_jitter_s)
+    return bool(j_max <= 0.0 or j <= j_max)
+
+
+def control_link_ok(
+    link: LinkState,
+    th: Paper1DualLinkThresholds,
+    *,
+    check_jitter: bool = False,
+) -> bool:
     """§9.1: command / telemetry link acceptable at this instant."""
 
-    return bool(
+    ok = bool(
         float(link.loss_p) <= float(th.control_max_loss_p)
         and float(link.delay_s) <= float(th.control_max_delay_s)
     )
+    if check_jitter:
+        ok = ok and _jitter_ok(link, th.control_max_jitter_s)
+    return ok
 
 
 def data_return_time_s(
@@ -59,10 +73,15 @@ def data_return_ok(
     link: LinkState,
     key_bits: float,
     th: Paper1DualLinkThresholds,
+    *,
+    check_jitter: bool = False,
 ) -> bool:
     """§9.2 + Eq. (12): task-data return feasible (loss, delay, transfer time)."""
 
-    return return_success(link=link, key_bits=float(key_bits), params=th.to_return_params())
+    ok = return_success(link=link, key_bits=float(key_bits), params=th.to_return_params())
+    if check_jitter:
+        ok = ok and _jitter_ok(link, th.data_max_jitter_s)
+    return ok
 
 
 def data_path_feasible_at(

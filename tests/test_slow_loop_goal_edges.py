@@ -132,12 +132,14 @@ def test_goal_lock_stuck_timeout_releases_on_periodic_replan():
         }
     )
     cfg["paper1_loops"]["slow_loop"]["goal_lock_stuck_s"] = 2.0
+    cfg["paper1_loops"]["return_policy"] = {"upload_stuck_s": 2.0}
     slow = _slow_loop_for_cfg(cfg)
     gid = 0
     slow._goal_id = gid
     slow.env.covered.add(gid)
     slow.env.return_queue.enqueue(poi_id=gid, bits=1000.0, covered_time_s=0.0)
     slow.env._sync_backlog_from_queue()
+    slow.env.t = 10
     stuck_obs = SlowObservation(
         step=10,
         fast_to_slow=FastToSlowPacket(
@@ -152,14 +154,24 @@ def test_goal_lock_stuck_timeout_releases_on_periodic_replan():
         ),
     )
     slow._update_stuck_timer(stuck_obs)
-    assert slow._stuck_since_step == 10
+    assert slow._stuck_since_step is None
+    late_step = 10 + slow._goal_lock_stuck_threshold_steps()
+    slow.env.t = late_step
     late_obs = SlowObservation(
-        step=10 + slow._goal_lock_stuck_threshold_steps(),
+        step=late_step,
         fast_to_slow=stuck_obs.fast_to_slow,
     )
     slow._update_stuck_timer(late_obs)
+    assert slow._stuck_since_step == late_step
+    final_step = late_step + slow._goal_lock_stuck_threshold_steps()
+    slow.env.t = final_step
+    final_obs = SlowObservation(
+        step=final_step,
+        fast_to_slow=stuck_obs.fast_to_slow,
+    )
+    slow._update_stuck_timer(final_obs)
     new_gid, new_seq = slow._apply_goal_lock(
-        obs=late_obs,
+        obs=final_obs,
         new_gid=2,
         new_seq=[2, 3],
         periodic_only=True,

@@ -78,12 +78,36 @@ class SlowLoop:
     def last_degrade_level(self) -> int:
         return int(self._last_degrade_level)
 
+    def _pending_return_count(self) -> int:
+        q = self.env.return_queue
+        if q is None:
+            return 0
+        return int(q.pending_count)
+
+    def _now_s(self) -> float:
+        hz = float(max(1, int(self.env.cfg.step_hz)))
+        return float(self.env.t) / hz
+
+    def _mission_phase(self) -> str:
+        rp = self.contract.return_policy
+        return rp.mission_phase(
+            float(self.env.backlog_bits),
+            pending_count=self._pending_return_count(),
+        )
+
     def _slow_params_with_struct(self) -> SlowLoopParams:
         prof = self.contract.struct_profile
+        rp = self.contract.return_policy
+        beta_ret = float(prof.comm_ret_objective_weight)
+        mu_dist = float(self.params.mu_dist)
+        phase = self._mission_phase()
+        if phase == "balance":
+            beta_ret *= float(rp.balance_beta_ret_mult)
+            mu_dist *= float(rp.balance_mu_dist_mult)
         return SlowLoopParams(
             lambda_q=float(self.params.lambda_q),
-            mu_dist=float(self.params.mu_dist),
-            beta_ret=float(prof.comm_ret_objective_weight),
+            mu_dist=mu_dist,
+            beta_ret=beta_ret,
             t_obs_s=float(self.params.t_obs_s),
             t_safe_s=float(self.params.t_safe_s),
             dual_link=self.params.dual_link,
@@ -96,28 +120,29 @@ class SlowLoop:
         hz = float(max(1, int(self.env.cfg.step_hz)))
         return max(1, int(round(stuck_s * hz)))
 
+    def _goal_return_stalled(self) -> bool:
+        """Per-POI return stall for the active slow-loop goal (P1.5)."""
+
+        gid = self._goal_id
+        if gid is None:
+            return False
+        ip = int(gid)
+        if ip in self.env.effective:
+            return False
+        if ip not in self.env.covered:
+            return False
+        q = self.env.return_queue
+        if q is None:
+            return False
+        stall_s = float(self.contract.return_policy.upload_stuck_s)
+        return bool(q.is_poi_return_stalled(ip, now_s=self._now_s(), stall_s=stall_s))
+
     def _is_post_cover_upload_stuck(self, obs: SlowObservation) -> bool:
+        """Upload stuck event: no return progress on current goal for ``upload_stuck_s``."""
+
         if self._goal_id is None:
             return False
-        gid = int(self._goal_id)
-        if gid in self.env.effective:
-            return False
-        if gid not in self.env.covered:
-            return False
-
-        pkt = obs.fast_to_slow
-        backlog = float(self.env.backlog_bits)
-        if pkt is not None and pkt.backlog_bits is not None:
-            backlog = float(pkt.backlog_bits)
-
-        mode_s = ""
-        if pkt is not None and pkt.mode is not None:
-            m = pkt.mode
-            mode_s = str(getattr(m, "value", m)).strip().lower()
-
-        if backlog > 0.0:
-            return True
-        return mode_s in ("srec", "rec")
+        return bool(self._goal_return_stalled())
 
     def _update_stuck_timer(self, obs: SlowObservation) -> None:
         steps = int(obs.step)
@@ -249,7 +274,63 @@ class SlowLoop:
             if float(self.env.remaining_energy) < self._energy_return_threshold():
                 return True
 
+        rp = self.contract.return_policy
+        pc = self._pending_return_count()
+        if bool(rp.enable_backlog_gates):
+            if float(self.env.backlog_bits) >= float(rp.backlog_hard_bits):
+                return True
+            if int(rp.backlog_hard_poi_count) > 0 and pc >= int(rp.backlog_hard_poi_count):
+                return True
+
         return False
+
+    def _sync_backlog_return_phase(self) -> None:
+        """Force homing when backlog crosses the hard gate (FDLC P1)."""
+
+        if self._mission_phase() != "return":
+            return
+        if self._goal_id is None:
+            return
+        self._goal_id = None
+        self._goal_ne = self._goal_ne_for(None)
+        self._last_sequence = []
+        self._stuck_since_step = None
+
+    def _upload_stuck_recovery_eligible(self) -> bool:
+        """P1.5c: do not force return on the first pending POI / below soft backlog."""
+
+        rp = self.contract.return_policy
+        pc = self._pending_return_count()
+        b = float(self.env.backlog_bits)
+        min_pc = int(rp.upload_stuck_min_pending_count)
+        if min_pc > 0 and pc < min_pc:
+            return False
+        if bool(rp.upload_stuck_requires_soft_backlog):
+            soft = bool(b >= float(rp.backlog_soft_bits))
+            if int(rp.backlog_soft_poi_count) > 0 and pc >= int(rp.backlog_soft_poi_count):
+                soft = True
+            if not soft:
+                return False
+        return True
+
+    def _apply_upload_stuck_recovery(self, obs: SlowObservation) -> bool:
+        """
+        Post-cover upload stall → enter return phase without goal-changing replan.
+
+        Clears the active goal so the fast loop can focus on ``S_tx``/``S_rec``.
+        """
+
+        if not bool(self.contract.return_policy.enable_upload_stuck_recovery):
+            return False
+        if not self._upload_stuck_recovery_eligible():
+            return False
+        if not self._is_post_cover_upload_stuck(obs):
+            return False
+        self._goal_id = None
+        self._goal_ne = self._goal_ne_for(None)
+        self._last_sequence = []
+        self._stuck_since_step = None
+        return True
 
     def _solve_from_candidate_window(self) -> tuple[Optional[int], list[int]]:
         trig = dict(self.contract.slow_loop_triggers or {})
@@ -257,6 +338,9 @@ class SlowLoop:
         prefetch_mult = _slow_loop_pos_int(trig.get("prefetch_k_multiplier", 3), default=3, minimum=1)
         horizon_h = int(trig.get("horizon_h", 4))
         path_samples = int(trig.get("path_samples", 9))
+        phase = self._mission_phase()
+        if phase == "balance":
+            window_k = max(4, int(window_k) // 2)
         params = self._slow_params_with_struct()
         profile = self.contract.struct_profile
 
@@ -338,6 +422,8 @@ class SlowLoop:
         steps = int(obs.step)
 
         self._update_stuck_timer(obs)
+        self._apply_upload_stuck_recovery(obs)
+        self._sync_backlog_return_phase()
 
         if self._should_enter_return_phase():
             self._goal_id = None

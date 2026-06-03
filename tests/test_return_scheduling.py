@@ -122,11 +122,30 @@ def test_before_spatial_only_stx_srec_or_cdsl_path() -> None:
         spatial_complete=False,
         fast_upload_mode="policy",
     )
+    assert should_attempt_key_return(
+        backlog_bits=1.0,
+        comm_mode=FastCommState.INS,
+        enable_fast_mode_switch=True,
+        spatial_complete=False,
+        fast_upload_mode="policy",
+    )
     assert not should_attempt_key_return(
         backlog_bits=1.0,
         comm_mode=FastCommState.INS,
         enable_fast_mode_switch=True,
         spatial_complete=False,
+        fast_upload_mode="fixed",
+    )
+
+
+def test_policy_ins_transit_can_be_disabled() -> None:
+    assert not should_attempt_key_return(
+        backlog_bits=1.0,
+        comm_mode=FastCommState.INS,
+        enable_fast_mode_switch=True,
+        spatial_complete=False,
+        fast_upload_mode="policy",
+        return_during_ins_transit=False,
     )
 
 

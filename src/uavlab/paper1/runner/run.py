@@ -136,6 +136,9 @@ def main() -> None:
                 enable_fast_mode_switch=bool(contract.enable_fast_mode_switch),
                 spatial_complete=goal_spatial_complete(env=env, goal_id=exec_plan.goal_id),
                 return_phase=exec_plan.goal_id is None,
+                fast_upload_mode=str(env.cfg.fast_upload_mode),
+                fixed_send_ratio=float(env.cfg.fixed_send_ratio),
+                step=int(env.t),
             ):
                 env.progress_key_return(dt_s=float(dt), params=ret_params)
 

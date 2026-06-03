@@ -24,6 +24,7 @@ class LinkState:
     loss_p: float
     delay_s: float
     bandwidth_bps: float
+    jitter_s: float = 0.0
 
 
 @dataclass(frozen=True)

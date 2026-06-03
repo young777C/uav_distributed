@@ -9,5 +9,7 @@
 | [data_flow.md](data_flow.md) | 单步数据流与双链路；传感器级细节见实验设计文档 §2 |
 | [dual_link_metrics_design.md](dual_link_metrics_design.md) | 控制链路与任务数据链路指标（公式.txt） |
 | [model_selection_and_experiments.md](model_selection_and_experiments.md) | 全局/局部/回传模型选择切入点与实验设计（基线、消融、因子） |
+| [struct_axis_1m_4m_8mbit_analysis.md](struct_axis_1m_4m_8mbit_analysis.md) | Struct 轴 1/4/8 Mbit 数据量 sweep：三架构差异、失稳根因与修改建议 |
+| [struct_axis_key_data_pressure_issues.md](struct_axis_key_data_pressure_issues.md) | Struct 轴关键数据量压力实验（历史 8k / 0.5MB / 1MB 档）问题梳理 |
 
 **代码**：`TaskAEnv` 构造参数与 YAML 对齐统一由 `src/uavlab/tasks/taskA/env_from_config.py` 的 `build_env_kwargs` 生成（快环 train/eval、sweep、双环 run_hierarchical 共用）。

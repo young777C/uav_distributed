@@ -9,7 +9,7 @@ axis_grid:
     - configs/experiments/paper1/system/struct_full_dual_loop_distributed.yaml
 
 episodes: 5
-seeds: [0]
+seeds: [0, 1, 2]
 slow_interval_steps_list: [40]
 comm_mode: ""
 runs_root: runs/debug/struct_goal_trace

@@ -108,6 +108,10 @@ def test_fsm_transit_weak_link_stays_ins():
         {"comm_mode": FastCommState.INS, "backlog_bits": 1000.0, "link_loss_p": 0.35},
     )()
     params = FastLoopParams(enable_recovery_mode=True, enable_safety_mode=False)
+    contract = Paper1ContractConfig.from_cfg(
+        {"comm": {"data_chunk_bits": 1_000_000}, "paper1_loops": {"semantics": {"structure": "cdsl"}}},
+        waypoint_delta_max_m=5.0,
+    )
     mode = select_comm_mode(
         env=_Env(),
         obs=obs,
@@ -116,6 +120,11 @@ def test_fsm_transit_weak_link_stays_ins():
         use_comm_in_fast=True,
         use_energy_in_fast=False,
         mode_switching_allowed=True,
+        dt_s=1.0,
+        return_policy=contract.return_policy,
+        dual_link=contract.dual_link,
+        link_bandwidth_bps=1_000_000.0,
+        link_delay_s=0.05,
     )
     assert mode == FastCommState.INS
 
@@ -137,6 +146,10 @@ def test_fsm_post_cover_uses_rec_on_weak_link():
         {"comm_mode": FastCommState.INS, "backlog_bits": 1000.0, "link_loss_p": 0.35},
     )()
     params = FastLoopParams(enable_recovery_mode=True, enable_safety_mode=False, link_loss_recover=0.20)
+    contract = Paper1ContractConfig.from_cfg(
+        {"comm": {"data_chunk_bits": 1_000_000}, "paper1_loops": {"semantics": {"structure": "cdsl"}}},
+        waypoint_delta_max_m=5.0,
+    )
     mode = select_comm_mode(
         env=_Env(),
         obs=obs,
@@ -145,5 +158,10 @@ def test_fsm_post_cover_uses_rec_on_weak_link():
         use_comm_in_fast=True,
         use_energy_in_fast=False,
         mode_switching_allowed=True,
+        dt_s=1.0,
+        return_policy=contract.return_policy,
+        dual_link=contract.dual_link,
+        link_bandwidth_bps=1_000_000.0,
+        link_delay_s=0.05,
     )
     assert mode == FastCommState.REC

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from uavlab.common.config import load_resolved_config
-from uavlab.experiments.presets import apply_experiment_presets
+from uavlab.common.config import _deep_merge, load_resolved_config
+from uavlab.experiments.presets import apply_experiment_presets, normalize_paper1_struct
 from uavlab.paper1.comm.dual_link import Paper1DualLinkThresholds, dual_link_thresholds_from_comm
 from uavlab.paper1.comm.thresholds import control_link_ok, data_path_feasible_at, data_return_ok
 from uavlab.paper1.contracts.contract_config import Paper1ContractConfig
@@ -47,6 +47,15 @@ def test_control_vs_data_feasibility():
     assert not control_link_ok(weak_data, th)
 
 
+def test_data_return_delay_gate():
+    """Eq. (12): high one-way delay can violate max_return_time_s even with good loss/bw."""
+    th = Paper1DualLinkThresholds(data_max_return_time_s=5.0)
+    ok = LinkState(loss_p=0.10, delay_s=0.1, bandwidth_bps=1e6)
+    slow = LinkState(loss_p=0.10, delay_s=5.0, bandwidth_bps=1e6)
+    assert data_return_ok(ok, key_bits=8000.0, th=th)
+    assert not data_return_ok(slow, key_bits=8000.0, th=th)
+
+
 def test_data_return_jitter_gate():
     th = Paper1DualLinkThresholds()
     ok = LinkState(loss_p=0.10, delay_s=0.5, bandwidth_bps=1e6, jitter_s=0.5)
@@ -57,8 +66,6 @@ def test_data_return_jitter_gate():
 
 
 def test_structure_use_jitter_in_slow_comm():
-    from uavlab.paper1.contracts.contract_config import Paper1ContractConfig
-
     base = apply_experiment_presets(load_resolved_config("configs/base.yaml"))
     for struct, expect_jit in (("cdsl", False), ("wcdl", True), ("fdlc", True)):
         cfg = dict(base)
@@ -66,7 +73,21 @@ def test_structure_use_jitter_in_slow_comm():
         cfg.setdefault("paper1_loops", {}).setdefault("semantics", {})["structure"] = struct
         c = Paper1ContractConfig.from_cfg(cfg, waypoint_delta_max_m=5.0)
         assert c.use_jitter_in_slow_comm is expect_jit, struct
-        assert c.structure == struct
+        assert normalize_paper1_struct(c.structure) == struct
+
+
+def test_struct_yaml_safety_mode():
+    base = apply_experiment_presets(load_resolved_config("configs/base.yaml"))
+    for struct, expect_safe in (("cdsl", False), ("wcdl", True), ("fdlc", True)):
+        rel = {
+            "cdsl": "configs/experiments/paper1/system/struct_centralized_single_loop.yaml",
+            "wcdl": "configs/experiments/paper1/system/struct_decoupled_dual_loop.yaml",
+            "fdlc": "configs/experiments/paper1/system/struct_full_dual_loop_distributed.yaml",
+        }[struct]
+        cfg = apply_experiment_presets(_deep_merge(base, load_resolved_config(rel)))
+        c = Paper1ContractConfig.from_cfg(cfg, waypoint_delta_max_m=5.0)
+        assert bool(c.fast_loop.get("enable_safety_mode")) is expect_safe, struct
+        assert normalize_paper1_struct(c.structure) == struct
 
 
 def test_contract_applies_dual_link_to_fsm_and_slow_triggers():
@@ -92,7 +113,9 @@ def test_data_path_feasible_near_gcs():
     env.reset(seed=0)
     th = sim_cfg.dual_link
     gcs = (float(sim_cfg.gcs_ne[0]), float(sim_cfg.gcs_ne[1]))
-    assert data_path_feasible_at(env, gcs, sim_cfg.key_bits_per_poi, th)
+    # C2 paper anchor (4 Mbit); 16 Mbit at GCS exceeds 15 s return cap with link_proxy_at.
+    chunk_bits = 4_000_000.0
+    assert data_path_feasible_at(env, gcs, chunk_bits, th)
 
 
 def test_link_proxy_at_matches_loss_proxy():

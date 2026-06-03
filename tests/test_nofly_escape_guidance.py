@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 
-from uavlab.common.config import load_resolved_config
+from uavlab.common.config import _deep_merge, load_resolved_config
 from uavlab.experiments.presets import apply_experiment_presets
 from uavlab.paper1.contracts.contract_config import Paper1ContractConfig
 from uavlab.paper1.contracts.contract_types import FastObservation, SlowPlan
@@ -19,6 +19,11 @@ from uavlab.scene.loader import load_scene_config
 def _env_and_contract():
     cfg = apply_experiment_presets(
         load_resolved_config("configs/experiments/paper1/cases/c2_g2_m0.yaml")
+    )
+    # Case YAML does not include struct system file; enable S_safe for this unit test.
+    cfg = _deep_merge(
+        cfg,
+        {"paper1_loops": {"fast_loop": {"enable_safety_mode": True}}},
     )
     scene_raw = load_scene_yaml(cfg["scene_file"])
     sim = from_resolved_config(cfg, scene_raw)

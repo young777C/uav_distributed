@@ -1,16 +1,33 @@
 # Paper1 structure axis: FDLC (full dual-loop collaboration)
-# Slow-loop modeling identical to CDSL/WCDL; differs in struct thresholds, coupling, fast loop.
+# P2: per-POI sharded return + backlog-aware gates + full f2s + policy FSM (incl. S_ins transit upload).
 experiment:
   paper1:
     struct: fdlc
     modeling: comm_energy_aware_decision
     coupling: full_coupling
 
+env:
+  fast_upload_mode: policy
+
 paper1_loops:
+  return_policy:
+    backlog_soft_mult: 2.0
+    backlog_hard_mult: 5.0
+    backlog_soft_poi_count: 2
+    backlog_hard_poi_count: 5
+    min_tx_gain_bits: 0
+    balance_beta_ret_mult: 2.0
+    balance_mu_dist_mult: 1.5
+    upload_stuck_min_pending_count: 2
+    upload_stuck_requires_soft_backlog: true
+    enable_backlog_gates: true
+    enable_upload_stuck_recovery: true
   slow_policy: periodic_or_event_replan
   slow_backend: heuristic
   allow_waypoint_delta: true
   allow_mode_switching: true
+  fast_loop:
+    enable_safety_mode: true
   coupling_mode: full_coupling
   modeling_mode: completion_comm_energy
   modeling:
@@ -18,17 +35,24 @@ paper1_loops:
     comm_constraint: true
     energy_objective: false
     energy_constraint: full
+    struct_profile:
+      control_cmd_min_ratio: 0.70
+      control_loss_exposure_max: 0.10
+      use_data_return_hard_mask: false
+      energy_plan_margin_frac: 0.08
+      candidate_degrade_max_level: 3
   slow_loop:
     replan_trigger_policy: hybrid
     periodic_replan_scope: repeat
     replan_cooldown_s: 15.0
+    goal_lock_stuck_s: 60.0
     suppress_link_interrupt_in_back: true
     event_levels:
       on_safety_event: critical
       on_energy_low: critical
       on_link_drop: warning
       on_control_link_lost: warning
-      on_post_cover_upload_stuck: warning
+      on_post_cover_upload_stuck: info
     event_triggers:
       on_safety_event: true
       on_energy_low: true

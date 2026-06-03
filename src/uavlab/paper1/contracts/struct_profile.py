@@ -83,7 +83,7 @@ _STRUCT_AXIS_DEFAULTS: Dict[str, StructAxisProfile] = {
         control_loss_exposure_max=0.10,
         use_data_return_hard_mask=False,
         comm_ret_objective_weight=0.5,
-        energy_plan_margin_frac=0.02,
+        energy_plan_margin_frac=0.08,
         candidate_degrade_max_level=3,
     ),
 }

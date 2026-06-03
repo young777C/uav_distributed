@@ -71,6 +71,12 @@ class FastLoop:
             use_comm_in_fast=bool(self.contract.use_comm_in_fast),
             use_energy_in_fast=bool(self.contract.use_energy_in_fast),
             mode_switching_allowed=mode_sw,
+            dt_s=float(dt),
+            return_policy=self.contract.return_policy,
+            dual_link=self.contract.dual_link,
+            link_bandwidth_bps=float(link.bandwidth_bps),
+            link_delay_s=float(link.delay_s),
+            return_phase=gid is None,
         )
 
         if mode == FastCommState.BACK:

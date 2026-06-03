@@ -1,13 +1,20 @@
 # Paper1 structure axis: CDSL (center-dominant single-loop)
-# Slow-loop modeling identical to WCDL/FDLC (comm_energy_aware_decision); architecture
-# conservatism comes from StructAxisProfile thresholds + coupling/fast-loop only.
+# P2: conservative coverage + fixed upload; no backlog-driven slow loop.
 experiment:
   paper1:
     struct: cdsl
     modeling: comm_energy_aware_decision
     coupling: full_coupling
 
+env:
+  fast_upload_mode: fixed
+  # High duty: prioritize clearing each POI before covering more (§6.1 少积压).
+  fixed_send_ratio: 0.7
+
 paper1_loops:
+  return_policy:
+    enable_backlog_gates: false
+    enable_upload_stuck_recovery: false
   slow_policy: periodic_or_event_replan
   slow_backend: heuristic
   allow_waypoint_delta: false
@@ -19,6 +26,12 @@ paper1_loops:
     comm_constraint: true
     energy_objective: false
     energy_constraint: full
+    struct_profile:
+      control_cmd_min_ratio: 0.95
+      control_loss_exposure_max: 0.0
+      use_data_return_hard_mask: true
+      energy_plan_margin_frac: 0.15
+      candidate_degrade_max_level: 1
   slow_loop:
     replan_trigger_policy: periodic
     periodic_replan_scope: repeat
@@ -27,6 +40,7 @@ paper1_loops:
       on_energy_low: true
       on_link_drop: false
       on_control_link_lost: false
+      on_post_cover_upload_stuck: false
       on_goal_spatial_complete: true
       on_goal_effective_complete: true
   fast_to_slow:
