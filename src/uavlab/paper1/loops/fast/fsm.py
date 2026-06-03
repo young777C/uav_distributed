@@ -60,11 +60,11 @@ def select_comm_mode(
     """
 
     cur = obs.comm_mode
-    if not mode_switching_allowed or not params.enable_fsm:
-        return cur if isinstance(cur, FastCommState) else FastCommState(str(cur))
-
     if params.enable_safety_mode and env.in_nofly(env.pos_ne):
         return FastCommState.SAFE
+
+    if not mode_switching_allowed or not params.enable_fsm:
+        return cur if isinstance(cur, FastCommState) else FastCommState(str(cur))
 
     if params.enable_back_mode and use_energy_in_fast:
         need = energy_return_need_from_env(env)

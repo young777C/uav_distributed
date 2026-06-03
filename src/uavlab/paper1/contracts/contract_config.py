@@ -58,18 +58,21 @@ _STRUCTURE_SEMANTICS_DEFAULTS: Dict[str, Dict[str, Any]] = {
         "enable_fast_mode_switch": False,
         "use_comm_in_fast": False,
         "use_energy_in_fast": False,
+        "use_jitter_in_slow_comm": False,
     },
     "wcdl": {
         "structure": "wcdl",
         "enable_fast_mode_switch": True,
         "use_comm_in_fast": False,
         "use_energy_in_fast": False,
+        "use_jitter_in_slow_comm": True,
     },
     "fdlc": {
         "structure": "fdlc",
         "enable_fast_mode_switch": True,
         "use_comm_in_fast": True,
         "use_energy_in_fast": True,
+        "use_jitter_in_slow_comm": True,
     },
 }
 
@@ -323,6 +326,7 @@ class Paper1ContractConfig:
     enable_event_feedback: bool
     enable_fast_mode_switch: bool
     enable_goal_lock: bool
+    use_jitter_in_slow_comm: bool
     dual_link: Paper1DualLinkThresholds
     struct_profile: StructAxisProfile
     return_policy: ReturnPolicyConfig
@@ -605,6 +609,11 @@ class Paper1ContractConfig:
         else:
             enable_event_feedback = str(coupling_mode).strip().lower() not in ("periodic_goal", "no_replan", "no_feedback")
 
+        if "use_jitter_in_slow_comm" in sem:
+            use_jitter_in_slow_comm = bool(sem.get("use_jitter_in_slow_comm"))
+        else:
+            use_jitter_in_slow_comm = bool(_STRUCTURE_SEMANTICS_DEFAULTS.get(structure, {}).get("use_jitter_in_slow_comm", True))
+
         if "enable_fast_mode_switch" in sem:
             enable_fast_mode_switch = bool(sem.get("enable_fast_mode_switch"))
         elif cm_eff == "periodic_goal":
@@ -677,6 +686,7 @@ class Paper1ContractConfig:
             enable_event_feedback=enable_event_feedback,
             enable_fast_mode_switch=enable_fast_mode_switch,
             enable_goal_lock=enable_goal_lock,
+            use_jitter_in_slow_comm=use_jitter_in_slow_comm,
             dual_link=dual_link,
             struct_profile=struct_profile,
             return_policy=return_policy,
