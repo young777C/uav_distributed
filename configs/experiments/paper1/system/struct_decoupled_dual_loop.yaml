@@ -18,6 +18,8 @@ paper1_loops:
   slow_backend: heuristic
   allow_waypoint_delta: true
   allow_mode_switching: true
+  fast_loop:
+    enable_safety_mode: true
   coupling_mode: full_coupling
   modeling_mode: completion_comm_energy
   modeling:

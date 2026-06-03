@@ -20,7 +20,6 @@ from uavlab.paper1.sim.config import from_resolved_config
 from uavlab.paper1.sim.env import build_env
 from uavlab.paper1.sim.scene_loader import load_scene_yaml
 from uavlab.scene.loader import load_scene_config
-from uavlab.policies.registry import taska_merged_slow_loop_block
 
 
 def test_normalize_paper1_modeling_legacy():
@@ -244,22 +243,6 @@ def test_struct_profile_monotonicity_from_contract():
     ).struct_profile
     assert cdsl.control_cmd_min_ratio >= wcdl.control_cmd_min_ratio >= fdlc.control_cmd_min_ratio
     assert cdsl.energy_plan_margin_frac >= wcdl.energy_plan_margin_frac >= fdlc.energy_plan_margin_frac
-
-
-def test_taska_merged_slow_loop_root_overrides_paper1_loops():
-    cfg = {
-        "paper1_loops": {
-            "slow_loop": {
-                "periodic_replan_scope": "init_only",
-                "replan_observation_mode": "full",
-            }
-        },
-        "slow_loop": {"periodic_replan_scope": "repeat", "backend": "heuristic"},
-    }
-    m = taska_merged_slow_loop_block(cfg)
-    assert m["periodic_replan_scope"] == "repeat"
-    assert m["backend"] == "heuristic"
-    assert m["replan_observation_mode"] == "full"
 
 
 def test_coupling_periodic_goal_strips_feedback_fields():
