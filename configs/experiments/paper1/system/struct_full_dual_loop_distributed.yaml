@@ -12,13 +12,14 @@ env:
 paper1_loops:
   return_policy:
     backlog_soft_mult: 2.0
-    backlog_hard_mult: 5.0
-    backlog_soft_poi_count: 2
-    backlog_hard_poi_count: 5
+    backlog_hard_mult: 6.0
+    backlog_soft_poi_count: 3
+    backlog_hard_poi_count: 7
     min_tx_gain_bits: 0
     balance_beta_ret_mult: 2.0
     balance_mu_dist_mult: 1.5
-    upload_stuck_min_pending_count: 2
+    upload_stuck_s: 45.0
+    upload_stuck_min_pending_count: 3
     upload_stuck_requires_soft_backlog: true
     enable_backlog_gates: true
     enable_upload_stuck_recovery: true

@@ -15,7 +15,7 @@ env:
   # episode_steps: ****   # equivalent to 1800 s @ 5 Hz (optional if mission_time_s is set)
   # v_xy_cruise: average cruise speed for energy model (P_fly/v_c) and nominal en-route flight (m/s).
   # Pursuit is slower near POI (approach_slowdown_radius_m) and zero inside cover for dwell — not fixed 10 m/s every step.
-  v_xy_cruise: 10.0
+  v_xy_cruise: 11.0
   # v_xy_max: hard ceiling for explicit velocity commands (e.g. PID); not the default waypoint pursuit speed.
   v_xy_max: 20.0
   approach_slowdown_radius_m: 50.0
@@ -30,7 +30,7 @@ env:
   energy_depleted_threshold: 0.0
   return_radius_m: 8.0
   # Wall-clock reserve before mission end to switch slow-loop goal to GCS (return phase).
-  return_reserve_s: 300.0
+  return_reserve_s: 240.0
   terminate_on_returned_home: true
   # Paper1Lite fast loop: policy = link-adaptive FSM (Srec/Stx); fixed = duty-cycled Stx entry (fixed_send_ratio)
   fast_upload_mode: policy
@@ -70,7 +70,7 @@ comm:
   loss_jitter_sigma: 0.0
 
   # data size default (also used by Paper1Lite as key bits proxy)
-  data_chunk_bits: 16_000_000.0
+  data_chunk_bits: 4_000_000.0
 
 reset:
   reset_pos_jitter_m: 0.0
@@ -187,9 +187,9 @@ paper1_loops:
     min_replan_interval_steps: 5
     link_drop_loss_p: 0.50
     # slow-loop optimizer knobs (paper: base window K, horizon H; prefetch |Ŵ_t| = min(mult*K,|U_t|))
-    window_k: 12
-    prefetch_k_multiplier: 3
-    horizon_h: 4
+    window_k: 16
+    prefetch_k_multiplier: 4
+    horizon_h: 6
     # path sampling points for q_path_min (odd number recommended, includes endpoints)
     path_samples: 9
     # After spatial cover: release goal_lock if Srec/backlog persists this long (wall-clock s).
@@ -235,11 +235,11 @@ fast_loop:
 energy:
   # UAV_GCS_能量建模计算说明.md §8 — physical parameters (normalized in code via E_0).
   use_power_speed_model: true
-  E_0_Wh: 236.8
+  E_0_Wh: 263.2
   P_fly_W: 400.0
   P_hov_W: 450.0
   eta_safe: 0.20
-  t_hov_s: 10.0
+  t_hov_s: 5.0
   # Paper1Env: speed < threshold => P_hov * dt; else (P_fly/v_c) * distance (see energy_model.deduct_step_energy).
   hover_speed_threshold_mps: 0.5
   segment_max_extra_detour_m: 8.0
@@ -255,4 +255,3 @@ train:
   n_steps: 2048
   gamma: 0.99
   device: cpu
-

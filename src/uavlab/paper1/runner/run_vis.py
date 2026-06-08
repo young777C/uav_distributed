@@ -21,6 +21,7 @@ from uavlab.scene.loader import load_scene_config
 from uavlab.paper1.metrics.link_recovery import link_recovery_recorder_from_contract
 from uavlab.paper1.types import FastCommState
 from uavlab.paper1.runner.return_scheduling import goal_spatial_complete, should_attempt_key_return
+from uavlab.paper1.runner.run_context import format_paper1_episode_line, print_paper1_run_header
 from uavlab.related_models.key_data_return import ReturnDecisionParams
 
 
@@ -167,6 +168,13 @@ def main() -> None:
     exp_id = exp.get("id")
     p1 = exp.get("paper1") if isinstance(exp.get("paper1"), dict) else {}
     env_case = exp.get("env_case") if isinstance(exp.get("env_case"), dict) else {}
+
+    run_ctx = print_paper1_run_header(
+        cfg,
+        contract=contract,
+        experiment_id=exp_id,
+        slow_interval_steps=int(args.slow_interval_steps),
+    )
 
     for ep in range(int(args.episodes)):
         _ = env.reset(seed=int(args.seed) + ep)
@@ -372,10 +380,7 @@ def main() -> None:
         row["goal_switch_count"] = int(goal_switch_count)
         row["replan_count"] = int(slow.replan_count)
         row["pending_return_max_bits"] = float(pending_return_max_bits)
-        print(
-            f"[Paper1Lite] ep={ep} R_cov={row['R_cov']:.3f} R_task={row['R_task']:.3f} "
-            f"R_fail|cov={row['R_fail_given_cov']:.3f} T_nf={row['T_nf_s']:.2f}s"
-        )
+        print(format_paper1_episode_line(ctx=run_ctx, episode=ep, metrics=row), flush=True)
         if metrics_f is not None:
             metrics_f.write(json.dumps(row, ensure_ascii=False) + "\n")
             metrics_f.flush()

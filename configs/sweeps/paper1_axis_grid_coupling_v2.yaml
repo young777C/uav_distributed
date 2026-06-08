@@ -1,8 +1,8 @@
-# coupling_v2 main sweep: C2 + C2-hard × three coupling profiles.
-# periodic uses Ts=200 via experiment.sweep.slow_interval_steps in system YAML.
+# coupling_v3: three profiles extend struct_full_dual_loop_distributed.yaml (policy upload).
+# periodic Ts=200 via experiment.sweep + apply_experiment_presets in scripts/sweep.py.
 axis_grid:
   cases:
-    - configs/experiments/paper1/cases/c1_g2_m2.yaml
+    # - configs/experiments/paper1/cases/c1_g2_m2.yaml
     - configs/experiments/paper1/cases/c2_g2_m2.yaml
     # - configs/experiments/paper1/cases/c2_hard_g2_m2.yaml
   systems:
@@ -10,9 +10,9 @@ axis_grid:
     - configs/experiments/paper1/system/coupling_event_driven_goal.yaml
     - configs/experiments/paper1/system/coupling_full_coupling.yaml
 
-episodes: 3
-seeds: [0, 1]
-slow_interval_steps_list: [100]
+episodes: 5
+seeds: [0, 1, 2]
+slow_interval_steps_list: [40]
 comm_mode: ""
-runs_root: runs/debug/coupling_goal_trace
+runs_root: runs/sweeps
 runner_module: uavlab.paper1.runner.run_vis

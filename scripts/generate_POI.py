@@ -54,7 +54,7 @@ G2_N_MICRO_MAX: int = 6
 G2_MICRO_RING_R_M: float = 58.0  # spread micro-sites across more of the map
 G2_MICRO_DISK_R_M: float = 17.0  # slightly tighter local disks vs G1 cell spacing
 G2_MICRO_ANG_JITTER_RAD: float = 0.45
-G2_N_CLUSTER_POI: int = 52  # more POIs in sites + fewer scatter → stronger “cluster” read vs G1
+G2_N_CLUSTER_POI: int = 43  # keep the original clustered fraction after reducing total POIs to 100
 
 
 
@@ -154,6 +154,32 @@ def in_any_circle(pt: Point, circles: List[List[float]]) -> bool:
     return False
 
 
+def clear_of_circles(pt: Point, circles: List[List[float]], *, pad_m: float) -> bool:
+    x, y = pt
+    for cx, cy, r in circles:
+        if (x - cx) ** 2 + (y - cy) ** 2 <= ((r + pad_m) ** 2):
+            return False
+    return True
+
+
+def sample_free_uniform_point(
+    *,
+    rng: random.Random,
+    bounds: Tuple[float, float, float, float],
+    margin: float,
+    forbidden_circles: List[List[float]],
+) -> Point:
+    n_min, n_max, e_min, e_max = bounds
+    for _ in range(10000):
+        pt = (
+            rng.uniform(n_min + margin, n_max - margin),
+            rng.uniform(e_min + margin, e_max - margin),
+        )
+        if not in_any_circle(pt, forbidden_circles):
+            return pt
+    raise RuntimeError("Failed to sample a free point outside no-fly circles")
+
+
 def qhat_at_point(
     *,
     pt: Point,
@@ -225,13 +251,19 @@ def sample_uniform_points(
     n: int,
     bounds: Tuple[float, float, float, float],
     margin: float = 10.0,
+    forbidden_circles: List[List[float]] | None = None,
 ) -> List[Point]:
-    n_min, n_max, e_min, e_max = bounds
+    forbidden = list(forbidden_circles or [])
     pts: List[Point] = []
     for _ in range(n):
-        x = rng.uniform(n_min + margin, n_max - margin)
-        y = rng.uniform(e_min + margin, e_max - margin)
-        pts.append((x, y))
+        pts.append(
+            sample_free_uniform_point(
+                rng=rng,
+                bounds=bounds,
+                margin=margin,
+                forbidden_circles=forbidden,
+            )
+        )
     return pts
 
 
@@ -252,6 +284,7 @@ def sample_stratified_jittered_grid(
     bounds: Tuple[float, float, float, float],
     margin: float,
     jitter_frac: float,
+    forbidden_circles: List[List[float]] | None = None,
 ) -> List[Point]:
     """
     One POI per grid cell (stratification) + independent uniform jitter inside each cell.
@@ -266,14 +299,27 @@ def sample_stratified_jittered_grid(
     cells = [(i, j) for j in range(ge) for i in range(gn)]
     rng.shuffle(cells)
     pts: List[Point] = []
+    forbidden = list(forbidden_circles or [])
     for (i, j) in cells[:n]:
         cx = n_min + margin + (i + 0.5) * cell_w
         cy = e_min + margin + (j + 0.5) * cell_h
         half_jx = jitter_frac * 0.5 * cell_w
         half_jy = jitter_frac * 0.5 * cell_h
-        x = min(max(cx + rng.uniform(-half_jx, half_jx), n_min + margin), n_max - margin)
-        y = min(max(cy + rng.uniform(-half_jy, half_jy), e_min + margin), e_max - margin)
-        pts.append((x, y))
+        chosen: Point | None = None
+        for _try in range(80):
+            x = min(max(cx + rng.uniform(-half_jx, half_jx), n_min + margin), n_max - margin)
+            y = min(max(cy + rng.uniform(-half_jy, half_jy), e_min + margin), e_max - margin)
+            if not in_any_circle((x, y), forbidden):
+                chosen = (x, y)
+                break
+        if chosen is None:
+            chosen = sample_free_uniform_point(
+                rng=rng,
+                bounds=bounds,
+                margin=margin,
+                forbidden_circles=forbidden,
+            )
+        pts.append(chosen)
     return pts
 
 
@@ -324,15 +370,21 @@ def sample_cluster_points(
     sigma_m: float,
     bounds: Tuple[float, float, float, float],
     margin: float = 10.0,
+    forbidden_circles: List[List[float]] | None = None,
 ) -> List[Point]:
     n_min, n_max, e_min, e_max = bounds
     pts: List[Point] = []
     cx, cy = center
+    forbidden = list(forbidden_circles or [])
     for _ in range(n):
         for _try in range(2000):
             x = rng.gauss(cx, sigma_m)
             y = rng.gauss(cy, sigma_m)
-            if (n_min + margin) <= x <= (n_max - margin) and (e_min + margin) <= y <= (e_max - margin):
+            if (
+                (n_min + margin) <= x <= (n_max - margin)
+                and (e_min + margin) <= y <= (e_max - margin)
+                and not in_any_circle((x, y), forbidden)
+            ):
                 pts.append((x, y))
                 break
         else:
@@ -348,11 +400,13 @@ def sample_uniform_disk_points(
     disk_r_m: float,
     bounds: Tuple[float, float, float, float],
     margin: float = 10.0,
+    forbidden_circles: List[List[float]] | None = None,
 ) -> List[Point]:
     """Uniform draws inside a disk (no central peak); milder visual clustering than Gaussian."""
     n_min, n_max, e_min, e_max = bounds
     cx, cy = center
     pts: List[Point] = []
+    forbidden = list(forbidden_circles or [])
     attempts = max(8000, n * 500)
     while len(pts) < n and attempts > 0:
         attempts -= 1
@@ -360,7 +414,11 @@ def sample_uniform_disk_points(
         rad = disk_r_m * math.sqrt(rng.random())
         x = cx + rad * math.cos(ang)
         y = cy + rad * math.sin(ang)
-        if (n_min + margin) <= x <= (n_max - margin) and (e_min + margin) <= y <= (e_max - margin):
+        if (
+            (n_min + margin) <= x <= (n_max - margin)
+            and (e_min + margin) <= y <= (e_max - margin)
+            and not in_any_circle((x, y), forbidden)
+        ):
             pts.append((x, y))
     short = n - len(pts)
     if short > 0:
@@ -372,6 +430,7 @@ def sample_uniform_disk_points(
                 sigma_m=disk_r_m * 0.5,
                 bounds=bounds,
                 margin=margin,
+                forbidden_circles=forbidden,
             )
         )
     return pts
@@ -391,6 +450,7 @@ def choose_micro_layout_for_level(
     k_min: int,
     k_max: int,
     ring_r: float,
+    forbidden_circles: List[List[float]],
 ) -> Tuple[List[Point], List[Point], float, float]:
     """
     Search anchor + ring-placed micro-centers; pool all micro-cluster samples and
@@ -414,6 +474,8 @@ def choose_micro_layout_for_level(
             bounds=bounds,
             margin=16.0,
         )
+        if not all(clear_of_circles(c, forbidden_circles, pad_m=cluster_disk_r_m + 6.0) for c in micro):
+            continue
         counts = _split_counts(n_cluster, k)
         pooled: List[Point] = []
         for center, ni in zip(micro, counts):
@@ -426,6 +488,7 @@ def choose_micro_layout_for_level(
                     disk_r_m=cluster_disk_r_m,
                     bounds=bounds,
                     margin=12.0,
+                    forbidden_circles=forbidden_circles,
                 )
             )
         qc, eta = compute_cluster_conflict(
@@ -452,13 +515,14 @@ def main() -> None:
     )
     gcs = tuple(map(float, base_scene.get("gcs_ne", base_scene["start_ne"])))  # type: ignore[assignment]
     blackholes = [list(map(float, c)) for c in list(base_scene.get("communication_blackholes") or [])]
+    nofly = [list(map(float, c)) for c in list(base_scene.get("nofly_circles") or [])]
 
     # parameters (paper-aligned defaults; adjust as needed)
     d_max = 250.0
     thr = ConflictThresholds()
 
     # POI counts
-    total_poi = 120
+    total_poi = 100
     n_cluster = G2_N_CLUSTER_POI
     n_scatter = total_poi - n_cluster
     cluster_disk_r = G2_MICRO_DISK_R_M
@@ -475,6 +539,7 @@ def main() -> None:
             bounds=bounds,
             margin=12.0,
             jitter_frac=jitter,
+            forbidden_circles=nofly,
         )
         if _min_nn_dist(cand) >= NN_MIN_DIST_M:
             g1 = cand
@@ -486,6 +551,7 @@ def main() -> None:
             bounds=bounds,
             margin=12.0,
             jitter_frac=0.12,
+            forbidden_circles=nofly,
         )
     g1_dbar, g1_u = _nn_uniformity_index(g1, bounds)
     dump_scene(
@@ -514,6 +580,7 @@ def main() -> None:
             k_min=G2_N_MICRO_MIN,
             k_max=G2_N_MICRO_MAX,
             ring_r=G2_MICRO_RING_R_M,
+            forbidden_circles=nofly,
         )
         k_micro = len(micro_centers)
         # scattered points: keep away from every micro-cluster center
@@ -522,6 +589,8 @@ def main() -> None:
         while len(scatter) < n_scatter:
             x = scat_rng.uniform(bounds[0] + 12.0, bounds[1] - 12.0)
             y = scat_rng.uniform(bounds[2] + 12.0, bounds[3] - 12.0)
+            if in_any_circle((x, y), nofly):
+                continue
             if _nearest_center_dist_m((x, y), micro_centers) < scatter_excl_m:
                 continue
             scatter.append((x, y))
@@ -538,6 +607,8 @@ def main() -> None:
                 while len(scatter) < n_scatter:
                     x = scat_rng.uniform(bounds[0] + 12.0, bounds[1] - 12.0)
                     y = scat_rng.uniform(bounds[2] + 12.0, bounds[3] - 12.0)
+                    if in_any_circle((x, y), nofly):
+                        continue
                     if _nearest_center_dist_m((x, y), micro_centers) < scatter_excl_m:
                         continue
                     scatter.append((x, y))
@@ -568,4 +639,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

@@ -278,7 +278,10 @@ _COUPLING_P0_SLOW_LOOP: ConfigDict = {
 
 COUPLING_VARIANT_PRESETS: Dict[str, ConfigDict] = {
     "periodic_goal": {
-        "env": {"fast_upload_mode": "fixed", "fixed_send_ratio": 0.2},
+        "env": {
+            "fast_upload_mode": "fixed",
+            "fixed_send_ratio": 0.2,
+        },
         "paper1_loops": {
             "coupling_mode": "periodic_goal",
             "allow_mode_switching": False,
@@ -301,11 +304,14 @@ COUPLING_VARIANT_PRESETS: Dict[str, ConfigDict] = {
             "paper1": {"coupling": "periodic_goal"},
             "sweep": {"slow_interval_steps": 200},
             "paper_ref": "paper1 §4.2.2 PeriodicGoal",
-            "note": "coupling_v2: low-frequency periodic replan (Ts=200), fixed upload 0.2, no f2s.",
+            "note": "coupling_v3: extends struct FDLC; Ts=200; fixed 0.2 upload, periodic replan, no f2s, no fast FSM.",
         },
     },
     "event_driven_goal": {
-        "env": {"fast_upload_mode": "fixed", "fixed_send_ratio": 0.2},
+        "env": {
+            "fast_upload_mode": "fixed",
+            "fixed_send_ratio": 0.2,
+        },
         "paper1_loops": {
             "coupling_mode": "event_driven_goal",
             "allow_mode_switching": False,
@@ -327,11 +333,10 @@ COUPLING_VARIANT_PRESETS: Dict[str, ConfigDict] = {
         "experiment": {
             "paper1": {"coupling": "event_driven_goal"},
             "paper_ref": "paper1 §4.2.2 EventDrivenGoal",
-            "note": "coupling_v2: hybrid+P0 slow loop, fixed upload 0.2, partial f2s (no backlog/mode).",
+            "note": "coupling_v3: extends struct FDLC; fixed 0.2 upload, hybrid, partial f2s, no fast FSM.",
         },
     },
     "full_coupling": {
-        "env": {"fast_upload_mode": "policy"},
         "paper1_loops": {
             "coupling_mode": "full_coupling",
             "allow_mode_switching": True,
@@ -353,7 +358,7 @@ COUPLING_VARIANT_PRESETS: Dict[str, ConfigDict] = {
         "experiment": {
             "paper1": {"coupling": "full_coupling"},
             "paper_ref": "paper1 §4.2.2 FullCoupling",
-            "note": "coupling_v2: hybrid+P0 slow loop, policy FSM, full f2s.",
+            "note": "coupling_v3: extends struct FDLC; full f2s + fast FSM (same as struct axis FDLC).",
         },
     },
 }

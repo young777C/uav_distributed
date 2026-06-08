@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Tuple
 
 from uavlab.common.config import load_resolved_config, load_yaml, save_yaml
+from uavlab.experiments.presets import apply_experiment_presets
 
 
 
@@ -128,9 +129,9 @@ def _resolve_slow_interval_steps(
     combined_cfg_path: Path,
     plan_default: int,
 ) -> int:
-    """Use ``experiment.sweep.slow_interval_steps`` from system YAML when set."""
+    """Use ``experiment.sweep.slow_interval_steps`` from preset/system YAML when set."""
     try:
-        cfg = load_resolved_config(combined_cfg_path)
+        cfg = apply_experiment_presets(load_resolved_config(combined_cfg_path))
         exp = dict(cfg.get("experiment") or {})
         sweep = dict(exp.get("sweep") or {})
         raw = sweep.get("slow_interval_steps")

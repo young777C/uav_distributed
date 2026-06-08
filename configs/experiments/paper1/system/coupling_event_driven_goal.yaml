@@ -1,14 +1,16 @@
-# Paper §4.2.2 — EventDrivenGoal (coupling_v2)
-# Slow: hybrid + P0 event grading; partial fast→slow. Fast: fixed upload 0.2, no FSM.
+# Paper §4.2.2 — EventDrivenGoal: diff on struct FDLC (dim-1 partial f2s; dim-2 no fast FSM).
+extends: struct_full_dual_loop_distributed.yaml
+
 experiment:
   paper1:
-    struct: fdlc
-    modeling: comm_energy_aware_decision
     coupling: event_driven_goal
+
+env:
+  fast_upload_mode: fixed
+  fixed_send_ratio: 0.2
 
 paper1_loops:
   coupling_mode: event_driven_goal
-  slow_policy: periodic_or_event_replan
   allow_mode_switching: false
   semantics:
     coupling_mechanism: event_driven_goal
@@ -17,29 +19,9 @@ paper1_loops:
     enable_goal_lock: true
   slow_loop:
     replan_trigger_policy: hybrid
-    periodic_replan_scope: repeat
-    replan_cooldown_s: 15.0
-    suppress_link_interrupt_in_back: true
-    event_levels:
-      on_safety_event: critical
-      on_energy_low: critical
-      on_link_drop: warning
-      on_control_link_lost: warning
-      on_post_cover_upload_stuck: warning
-    event_triggers:
-      on_safety_event: true
-      on_energy_low: true
-      on_link_drop: true
-      on_control_link_lost: true
-      on_goal_spatial_complete: true
-      on_goal_effective_complete: true
   fast_to_slow:
     send_completion: true
     send_link_stats: full
     send_backlog: false
     send_mode: false
     send_safety_events: true
-
-env:
-  fast_upload_mode: fixed
-  fixed_send_ratio: 0.2
