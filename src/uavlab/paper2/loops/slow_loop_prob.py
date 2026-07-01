@@ -138,8 +138,13 @@ def _compute_poi_probability(
         if d_hi < margin_2x:
             boundary_penalty = max(boundary_penalty, 1.0 - d_hi / margin_2x)
     boundary_penalty = _clip01(boundary_penalty)
-    # Blend boundary risk to deprioritize edge POIs.
-    effective_risk = max(_clip01(risk / risk_max), boundary_penalty * 0.7)
+    # V5: Degradation-aware boundary penalty. At high degradation (loss_max ≥ 0.50),
+    # boundary POIs are hard to reach — link is already bad everywhere, and SAFE
+    # avoidance near boundaries wastes flight time. Stronger penalty deprioritizes
+    # edge POIs in favour of interior POIs that the UAV can actually reach.
+    loss_max_cfg = float(getattr(env.cfg, 'distance_loss_max', 0.40))
+    boundary_weight = 2.5 if loss_max_cfg >= 0.50 else 0.7
+    effective_risk = max(_clip01(risk / risk_max), boundary_penalty * boundary_weight)
 
     pcov = gcs_coverage_success_prob(
         norm_dist=nd, energy_margin=em, path_ctrl_quality=path_q, path_risk=effective_risk,
