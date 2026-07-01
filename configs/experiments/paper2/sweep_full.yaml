@@ -1,0 +1,43 @@
+# Paper 2 §6: Full experiment sweep configuration
+#
+# Runs all 6 baselines × 2 comm scenes (C1, C2) × 3 conflict levels (M0, M1, M2)
+# Total: 6 × 2 × 3 = 36 experiment jobs
+#
+# Usage:
+#   python scripts/paper2_sweep.py --dry-run    # preview jobs
+#   python scripts/paper2_sweep.py               # run all
+
+sweep:
+  description: "Paper 2 §6 main comparison sweep"
+
+  experiments:
+    - key: greedy_distance
+      label: Greedy-Distance
+    - key: centralized_rhp
+      label: Centralized-RHP
+    - key: periodic_dual_rhp
+      label: Periodic-Dual-RHP
+    - key: event_dual_rhp
+      label: Event-Dual-RHP
+    - key: epa_rhp_centralized
+      label: EPA-RHP-Centralized
+    - key: d_epa_rhp
+      label: D-EPA-RHP (proposed)
+
+  scenes:
+    - comm_case: c1
+      task_case: g2
+      conflict_levels: [m0, m1, m2]
+    - comm_case: c2
+      task_case: g2
+      conflict_levels: [m0, m1, m2]
+
+  common:
+    n_episodes: 10
+    seed: 42
+    step_hz: 5
+    episode_steps: 2000
+    map_size_m: 2500
+    key_bits_per_poi: 4000000
+
+  output_dir: "results/paper2/main_sweep"

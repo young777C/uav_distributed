@@ -1,0 +1,42 @@
+# Paper 2: C3 sweep — fast baselines only (no CP-SAT)
+sweep:
+  description: "Paper 2 C3 sweep — fast baselines"
+
+  experiments:
+    - key: greedy_distance
+      label: Greedy-Distance
+    - key: epa_rhp_centralized
+      label: EPA-RHP-Centralized
+    - key: d_epa_rhp
+      label: D-EPA-RHP (proposed)
+
+  scenes:
+    - scene_cfg: c3_g2_m0
+      label: C3-G2-M0 (low conflict)
+      comm_case: C3
+      task_case: G2
+      conflict_level: M0
+    - scene_cfg: c3_g2_m1
+      label: C3-G2-M1 (medium conflict)
+      comm_case: C3
+      task_case: G2
+      conflict_level: M1
+    - scene_cfg: c3_g2_m2
+      label: C3-G2-M2 (high conflict)
+      comm_case: C3
+      task_case: G2
+      conflict_level: M2
+    - scene_cfg: c3_g2_m3
+      label: C3-G2-M3 (severe conflict)
+      comm_case: C3
+      task_case: G2
+      conflict_level: M3
+
+  common:
+    n_episodes: 10
+    seed: 42
+    step_hz: 5
+    episode_steps: 2000
+    key_bits_per_poi: 4000000
+
+  output_dir: "results/paper2/c3_main_sweep"

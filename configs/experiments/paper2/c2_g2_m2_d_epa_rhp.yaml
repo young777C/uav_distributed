@@ -1,0 +1,19 @@
+# Paper 2: D-EPA-RHP — C2-G2-M2 (local occlusion, clustered, high conflict)
+extends:
+  - ../paper1/cases/c2_g2_m2.yaml
+
+experiment:
+  paper1:
+    struct: fdlc
+    modeling: comm_energy_aware_decision
+    coupling: full_coupling
+  paper2:
+    experiment: d_epa_rhp
+  n_episodes: 10
+  seed: 42
+
+paper2:
+  feedback_threshold: 0.15
+  adaptive_schedule: true
+  lambda_d: 1.0
+  lambda_m: 0.5

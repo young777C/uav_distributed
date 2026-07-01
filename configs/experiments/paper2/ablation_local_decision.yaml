@@ -1,0 +1,17 @@
+# Paper 2 §6.6.4: UAV local autonomy ablation — C2-G2-M2
+extends:
+  - ../paper1/cases/c2_g2_m2.yaml
+
+experiment:
+  paper1:
+    struct: fdlc
+    modeling: comm_energy_aware_decision
+    coupling: full_coupling
+  paper2:
+    description: "Paper 2 §6.6.4 UAV local autonomy ablation on C2-G2-M2"
+  n_episodes: 10
+  seed: 42
+
+paper2:
+  feedback_threshold: 0.15
+  adaptive_schedule: true

@@ -1,0 +1,54 @@
+# Paper 2: Main comparison sweep across all baselines
+# Runs all 6 methods on C1-G2-M2 and C2-G2-M2
+#
+# Usage:
+#   python -m uavlab.paper2.runner.run --config configs/experiments/paper2/main_comparison.yaml \
+#       --experiment d_epa_rhp --episodes 10
+
+experiment:
+  paper1:
+    struct: fdlc
+    modeling: comm_energy_aware_decision
+    coupling: full_coupling
+  paper2:
+    description: "Paper 2 §6.6 main comparison across C1-G2-M2 and C2-G2-M2"
+  n_episodes: 10
+  seed: 42
+
+step_hz: 5
+episode_steps: 2000
+map_size_m: 2500
+gcs_ne: [1250, 1250]
+key_bits_per_poi: 4000000
+
+env:
+  fast_upload_mode: policy
+
+paper1_loops:
+  return_policy:
+    enable_backlog_gates: true
+    enable_upload_stuck_recovery: true
+  slow_policy: periodic_or_event_replan
+  allow_waypoint_delta: true
+  allow_mode_switching: true
+  semantics:
+    enable_event_feedback: true
+    enable_goal_lock: true
+    enable_fast_mode_switch: true
+    use_comm_in_fast: true
+    use_energy_in_fast: true
+    use_comm_in_slow: true
+    use_energy_in_slow: true
+  slow_loop:
+    slow_interval_steps: 40
+    replan_trigger_policy: hybrid
+    periodic_replan_scope: repeat
+    window_k: 12
+    prefetch_k_multiplier: 3
+    horizon_h: 4
+
+paper2:
+  feedback_threshold: 0.15
+  adaptive_schedule: true
+  lambda_d: 1.0
+  lambda_m: 0.5

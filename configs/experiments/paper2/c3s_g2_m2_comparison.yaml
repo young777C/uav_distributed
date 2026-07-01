@@ -1,0 +1,32 @@
+# Paper 2: C3-severe comparison sweep
+# C3-severe = stronger blackholes + tighter data thresholds
+sweep:
+  description: "Paper 2 C3 vs C3-Severe comparison"
+
+  experiments:
+    - key: greedy_distance
+      label: Greedy-Distance
+    - key: event_dual_rhp
+      label: Event-Dual-RHP (Paper1 FDLC)
+    - key: d_epa_rhp
+      label: D-EPA-RHP (proposed)
+
+  scenes:
+    - scene_cfg: c3_g2_m2
+      label: C3-G2-M2 (standard)
+      comm_case: C3
+      task_case: G2
+      conflict_level: M2
+    - scene_cfg: c3s_g2_m2
+      label: C3S-G2-M2 (severe)
+      comm_case: C3S
+      task_case: G2
+      conflict_level: M2
+
+  common:
+    n_episodes: 5
+    seed: 42
+    step_hz: 5
+    episode_steps: 2000
+
+  output_dir: "results/paper2/c3_severe_comparison"

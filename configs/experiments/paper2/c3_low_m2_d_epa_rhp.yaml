@@ -1,0 +1,19 @@
+# D-EPA-RHP V2 — C3 Low, G2-M2
+extends:
+  - ../paper1/cases/c3_low_m2.yaml
+
+experiment:
+  paper1:
+    struct: fdlc
+    modeling: comm_energy_aware_decision
+    coupling: full_coupling
+  paper2:
+    experiment: d_epa_rhp
+  n_episodes: 3
+  seed: 42
+
+paper2:
+  feedback_threshold: 0.15
+  adaptive_schedule: true
+  lambda_d: 1.0
+  lambda_m: 0.5

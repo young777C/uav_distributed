@@ -1,0 +1,36 @@
+# Paper 2 §6.6: Ablation experiment sweep
+sweep:
+  description: "Paper 2 §6.6 ablation experiments"
+
+  experiments:
+    # §6.6.1 Task effectiveness (vary prob model)
+    - key: d_epa_rhp
+      label: D-EPA-RHP (full)
+    - key: epa_rhp_centralized
+      label: w/o UAV Local Decision
+    # §6.6.3 VoI feedback
+    - key: event_dual_rhp
+      label: w/o VoI (event-only)
+    - key: periodic_dual_rhp
+      label: w/o VoI (periodic)
+    # §6.6.4 Local autonomy
+    - key: centralized_rhp
+      label: w/o Local Autonomy
+
+  scenes:
+    - comm_case: c1
+      task_case: g2
+      conflict_levels: [m2]
+    - comm_case: c2
+      task_case: g2
+      conflict_levels: [m2]
+
+  common:
+    n_episodes: 10
+    seed: 42
+    step_hz: 5
+    episode_steps: 2000
+    map_size_m: 2500
+    key_bits_per_poi: 4000000
+
+  output_dir: "results/paper2/ablations"
