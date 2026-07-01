@@ -9,6 +9,15 @@ Overrides Paper 1 FastLoop:
 - Safe action set A^safe_U is pre-filtered by energy, control link, and safety (Eq. 25).
 - Reports prediction-execution discrepancy for VoI feedback.
 
+V5 (2026-07-01): FSM path planning integration.
+- INSPECT prediction uses pick_waypoint() for nofly-aware approach (not straight-line).
+- SAFE prediction uses pick_nofly_escape_target() — only escapes when in nofly,
+  preserving task direction via mission_goal_ne.
+- RECOVER prediction uses pick_link_recovery_waypoint() — candidate-sampled recovery.
+- 100 m boundary margin replaced by FSM path planning; only 20 m guard remains.
+- near_boundary action pre-filtering removed — probability evaluation with FSM-
+  augmented predictions naturally selects the best action.
+
 Wraps Paper1 FastLoop for trajectory tracking and waypoint computation.
 """
 
@@ -67,7 +76,7 @@ class ActionEvaluation:
 
 @dataclass
 class Paper2FastLoop:
-    """Probability-driven fast loop (§5.3).
+    """Probability-driven fast loop with FSM-augmented action evaluation (§5.3, V5).
 
     Extends Paper1's FastLoop by replacing FSM with action-conditional
     probability evaluation.
@@ -76,6 +85,13 @@ class Paper2FastLoop:
     - Actions are scored by P̂^eff + backlog improvement - mode switch cost
     - Safe action set is explicitly pre-filtered
     - Reports local probability evaluation for VoI feedback
+
+    V5 (2026-07-01): FSM path planning integration.
+    - INSPECT/SAFE/RECOVER predictions delegate to FSM guidance functions
+      (pick_waypoint / pick_nofly_escape_target / pick_link_recovery_waypoint)
+      instead of simple geometric straight-line calculations.
+    - Boundary margin reduced from 100 m → 20 m; path safety handled by FSM.
+    - near_boundary action pre-filtering removed.
     """
 
     env: Paper1Env
@@ -141,18 +157,18 @@ class Paper2FastLoop:
         return bool(control_link_ok(link, th))
 
     def _safety_feasible(self, predicted_pos_ne: Tuple[float, float]) -> bool:
-        """G_S: local safety check (nofly zones + adaptive map boundary margin).
+        """G_S: local safety check (nofly zones + tight map boundary margin).
 
-        Margin scales with degradation severity: lower margin at higher degradation
-        because link quality is already poor everywhere, so boundary exclusion
-        costs more (lost coverage) than it saves (OOB prevention).
+        V5: Boundary safety is now handled by FSM path planning functions
+        (pick_waypoint / pick_nofly_escape_target) rather than a crude 100m margin.
+        The boundary margin here is only a last-resort guard against numerical
+        overshoot — 20m is sufficient for that purpose.
         """
         if bool(self.env.in_nofly(predicted_pos_ne)):
             return False
-        # Adaptive margin: keep 100m minimum at all degradation levels.
-        # At high degradation the UAV flies more aggressively near boundaries
-        # (INS instead of SAFE), so margins must stay large to prevent OOB.
-        margin = float(getattr(self.env.cfg, 'boundary_safety_margin_m', 100.0))
+        # Tight margin only: FSM path planning handles boundary avoidance.
+        # 20 m ≈ 2 steps at 11 m/s with 0.2 s dt — enough to prevent OOB.
+        margin = 20.0
         n_min = float(self.env.cfg.n_min)
         n_max = float(self.env.cfg.n_max)
         px, py = float(predicted_pos_ne[0]), float(predicted_pos_ne[1])
@@ -192,9 +208,11 @@ class Paper2FastLoop:
         speed = float(getattr(self.env.cfg, 'v_xy_cruise', 11.0))
 
         if action == UavAction.INSPECT and goal_id is not None:
-            # Move toward goal
-            dx = goal_ne[0] - pos[0]
-            dy = goal_ne[1] - pos[1]
+            # V5: Use FSM pick_waypoint() for nofly-aware, boundary-safe approach.
+            # Replaces straight-line flight which blindly enters boundary danger zones.
+            wp = pick_waypoint(env=self.env, goal_ne=goal_ne, contract=self.contract)
+            dx = wp[0] - pos[0]
+            dy = wp[1] - pos[1]
             d = math.hypot(dx, dy)
             if d > 1.0:
                 step_dist = min(d, speed * dt_s)
@@ -209,9 +227,19 @@ class Paper2FastLoop:
             pred_energy -= float(self.env.cfg.energy_hover_per_s) * dt_s
 
         elif action == UavAction.RECOVER:
-            # Move toward GCS (improving link)
-            dx = float(self.env.cfg.gcs_ne[0]) - pos[0]
-            dy = float(self.env.cfg.gcs_ne[1]) - pos[1]
+            # V5: Use FSM pick_link_recovery_waypoint() to find optimal link-recovery
+            # position via candidate sampling (ring + GCS-direction), filtered by
+            # nofly zones and link quality thresholds. Replaces simple GCS homing.
+            fb = goal_ne if goal_id is not None else (
+                float(self.env.cfg.gcs_ne[0]), float(self.env.cfg.gcs_ne[1]))
+            recovery_target = pick_link_recovery_waypoint(
+                env=self.env,
+                contract=self.contract,
+                params=self.params,
+                fallback_ne=fb,
+            )
+            dx = recovery_target[0] - pos[0]
+            dy = recovery_target[1] - pos[1]
             d = math.hypot(dx, dy)
             if d > 1.0:
                 step_dist = min(d, speed * dt_s)
@@ -223,9 +251,19 @@ class Paper2FastLoop:
             pred_loss_p = float(pred_link.loss_p)
 
         elif action == UavAction.SAFE:
-            # Safe exit — move toward GCS (away from boundaries/threats)
-            dx = float(self.env.cfg.gcs_ne[0]) - pos[0]
-            dy = float(self.env.cfg.gcs_ne[1]) - pos[1]
+            # V5: Use FSM pick_nofly_escape_target() with mission_goal_ne reference.
+            # Only triggers actual escape when inside nofly zone; otherwise returns
+            # goal_ne directly, preserving task progress. Replaces the old GCS-only
+            # homing which unconditionally abandoned task direction.
+            fb = goal_ne if goal_id is not None else (
+                float(self.env.cfg.gcs_ne[0]), float(self.env.cfg.gcs_ne[1]))
+            escape_target = pick_nofly_escape_target(
+                env=self.env,
+                contract=self.contract,
+                mission_goal_ne=fb,
+            )
+            dx = escape_target[0] - pos[0]
+            dy = escape_target[1] - pos[1]
             d = math.hypot(dx, dy)
             if d > 1.0:
                 step_dist = min(d, speed * dt_s)
@@ -372,13 +410,20 @@ class Paper2FastLoop:
 
 
     def step(self, obs: FastObservation, plan: SlowPlan, dt: float) -> tuple[FastCommand, float]:
-        """V2 fast-loop step with phase-based action restriction.
+        """V5 fast-loop step: FSM-augmented action evaluation.
 
-        Phase A (goal NOT covered):  {INSPECT, SAFE} — fly to goal, stay safe.
+        V5 changes (vs V2):
+        - INSPECT uses pick_waypoint() for nofly-aware approach (not straight-line).
+        - SAFE uses pick_nofly_escape_target() — only escapes when truly in nofly.
+        - RECOVER uses pick_link_recovery_waypoint() — candidate-sampled recovery.
+        - 100 m boundary margin replaced by FSM path planning; only 20 m guard remains.
+        - near_boundary action pre-filtering removed — probability evaluation
+          naturally selects the best action given the FSM-augmented predictions.
+        - Action hysteresis preserved (15-step commitment) to dampen oscillation.
+
+        Phase A (goal NOT covered):  {INSPECT, SAFE, RECOVER} — evaluate all.
         Phase B (goal covered, data pending): {TRANSMIT, RECOVER} — return data.
         Safety/energy overrides always available.
-
-        Action hysteresis prevents mode oscillation (min 15-step commitment).
         """
         gid = plan.goal_id
         gx, gy = float(plan.goal_ne[0]), float(plan.goal_ne[1])
@@ -392,43 +437,38 @@ class Paper2FastLoop:
         in_return_phase = gid is None
 
         # ── Safety / energy override checks ──
-        near_boundary = not self._safety_feasible(
-            (float(self.env.pos_ne[0]), float(self.env.pos_ne[1])))
+        # V5: Only check actual nofly intrusion, not boundary margin.
+        # Boundary safety is handled by pick_waypoint/pick_nofly_escape_target.
+        in_nofly_now = bool(self.env.in_nofly(
+            (float(self.env.pos_ne[0]), float(self.env.pos_ne[1]))))
         # Energy critical: only when truly cannot reach any more POIs.
         home_need = float(energy_return_need_from_env(self.env))
         energy_critical = float(self.env.remaining_energy) < home_need
 
-        # ── Degradation-aware: at high degradation, prioritize coverage over safety ──
-        loss_max_cfg = float(getattr(self.env.cfg, 'distance_loss_max', 0.40))
-        high_degradation = loss_max_cfg >= 0.50  # High or Severe
-
-        # ── Phase-based candidate action set (V4: degradation-aware) ──
+        # ── Phase-based candidate action set (V5: FSM-augmented) ──
         if in_return_phase:
             candidate_actions = [UavAction.RETURN]
         elif energy_critical:
             candidate_actions = [UavAction.RETURN, UavAction.RECOVER]
-        elif near_boundary and not high_degradation:
-            # Low/Medium: stay safe near boundaries
-            candidate_actions = [UavAction.SAFE, UavAction.RECOVER]
-        elif near_boundary and high_degradation:
-            # High/Severe: accept boundary risk, keep flying to goal
-            candidate_actions = [UavAction.INSPECT, UavAction.SAFE, UavAction.RECOVER]
+        elif in_nofly_now:
+            # Actually inside nofly zone — SAFE is mandatory.
+            # pick_nofly_escape_target will push outward while keeping goal direction.
+            candidate_actions = [UavAction.SAFE]
         elif goal_covered_now and not goal_returned_now and has_backlog:
             # Phase B: at covered POI, need to return data.
-            # At high degradation, limit RECOVER (link improvement is marginal).
-            if high_degradation:
-                candidate_actions = [UavAction.TRANSMIT]
-            else:
-                candidate_actions = [UavAction.TRANSMIT, UavAction.RECOVER]
+            candidate_actions = [UavAction.TRANSMIT, UavAction.RECOVER]
         else:
-            # Phase A: flying to uncovered goal
-            candidate_actions = [UavAction.INSPECT, UavAction.SAFE]
+            # Phase A: flying to uncovered goal.
+            # V5: include RECOVER in Phase A — at high degradation, link-aware
+            # approach may outperform blind straight-line flight. Probability
+            # evaluation (now FSM-augmented) selects the best action naturally.
+            candidate_actions = [UavAction.INSPECT, UavAction.SAFE, UavAction.RECOVER]
 
         # ── Action hysteresis: hold committed action unless overridden ──
         if (self._committed_action is not None
                 and self._committed_action in candidate_actions
                 and current_step - self._action_commit_step < self.MIN_ACTION_DURATION
-                and not near_boundary
+                and not in_nofly_now
                 and not energy_critical):
             candidate_actions = [self._committed_action]
 
