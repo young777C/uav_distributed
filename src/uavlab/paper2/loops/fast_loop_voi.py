@@ -122,6 +122,8 @@ class Paper2FastLoop:
         self._previous_mode = FastCommState.INS
         self._last_action = UavAction.INSPECT
         self._last_probability = 0.0
+        self._phase_b_goal_id = None
+        self._phase_b_entry_step = -1
 
     @property
     def control_link_lost(self) -> bool:
@@ -409,6 +411,18 @@ class Paper2FastLoop:
     _committed_action: Optional[UavAction] = None
     MIN_ACTION_DURATION: int = 15         # minimum steps to hold an action
 
+    # ——— P0 fix 3: Phase B commit-or-skip state ———
+    _phase_b_goal_id: Optional[int] = None   # POI we're in Phase B for
+    _phase_b_entry_step: int = -1            # step when Phase B started
+    SKIP_TRANSMIT_THRESHOLD: float = 0.12    # below this prob → TRANSMIT is hopeless
+
+    # ——— P0 diagnostic counters (temporary) ———
+    _diag_phase_a_steps: int = 0
+    _diag_link_critical_steps: int = 0
+    _diag_recover_in_phase_a_steps: int = 0
+    _diag_recover_chosen_in_phase_a: int = 0
+    _diag_phase_b_skip_steps: int = 0
+
 
     # ——— Main step (V2: phase-based action restriction) ———
 
@@ -440,6 +454,20 @@ class Paper2FastLoop:
         has_backlog = float(getattr(self.env, 'backlog_bits', 0.0)) > 0
         in_return_phase = gid is None
 
+        # ── M3 link-critical detection (P0 fix 1) ──
+        # When the current link loss exceeds the data-return threshold by >30%,
+        # the UAV is in an M3-like regime: covering new POIs without data-return
+        # capability wastes flight time.  RECOVER is conditionally re-introduced
+        # during Phase A to let the UAV improve its link position *before*
+        # arriving at the POI, so that subsequent Phase B TRANSMIT is effective.
+        th_data = self.contract.dual_link
+        data_loss_max = float(th_data.data_max_loss_p)
+        current_loss_p = float(getattr(obs, 'link_loss_p', 0.0))
+        # Link is critical when loss exceeds the data-return threshold.
+        # (Previously 1.3× multiplier — relaxed to 1.0× since return_cond_prob
+        #  now correctly reflects POI-position link quality.)
+        link_critical = current_loss_p > data_loss_max
+
         # ── Safety / energy override checks ──
         # V5: Only check actual nofly intrusion, not boundary margin.
         # Boundary safety is handled by pick_waypoint/pick_nofly_escape_target.
@@ -449,7 +477,7 @@ class Paper2FastLoop:
         home_need = float(energy_return_need_from_env(self.env))
         energy_critical = float(self.env.remaining_energy) < home_need
 
-        # ── Phase-based candidate action set (V5: FSM-augmented) ──
+        # ── Phase-based candidate action set (V5: FSM-augmented + P0 fix 1) ──
         if in_return_phase:
             candidate_actions = [UavAction.RETURN]
         elif energy_critical:
@@ -459,15 +487,65 @@ class Paper2FastLoop:
             # pick_nofly_escape_target will push outward while keeping goal direction.
             candidate_actions = [UavAction.SAFE]
         elif goal_covered_now and not goal_returned_now and has_backlog:
-            # Phase B: at covered POI, need to return data.
-            candidate_actions = [UavAction.TRANSMIT, UavAction.RECOVER]
+            # ── P0 fix 3: Phase B commit-or-skip ──
+            # Track Phase B entry for this POI.
+            if self._phase_b_goal_id != gid:
+                self._phase_b_goal_id = gid
+                self._phase_b_entry_step = current_step
+
+            phase_b_steps = current_step - self._phase_b_entry_step
+
+            # Evaluate TRANSMIT viability at current position.
+            tx_eval = self._evaluate_action(
+                action=UavAction.TRANSMIT, goal_id=gid, goal_ne=goal_ne, dt_s=float(dt))
+
+            if (tx_eval.prob < self.SKIP_TRANSMIT_THRESHOLD
+                    and phase_b_steps >= self.MIN_ACTION_DURATION):
+                # SKIP: TRANSMIT probability is critically low even after a full
+                # hysteresis window.  Force RECOVER — the UAV must improve its
+                # link position instead of oscillating between TRANSMIT (futile)
+                # and RECOVER (too brief).
+                self._diag_phase_b_skip_steps += 1
+
+                if phase_b_steps >= self.MIN_ACTION_DURATION * 2:
+                    # DEEP SKIP: local RECOVER has failed for an extended period
+                    # (M3: no good-link position exists in the local neighbourhood).
+                    # Add RETURN — it moves toward GCS where link gradually
+                    # improves, allowing the background return queue to transmit
+                    # data during transit.  Once data is returned, the slow loop
+                    # advances to the next POI automatically.
+                    candidate_actions = [UavAction.RECOVER, UavAction.RETURN]
+                else:
+                    # Stage 1 skip: try local link improvement via RECOVER.
+                    candidate_actions = [UavAction.RECOVER]
+            else:
+                # COMMIT / TRIAL: TRANSMIT has reasonable chance, or we haven't
+                # tried long enough yet.  Standard Phase B behaviour.
+                candidate_actions = [UavAction.TRANSMIT, UavAction.RECOVER]
+        elif link_critical:
+            # P0 fix 1: M3 condition — link critically degraded during Phase A.
+            # RECOVER is re-introduced so the UAV can improve its communication
+            # position *en route* rather than arriving at a weak-link POI with
+            # no hope of returning data.  The probability evaluation still
+            # selects the best action among {INSPECT, SAFE, RECOVER}.
+            candidate_actions = [UavAction.INSPECT, UavAction.SAFE, UavAction.RECOVER]
+            self._diag_link_critical_steps += 1
         else:
-            # Phase A: flying to uncovered goal.
+            # Phase A (normal link): flying to uncovered goal.
             # V5: FSM-augmented INSPECT (pick_waypoint) provides nofly-aware
             # approach; SAFE (pick_nofly_escape_target) handles actual nofly
-            # intrusion. RECOVER is excluded — link recovery during Phase A
-            # wastes time that should be spent covering new POIs.
+            # intrusion. RECOVER excluded — link is healthy, no need to recover.
             candidate_actions = [UavAction.INSPECT, UavAction.SAFE]
+
+        # ── P0 diag: track Phase A steps ──
+        if not goal_covered_now and not in_return_phase and not energy_critical and not in_nofly_now:
+            self._diag_phase_a_steps += 1
+
+        # ── P0 fix 3: reset Phase B state when leaving Phase B ──
+        if not (goal_covered_now and not goal_returned_now and has_backlog):
+            if self._phase_b_goal_id is not None:
+                self._phase_b_goal_id = None
+                self._phase_b_entry_step = -1
 
         # ── Action hysteresis: hold committed action unless overridden ──
         if (self._committed_action is not None
@@ -508,6 +586,11 @@ class Paper2FastLoop:
         best = max(safe_or_fallback, key=lambda e: e.utility)
         self._last_action = best.action
         self._last_probability = best.prob
+
+        # ── P0 diag: track RECOVER chosen in Phase A ──
+        if (best.action == UavAction.RECOVER and not goal_covered_now
+                and not in_return_phase and not energy_critical):
+            self._diag_recover_chosen_in_phase_a += 1
 
         # Update hysteresis state
         if best.action != self._committed_action:
