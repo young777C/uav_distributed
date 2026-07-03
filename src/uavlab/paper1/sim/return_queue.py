@@ -156,6 +156,7 @@ class ReturnQueue:
         dt_s: float,
         now_s: float,
         params: ReturnDecisionParams | None = None,
+        comm_mode: str | None = None,
     ) -> ReturnProgressResult:
         p = params or ReturnDecisionParams()
         completed: List[int] = []
@@ -164,8 +165,25 @@ class ReturnQueue:
 
         max_loss = float(p.max_loss_p_for_return)
 
+        # ── Mode-aware bandwidth factor ──
+        # Data return is NOT a free background process — the UAV's action mode
+        # determines how much bandwidth is available for transmission.
+        #   TX / BACK : 1.0×  dedicated transmission (hovering / homing)
+        #   INS       : 0.3×  multitasking during transit to next POI
+        #   REC / SAFE: 0.5×  opportunistic during link recovery / safety
+        _mode = str(comm_mode) if comm_mode else ""
+        if _mode in ("Stx", "Sback"):
+            bw_factor = 1.0
+        elif _mode in ("Sins",):
+            bw_factor = 0.3
+        elif _mode in ("Srec", "Ssafe"):
+            bw_factor = 0.5
+        else:
+            bw_factor = 1.0  # unknown mode → conservative (backward compat)
+
         if float(link.loss_p) <= max_loss:
-            budget = float(effective_bandwidth_bps(link)) * float(max(0.0, dt_s))
+            budget = (float(effective_bandwidth_bps(link)) * float(max(0.0, dt_s))
+                      * bw_factor)
             remaining_budget = budget
             for pid in list(self._order):
                 if remaining_budget <= 0.0:

@@ -371,6 +371,7 @@ class Paper1Env:
         *,
         dt_s: float | None = None,
         params: ReturnDecisionParams | None = None,
+        comm_mode: str | None = None,
     ) -> ReturnProgressResult:
         """
         Incrementally return pending key data (per-POI FCFS, ``b_eff * dt`` per step).
@@ -388,6 +389,7 @@ class Paper1Env:
             dt_s=dt,
             now_s=t_now,
             params=params,
+            comm_mode=comm_mode if comm_mode else str(self.comm_mode.value),
         )
         for pid in result.completed_ids:
             ip = int(pid)
