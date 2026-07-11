@@ -39,7 +39,8 @@ def test_contract_comm_energy_aware_decision_sanity():
     assert c.use_comm_in_fast is True
     assert c.use_energy_in_fast is True
     assert c.comm_path_quality_mask is True
-    assert c.energy_budget_constraint is True
+    assert c.energy_hard_constraint is True
+    assert c.energy_budget_constraint is False
 
 
 def test_contract_comm_aware_decision_semantics():
@@ -54,6 +55,8 @@ def test_contract_comm_aware_decision_semantics():
     assert c.comm_path_quality_mask is True
     assert c.energy_budget_constraint is False
     assert c.energy_hard_constraint is False
+    assert bool(c.struct_profile.use_struct_comm_profile) is True
+    assert float(c.struct_profile.energy_plan_margin_frac) == 0.0
 
 
 def test_contract_energy_aware_decision_semantics():
@@ -67,6 +70,9 @@ def test_contract_energy_aware_decision_semantics():
     assert c.use_energy_in_fast is True
     assert c.comm_path_quality_mask is False
     assert c.energy_budget_constraint is True
+    assert bool(c.struct_profile.use_struct_comm_profile) is False
+    assert float(c.struct_profile.comm_ret_objective_weight) == 0.0
+    assert c.return_policy.enable_backlog_gates is False
 
 
 def test_semantics_disable_event_feedback():

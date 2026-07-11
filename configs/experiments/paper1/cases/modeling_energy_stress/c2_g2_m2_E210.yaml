@@ -1,0 +1,13 @@
+# Modeling-axis only: energy pressure on (C2, G2, M2). Not in struct/coupling case globs.
+#
+# Tier E210: ~20% lower pack energy + ~10% higher cruise power vs base (§8 physical model).
+# Goal: make joint/energy profiles show S_back / return-home without changing C/G/M comm layout.
+extends: ../c2_g2_m2.yaml
+
+energy:
+  E_0_Wh: 210.0
+  P_fly_W: 440.0
+
+experiment:
+  env_case:
+    energy_stress_tier: E210

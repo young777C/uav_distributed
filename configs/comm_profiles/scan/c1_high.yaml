@@ -1,0 +1,19 @@
+# C1 high degradation: 1.25 x the current medium profile.
+train:
+  comm_mode: degraded
+
+comm:
+  enable_distance_decay: true
+  distance_d0_m: 0.0
+  distance_d1_m: 2500.0
+  distance_loss_min: 0.0625
+  distance_loss_max: 0.50
+  loss_jitter_sigma: 0.10
+  delay_mean_s: 0.125
+  delay_jitter_s: 0.10
+  use_scene_blackholes: false
+
+experiment:
+  comm_degradation:
+    level: high
+    multiplier: 1.25

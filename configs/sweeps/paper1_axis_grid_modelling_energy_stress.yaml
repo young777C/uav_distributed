@@ -1,0 +1,26 @@
+# Modeling axis + energy pressure cases (§6.3.2 + Layer-A stress).
+#
+# Cases live under cases/modeling_energy_stress/ — excluded from struct sweep glob
+# ``configs/experiments/paper1/cases/*.yaml`` and from coupling v2 explicit lists.
+#
+# Compare baseline M2 vs E210 within the same 3 modeling profiles.
+
+axis_grid:
+  cases:
+    - configs/experiments/paper1/cases/c1_g1.yaml
+    - configs/experiments/paper1/cases/c2_
+    - configs/experiments/paper1/cases/c2_g2_m2.yaml
+    - configs/experiments/paper1/cases/modeling_energy_stress/c2_g2_m2_E210.yaml
+    - configs/experiments/paper1/cases/c1_g2_m2.yaml
+    - configs/experiments/paper1/cases/modeling_energy_stress/c1_g2_m2_E210.yaml
+  systems:
+    - configs/experiments/paper1/system/modelling_comm_aware_decision.yaml
+    - configs/experiments/paper1/system/modelling_energy_aware_decision.yaml
+    - configs/experiments/paper1/system/modelling_comm_energy_aware_decision.yaml
+
+episodes: 5
+seeds: [0, 1, 2]
+slow_interval_steps_list: [40]
+comm_mode: ""
+runs_root: runs/sweeps
+runner_module: uavlab.paper1.runner.run

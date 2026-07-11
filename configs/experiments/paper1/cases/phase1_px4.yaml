@@ -1,0 +1,15 @@
+# Phase 1 PX4+Gazebo verification case
+# Small scene (200m×200m, 3 POIs) for SITL validation
+extends:
+  - ../../../base.yaml
+  - ../../../comm_profiles/c3_low.yaml
+
+scene_file: configs/scenes/phase1_px4.yaml
+
+experiment:
+  env_case:
+    comm_case: C3
+    task_case: G2
+    conflict_level: M0
+  comm_degradation:
+    level: low

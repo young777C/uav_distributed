@@ -1,0 +1,37 @@
+# Phase 1 PX4+Gazebo verification scene (200m × 200m, 6 POIs)
+# Gazebo Iris 默认起降于 (0, 0, 0)，GCS 映射到该点。
+# POIs 均匀分布在四个象限，覆盖完整 200m×200m 区域。
+
+n_min: -100.0
+n_max: 100.0
+e_min: -100.0
+e_max: 100.0
+
+start_ne: [0.0, 0.0]
+goal_ne: [0.0, 0.0]
+goal_radius_m: 8.0
+gcs_ne: [0.0, 0.0]
+
+visit_radius_m: 8.0
+key_data_radius_m: 1.0
+
+# 简单边界禁飞 (boundary_as_nofly 防止飞出 200m × 200m)
+boundary_as_nofly: true
+boundary_buffer_m: 10.0
+
+# 无额外禁飞圆 (Phase 1 验证不涉及禁飞绕行)
+nofly_circles: []
+obstacles_circles: []
+communication_blackholes: []
+
+collision_margin_m: 0.5
+
+# 6 个测试航点 — 覆盖 200m×200m 全区域
+# NE象限 (2), NW象限 (1), SE象限 (1), SW象限 (2)
+poi_list:
+  - [50.0, 30.0]     # POI 0: NE象限，距GCS 58m
+  - [-60.0, 50.0]    # POI 1: NW象限，距GCS 78m
+  - [-70.0, -40.0]   # POI 2: SW象限，距GCS 81m
+  - [30.0, -60.0]    # POI 3: SE象限，距GCS 67m
+  - [80.0, -20.0]    # POI 4: NE/SE边界，距GCS 82m
+  - [-20.0, 80.0]    # POI 5: NW边界，距GCS 82m

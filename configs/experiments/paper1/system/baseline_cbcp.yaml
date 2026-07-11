@@ -1,0 +1,15 @@
+# External baseline: CBCP (connectivity–battery constrained planning)
+experiment:
+  paper1:
+    external_baseline: cbcp
+    # No struct/modeling/coupling — this is NOT part of the FDLC axis grid.
+
+env:
+  fast_upload_mode: fixed
+  fixed_send_ratio: 1.0   # best-effort return (no FSM duty cycle)
+
+paper1_loops:
+  semantics:
+    structure: fdlc
+    enable_event_feedback: false
+    enable_fast_mode_switch: false

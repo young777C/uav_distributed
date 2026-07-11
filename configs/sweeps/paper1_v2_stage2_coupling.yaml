@@ -1,0 +1,40 @@
+# Paper1 V2 Stage 2 — Coupling mechanism ablation
+#
+#   Strategies: 2 (Periodic Goal, Event-driven Goal) — NEW
+#   Full Coupling REUSES FDLC @ rho=40 from stage1_struct
+#   Scenes:  16 (C3 × G2 × {M0,M1,M2,M3} × {low,medium,high,severe})
+#   Rho:     40
+#   Seeds:    5
+#   Eps/seed: 15
+#   Total:    2 × 16 × 5 × 15 = 2,400 episodes
+#
+# DO NOT re-run coupling_full_coupling.yaml — it is identical to FDLC.
+
+axis_grid:
+  cases:
+    - configs/experiments/paper1/cases/c3_low_m0.yaml
+    - configs/experiments/paper1/cases/c3_low_m1.yaml
+    - configs/experiments/paper1/cases/c3_low_m2.yaml
+    - configs/experiments/paper1/cases/c3_low_m3.yaml
+    - configs/experiments/paper1/cases/c3_medium_m0.yaml
+    - configs/experiments/paper1/cases/c3_medium_m1.yaml
+    - configs/experiments/paper1/cases/c3_medium_m2.yaml
+    - configs/experiments/paper1/cases/c3_medium_m3.yaml
+    - configs/experiments/paper1/cases/c3_high_m0.yaml
+    - configs/experiments/paper1/cases/c3_high_m1.yaml
+    - configs/experiments/paper1/cases/c3_high_m2.yaml
+    - configs/experiments/paper1/cases/c3_high_m3.yaml
+    - configs/experiments/paper1/cases/c3_severe_m0.yaml
+    - configs/experiments/paper1/cases/c3_severe_m1.yaml
+    - configs/experiments/paper1/cases/c3_severe_m2.yaml
+    - configs/experiments/paper1/cases/c3_severe_m3.yaml
+  systems:
+    - configs/experiments/paper1/system/coupling_periodic_goal.yaml
+    - configs/experiments/paper1/system/coupling_event_driven_goal.yaml
+
+episodes: 15
+seeds: [0, 1, 2, 3, 4]
+slow_interval_steps_list: [40]
+comm_mode: ""
+runs_root: results_v2/stage2_coupling
+runner_module: uavlab.paper1.runner.run_vis

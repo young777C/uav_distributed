@@ -1,0 +1,39 @@
+# Paper1 V2 Stage 1 — Overall method comparison: external baselines
+#
+#   Methods:  2 (RHC-Inspection, CBCP)
+#   Scenes:  16 (C3 × G2 × {M0,M1,M2,M3} × {low,medium,high,severe})
+#   Rho:     40 (baselines replan at the same interval)
+#   Seeds:    8
+#   Eps/seed: 20
+#   Total:    2 × 16 × 8 × 20 = 5,120 episodes
+#
+# These results are paired with stage1_struct under the same scene_id–seed–episode_id.
+
+axis_grid:
+  cases:
+    - configs/experiments/paper1/cases/c3_low_m0.yaml
+    - configs/experiments/paper1/cases/c3_low_m1.yaml
+    - configs/experiments/paper1/cases/c3_low_m2.yaml
+    - configs/experiments/paper1/cases/c3_low_m3.yaml
+    - configs/experiments/paper1/cases/c3_medium_m0.yaml
+    - configs/experiments/paper1/cases/c3_medium_m1.yaml
+    - configs/experiments/paper1/cases/c3_medium_m2.yaml
+    - configs/experiments/paper1/cases/c3_medium_m3.yaml
+    - configs/experiments/paper1/cases/c3_high_m0.yaml
+    - configs/experiments/paper1/cases/c3_high_m1.yaml
+    - configs/experiments/paper1/cases/c3_high_m2.yaml
+    - configs/experiments/paper1/cases/c3_high_m3.yaml
+    - configs/experiments/paper1/cases/c3_severe_m0.yaml
+    - configs/experiments/paper1/cases/c3_severe_m1.yaml
+    - configs/experiments/paper1/cases/c3_severe_m2.yaml
+    - configs/experiments/paper1/cases/c3_severe_m3.yaml
+  systems:
+    - configs/experiments/paper1/system/baseline_rhc_inspection.yaml
+    - configs/experiments/paper1/system/baseline_cbcp.yaml
+
+episodes: 20
+seeds: [0, 1, 2, 3, 4, 5, 6, 7]
+slow_interval_steps_list: [40]
+comm_mode: ""
+runs_root: results_v2/stage1_baselines
+runner_module: uavlab.paper1.runner.run_baseline

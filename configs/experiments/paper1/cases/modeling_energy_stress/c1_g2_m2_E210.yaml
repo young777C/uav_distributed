@@ -1,0 +1,10 @@
+# Modeling-axis only: energy pressure on (C1, G2, M2). Not in struct/coupling case globs.
+extends: ../c1_g2_m2.yaml
+
+energy:
+  E_0_Wh: 210.0
+  P_fly_W: 440.0
+
+experiment:
+  env_case:
+    energy_stress_tier: E210

@@ -1,0 +1,25 @@
+# C3 medium degradation: paper baseline (F1 + F2 + F3).
+# Matches UAV_GCS_通信阈值设置说明.md §9.2 defaults (ρ_data^max=0.20 via base.yaml).
+train:
+  comm_mode: degraded
+
+comm:
+  # F1: smooth distance-dependent degradation from GCS to UAV.
+  enable_distance_decay: true
+  distance_d0_m: 0.0
+  distance_d1_m: 2500.0
+  distance_loss_min: 0.05
+  distance_loss_max: 0.40
+
+  # F2: extra local degradation inside scene communication shadow regions.
+  use_scene_blackholes: true
+  blackhole_extra_loss: 0.15
+
+  # F3: stochastic time-varying fading.
+  loss_jitter_sigma: 0.08
+  data_chunk_bits: 4000000.0
+
+experiment:
+  comm_degradation:
+    level: medium
+    multiplier: 1.0

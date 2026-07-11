@@ -1,0 +1,17 @@
+# Stage 3 — FDLC P0-d2 timescale sensitivity re-run
+# Only rho=20,80,100 (rho=40 reuses Stage 1 FDLC-d2 v4)
+axis_grid:
+  cases:
+    - configs/experiments/paper1/cases/c3_medium_m2.yaml
+    - configs/experiments/paper1/cases/c3_high_m2.yaml
+    - configs/experiments/paper1/cases/c3_high_m3.yaml
+    - configs/experiments/paper1/cases/c3_severe_m3.yaml
+  systems:
+    - configs/experiments/paper1/system/struct_full_dual_loop_distributed.yaml
+
+episodes: 15
+seeds: [0, 1, 2, 3, 4]
+slow_interval_steps_list: [20, 80, 100]
+comm_mode: ""
+runs_root: results_v2/stage3_fdlc_d2
+runner_module: uavlab.paper1.runner.run_vis

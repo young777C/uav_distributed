@@ -1,0 +1,12 @@
+# Layer 1b: FDLC on C2–G2–M2, ρ ∈ {5, 10, 20, 40, 80}
+axis_grid:
+  cases:
+    - configs/experiments/paper1/cases/c2_g2_m2.yaml
+  systems:
+    - configs/experiments/paper1/system/struct_full_dual_loop_distributed.yaml
+episodes: 5
+seeds: [0, 1, 2, 3, 4]
+slow_interval_steps_list: [5, 10, 20, 40, 80]
+comm_mode: ""
+runs_root: results/ts_sensitivity/layer1_c2
+runner_module: uavlab.paper1.runner.run_vis

@@ -1,0 +1,15 @@
+# Paper1 environment case: (C3, High, G2, M0)
+# C3 = F1 (distance decay) + F2 (local shadow) + F3 (stochastic jitter)
+extends:
+  - ../../../base.yaml
+  - ../../../comm_profiles/c3_high.yaml
+
+scene_file: configs/scenes/g2_cluster_m0.yaml
+
+experiment:
+  env_case:
+    comm_case: C3
+    task_case: G2
+    conflict_level: M0
+  comm_degradation:
+    level: high

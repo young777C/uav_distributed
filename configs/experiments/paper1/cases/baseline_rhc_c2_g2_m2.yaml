@@ -1,0 +1,3 @@
+extends:
+  - ../cases/c2_g2_m2.yaml
+  - ../system/baseline_rhc_inspection.yaml

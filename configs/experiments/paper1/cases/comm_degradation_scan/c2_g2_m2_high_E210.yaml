@@ -1,0 +1,9 @@
+extends: c2_g2_m2_high.yaml
+
+energy:
+  E_0_Wh: 210.0
+  P_fly_W: 440.0
+
+experiment:
+  env_case:
+    energy_stress_tier: E210

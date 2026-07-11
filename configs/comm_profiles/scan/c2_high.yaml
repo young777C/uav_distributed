@@ -1,0 +1,18 @@
+# C2 high degradation: 1.25 x base loss, shadow loss, delay, and fading.
+train:
+  comm_mode: degraded
+
+comm:
+  enable_distance_decay: false
+  base_loss: 0.1875
+  use_scene_blackholes: true
+  blackhole_extra_loss: 0.1875
+  loss_jitter_sigma: 0.10
+  delay_mean_s: 0.125
+  delay_jitter_s: 0.10
+  data_chunk_bits: 4000000.0
+
+experiment:
+  comm_degradation:
+    level: high
+    multiplier: 1.25

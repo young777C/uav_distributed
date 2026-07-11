@@ -1,0 +1,12 @@
+extends:
+  - ../../../../base.yaml
+  - ../../../../comm_profiles/scan/c2_high.yaml
+
+scene_file: configs/scenes/g2_cluster_m2.yaml
+
+experiment:
+  env_case:
+    comm_case: C2
+    task_case: G2
+    conflict_level: M2
+    comm_intensity: high

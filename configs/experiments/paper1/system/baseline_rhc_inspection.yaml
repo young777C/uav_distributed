@@ -1,0 +1,17 @@
+# External baseline: RHC-Inspection (rolling-horizon inspection)
+experiment:
+  paper1:
+    external_baseline: rhc_inspection
+    # No struct/modeling/coupling — this is NOT part of the FDLC axis grid.
+
+env:
+  fast_upload_mode: fixed
+  fixed_send_ratio: 1.0   # best-effort return (no FSM duty cycle)
+
+paper1_loops:
+  semantics:
+    # These knobs are unused by the baseline runner, but we keep minimal
+    # values so Paper1ContractConfig (if called) doesn't trip on defaults.
+    structure: fdlc
+    enable_event_feedback: false
+    enable_fast_mode_switch: false

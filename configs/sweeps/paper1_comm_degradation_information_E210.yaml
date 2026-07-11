@@ -1,0 +1,15 @@
+axis_grid:
+  cases:
+    - configs/experiments/paper1/cases/comm_degradation_scan/c2_g2_m2_medium_E210.yaml
+    - configs/experiments/paper1/cases/comm_degradation_scan/c2_g2_m2_high_E210.yaml
+  systems:
+    - configs/experiments/paper1/system/modelling_comm_aware_decision.yaml
+    - configs/experiments/paper1/system/modelling_energy_aware_decision.yaml
+    - configs/experiments/paper1/system/modelling_comm_energy_aware_decision.yaml
+
+episodes: 5
+seeds: [0, 1, 2]
+slow_interval_steps_list: [40]
+comm_mode: ""
+runs_root: results/comm_degradation_scan_20260620_103457
+runner_module: uavlab.paper1.runner.run

@@ -1,0 +1,30 @@
+# Paper1 V2 Stage 3 — Dual-timescale sensitivity
+#
+#   Strategies: 2 (Periodic Goal, Full Coupling / FDLC)
+#   Scenes:     4 representative (medium-M2, high-M2, high-M3, severe-M3)
+#   Rho:        4 values ∈ {20, 40, 80, 100}
+#   Seeds:      5
+#   Eps/seed:  15
+#
+# REUSE rules:
+#   Full Coupling @ rho=40 → reuses FDLC from stage1_struct
+#   Periodic Goal @ rho=40 → reuses from stage2_coupling
+#   Only NEW runs: rho ∈ {20, 80, 100} for both strategies
+#   NEW total: 2 × 3 × 4 × 5 × 15 = 1,800 episodes
+
+axis_grid:
+  cases:
+    - configs/experiments/paper1/cases/c3_medium_m2.yaml
+    - configs/experiments/paper1/cases/c3_high_m2.yaml
+    - configs/experiments/paper1/cases/c3_high_m3.yaml
+    - configs/experiments/paper1/cases/c3_severe_m3.yaml
+  systems:
+    - configs/experiments/paper1/system/struct_full_dual_loop_distributed.yaml
+    - configs/experiments/paper1/system/coupling_periodic_goal.yaml
+
+episodes: 15
+seeds: [0, 1, 2, 3, 4]
+slow_interval_steps_list: [20, 40, 80, 100]
+comm_mode: ""
+runs_root: results_v2/stage3_timescale
+runner_module: uavlab.paper1.runner.run_vis

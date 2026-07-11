@@ -1,0 +1,57 @@
+version: "3.8"
+# ====================================================================
+# FDLC × PX4+Gazebo 仿真 — Docker Compose
+#
+# 用法:
+#   docker compose -f scripts/docker-compose.yml up        # 启动
+#   docker compose -f scripts/docker-compose.yml down      # 停止
+#
+# 然后在另一终端运行 bridge:
+#   PYTHONPATH=src python3 scripts/phase1_fdlc_px4_bridge.py \
+#     --config configs/experiments/paper1/cases/phase1_px4.yaml \
+#     --system configs/experiments/paper1/system/struct_full_dual_loop_distributed.yaml
+# ====================================================================
+
+services:
+  px4-sitl:
+    image: px4io/px4-dev-simulation-focal:2024-12-09
+    container_name: px4_sitl_fdlc
+    network_mode: host
+
+    # 端口映射（network_mode: host 时自动暴露）
+    ports:
+      - "14540:14540/udp"   # MAVSDK 监听
+      - "14580:14580/udp"   # PX4 → MAVSDK
+
+    environment:
+      - HEADLESS=1
+      - DISPLAY=${DISPLAY:-:0}
+
+    volumes:
+      # 复用本地 PX4 源码（加速首次启动）
+      - ${HOME}/PX4-Autopilot:/home/PX4-Autopilot:z
+      # 日志输出目录
+      - ./runs/docker_px4_logs:/logs
+
+    working_dir: /home/PX4-Autopilot
+
+    # 命令入口: 启动 PX4 SITL
+    command: >
+      bash -c "
+        set -e;
+        if [ ! -f build/px4_sitl_default/bin/px4 ]; then
+          echo '[PX4] 正在编译 (首次启动, 需要 5-15 分钟)...';
+          DONT_RUN=1 make px4_sitl gazebo-classic_iris 2>&1;
+          echo '[PX4] 编译完成.';
+        fi;
+        echo '[PX4] 启动 SITL gazebo-classic_iris HEADLESS=1 ...';
+        HEADLESS=1 make px4_sitl gazebo-classic_iris
+      "
+
+    # 健康检查: 检测 mavlink 端口
+    healthcheck:
+      test: ["CMD-SHELL", "ss -tulpn 2>/dev/null | grep -q ':14580' || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 30s

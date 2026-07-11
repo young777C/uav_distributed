@@ -1,0 +1,19 @@
+# C1 mid degradation: current paper baseline.
+train:
+  comm_mode: degraded
+
+comm:
+  enable_distance_decay: true
+  distance_d0_m: 0.0
+  distance_d1_m: 2500.0
+  distance_loss_min: 0.05
+  distance_loss_max: 0.40
+  loss_jitter_sigma: 0.08
+  delay_mean_s: 0.10
+  delay_jitter_s: 0.08
+  use_scene_blackholes: false
+
+experiment:
+  comm_degradation:
+    level: mid
+    multiplier: 1.0

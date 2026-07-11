@@ -1,0 +1,31 @@
+# C3 severe degradation: 1.50 x medium (F1 + F2 + F3) + tighter data-return thresholds.
+# Severe tier additionally moves ρ_data^max and T_i^max toward weak-link / high-pressure regime
+# (see UAV_GCS_通信阈值设置说明.md §5–§9).
+train:
+  comm_mode: degraded
+
+comm:
+  # F1: smooth distance-dependent degradation from GCS to UAV.
+  enable_distance_decay: true
+  distance_d0_m: 0.0
+  distance_d1_m: 2500.0
+  distance_loss_min: 0.075
+  distance_loss_max: 0.60
+
+  # F2: extra local degradation inside scene communication shadow regions.
+  use_scene_blackholes: true
+  blackhole_extra_loss: 0.225
+
+  # F3: stochastic time-varying fading.
+  loss_jitter_sigma: 0.12
+  data_chunk_bits: 4000000.0
+
+  # Tighter data return thresholds (only severe tier; low/medium/high inherit base.yaml).
+  data_link:
+    max_loss_p: 0.15
+    max_return_time_s: 8.0
+
+experiment:
+  comm_degradation:
+    level: severe
+    multiplier: 1.5

@@ -1,0 +1,8 @@
+# Time-scale sensitivity wrapper: Periodic Goal.
+# Overrides the preset's hardcoded experiment.sweep.slow_interval_steps: 200
+# so the sweep plan can control Ts via slow_interval_steps_list.
+extends: coupling_periodic_goal.yaml
+
+experiment:
+  sweep:
+    slow_interval_steps: ~   # null → fall through to plan_default in _resolve_slow_interval_steps

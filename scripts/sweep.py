@@ -8,6 +8,7 @@ import math
 import os
 import subprocess
 import statistics
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Tuple
@@ -31,6 +32,19 @@ def _git_commit(root: Path) -> str:
         return out.decode("utf-8").strip()
     except Exception:
         return ""
+
+
+def _check_done(run_dir: Path, expected_eps: int) -> bool:
+    """Return True if the run directory has a complete metrics.jsonl."""
+    mp = run_dir / "metrics.jsonl"
+    if not mp.exists():
+        return False
+    try:
+        with mp.open("r", encoding="utf-8") as f:
+            n = sum(1 for _ in f)
+        return n >= expected_eps
+    except Exception:
+        return False
 
 
 def _run_one(
@@ -408,6 +422,7 @@ def main() -> None:
         default="",
         help="Optional tag; default is timestamp. Output under runs_root/<tag>/...",
     )
+    p.add_argument("--workers", type=int, default=1, help="Number of parallel workers (default: 1).")
     p.add_argument(
         "--aggregate_only",
         action="store_true",
@@ -449,6 +464,8 @@ def main() -> None:
     if not cases:
         raise ValueError("axis_grid.cases must be non-empty (paths or globs).")
 
+    # ── Collect tasks ──────────────────────────────────────────────
+    tasks = []
     for case_path in cases:
         case_name = Path(case_path).stem
         for system_path in systems:
@@ -476,16 +493,50 @@ def main() -> None:
                         system_path=system_path,
                         experiment_id=exp_name,
                     )
-                    _run_one(
-                        project_root=project_root,
-                        runner_module=runner_module,
-                        config_path=str(combined_cfg),
-                        episodes=episodes,
-                        seed=int(seed),
-                        slow_interval_steps=int(slow_interval_steps),
-                        comm_mode=comm_mode,
-                        run_dir=run_dir,
-                    )
+                    tasks.append((run_dir, combined_cfg, int(seed), int(slow_interval_steps), exp_name))
+
+    n_skip, n_run = 0, 0
+    runnable = []
+    for run_dir, combined_cfg, seed, slow_interval_steps, exp_name in tasks:
+        if _check_done(run_dir, int(episodes)):
+            n_skip += 1
+        else:
+            runnable.append((run_dir, combined_cfg, seed, slow_interval_steps, exp_name))
+
+    n_workers = int(args.workers)
+    print(f"── {len(tasks)} total seeds: {n_skip} skipped, {len(runnable)} new "
+          f"→ running {len(runnable)} with {n_workers} worker(s) ──")
+
+    if not runnable:
+        print("  Nothing to run.")
+        _ = _write_summary_csv(root_out=root_out)
+        return
+
+    # ── Run with worker pool ───────────────────────────────────────
+    def _task_fn(run_dir, combined_cfg, seed, slow_interval_steps, exp_name):
+        _run_one(
+            project_root=project_root,
+            runner_module=runner_module,
+            config_path=str(combined_cfg),
+            episodes=int(episodes),
+            seed=int(seed),
+            slow_interval_steps=int(slow_interval_steps),
+            comm_mode=comm_mode,
+            run_dir=run_dir,
+        )
+        return exp_name, str(run_dir)
+
+    with ThreadPoolExecutor(max_workers=n_workers) as pool:
+        futures = {
+            pool.submit(_task_fn, *args): args[4]
+            for args in runnable
+        }
+        for future in as_completed(futures):
+            try:
+                exp_name, run_dir = future.result()
+                print(f"  [ran] {exp_name} {Path(run_dir).parent.name} {Path(run_dir).name}")
+            except Exception as e:
+                print(f"  [FAIL] {futures[future]}: {e}")
 
     # Aggregate for convenience (best-effort).
     _ = _write_summary_csv(root_out=root_out)

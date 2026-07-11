@@ -1,0 +1,18 @@
+# Paper1 V2 Pilot — RHC-Inspection (via run_baseline)
+# Same 4 scenes, 2 seeds × 2 episodes.
+
+axis_grid:
+  cases:
+    - configs/experiments/paper1/cases/c3_low_m0.yaml
+    - configs/experiments/paper1/cases/c3_medium_m2.yaml
+    - configs/experiments/paper1/cases/c3_high_m3.yaml
+    - configs/experiments/paper1/cases/c3_severe_m3.yaml
+  systems:
+    - configs/experiments/paper1/system/baseline_rhc_inspection.yaml
+
+episodes: 2
+seeds: [0, 1]
+slow_interval_steps_list: [40]
+comm_mode: ""
+runs_root: results_v2/pilot
+runner_module: uavlab.paper1.runner.run_baseline

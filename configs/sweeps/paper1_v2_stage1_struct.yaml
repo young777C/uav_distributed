@@ -1,0 +1,42 @@
+# Paper1 V2 Stage 1 — Overall method comparison: struct axis (CDSL / WCDL / FDLC)
+#
+#   Methods:  3 (CDSL, WCDL, FDLC)
+#   Scenes:  16 (C3 × G2 × {M0,M1,M2,M3} × {low,medium,high,severe})
+#   Rho:     40 (default)
+#   Seeds:    8
+#   Eps/seed: 20
+#   Total:    3 × 16 × 8 × 20 = 7,680 episodes
+#
+# FDLC @ rho=40 is the canonical "Full Coupling" / "Comm+Energy" reference.
+# Stage 2 (coupling ablation) and Stage 3 (timescale) MUST reuse this batch —
+# do NOT re-run FDLC @ rho=40.
+
+axis_grid:
+  cases:
+    - configs/experiments/paper1/cases/c3_low_m0.yaml
+    - configs/experiments/paper1/cases/c3_low_m1.yaml
+    - configs/experiments/paper1/cases/c3_low_m2.yaml
+    - configs/experiments/paper1/cases/c3_low_m3.yaml
+    - configs/experiments/paper1/cases/c3_medium_m0.yaml
+    - configs/experiments/paper1/cases/c3_medium_m1.yaml
+    - configs/experiments/paper1/cases/c3_medium_m2.yaml
+    - configs/experiments/paper1/cases/c3_medium_m3.yaml
+    - configs/experiments/paper1/cases/c3_high_m0.yaml
+    - configs/experiments/paper1/cases/c3_high_m1.yaml
+    - configs/experiments/paper1/cases/c3_high_m2.yaml
+    - configs/experiments/paper1/cases/c3_high_m3.yaml
+    - configs/experiments/paper1/cases/c3_severe_m0.yaml
+    - configs/experiments/paper1/cases/c3_severe_m1.yaml
+    - configs/experiments/paper1/cases/c3_severe_m2.yaml
+    - configs/experiments/paper1/cases/c3_severe_m3.yaml
+  systems:
+    - configs/experiments/paper1/system/struct_centralized_single_loop.yaml
+    - configs/experiments/paper1/system/struct_decoupled_dual_loop.yaml
+    - configs/experiments/paper1/system/struct_full_dual_loop_distributed.yaml
+
+episodes: 20
+seeds: [0, 1, 2, 3, 4, 5, 6, 7]
+slow_interval_steps_list: [40]
+comm_mode: ""
+runs_root: results_v2/stage1_struct
+runner_module: uavlab.paper1.runner.run_vis

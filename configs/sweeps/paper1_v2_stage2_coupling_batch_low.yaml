@@ -1,0 +1,23 @@
+# Paper1 V2 Stage 2 Coupling — Batch: low intensity
+#
+# Run with:
+#   PYTHONPATH=src python3 scripts/sweep.py \
+#     --plan configs/sweeps/paper1_v2_stage2_coupling_batch_low.yaml \
+#     --workers 2
+
+axis_grid:
+  cases:
+    - configs/experiments/paper1/cases/c3_low_m0.yaml
+    - configs/experiments/paper1/cases/c3_low_m1.yaml
+    - configs/experiments/paper1/cases/c3_low_m2.yaml
+    - configs/experiments/paper1/cases/c3_low_m3.yaml
+  systems:
+    - configs/experiments/paper1/system/coupling_periodic_goal.yaml
+    - configs/experiments/paper1/system/coupling_event_driven_goal.yaml
+
+episodes: 15
+seeds: [0, 1, 2, 3, 4]
+slow_interval_steps_list: [40]
+comm_mode: ""
+runs_root: results_v2/stage2_coupling
+runner_module: uavlab.paper1.runner.run_vis

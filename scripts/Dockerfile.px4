@@ -1,0 +1,57 @@
+# Phase 1 FDLC × PX4 SITL Dockerfile
+# 从你本地的 PX4-Autopilot 源码构建，无需 docker pull
+#
+# 构建:
+#   docker build -t px4-sitl-fdlc -f scripts/Dockerfile.px4 .
+#
+# 运行:
+#   docker run -it --rm --name px4_sitl_fdlc -p 14540:14540/udp -p 14580:14580/udp \
+#     -e HEADLESS=1 px4-sitl-fdlc
+
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# PX4 SITL 运行时依赖（Gazebo Classic）
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    make \
+    cmake \
+    python3 \
+    python3-pip \
+    python3-empy \
+    python3-jinja2 \
+    python3-yaml \
+    python3-numpy \
+    python3-dev \
+    build-essential \
+    g++ \
+    ccache \
+    curl \
+    ca-certificates \
+    lsb-release \
+    sudo \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# Gazebo Classic
+RUN wget https://packages.osrfoundation.org/gazebo.gpg -O /usr/share/keyrings/gazebo-archive-keyring.gpg && \
+    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/gazebo-archive-keyring.gpg] http://packages.osrfoundation.org/gazebo/ubuntu-stable $(lsb_release -sc) main" > /etc/apt/sources.list.d/gazebo-stable.list && \
+    apt-get update && apt-get install -y --no-install-recommends \
+    gazebo11 \
+    libgazebo11-dev \
+    libeigen3-dev \
+    libopencv-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# 添加 PX4 源码（从构建上下文复制）
+COPY PX4-Autopilot /PX4-Autopilot
+
+# 编译 PX4 SITL
+WORKDIR /PX4-Autopilot
+RUN git submodule update --init --recursive --depth=1 2>/dev/null || true
+RUN DONT_RUN=1 make px4_sitl gazebo-classic_iris 2>&1 | tail -20
+
+# 启动入口
+ENTRYPOINT ["bash", "-c"]
+CMD ["cd /PX4-Autopilot && HEADLESS=1 make px4_sitl gazebo-classic_iris"]
