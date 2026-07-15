@@ -1,0 +1,70 @@
+{
+  "timestamp": "20260628_150854",
+  "config": "configs/experiments/paper2/sweep_c3_main.yaml",
+  "results": [
+    {
+      "job_id": "greedy_distance_C3_G1_none",
+      "experiment": "greedy_distance",
+      "label": "Greedy-Distance",
+      "comm_case": "C3",
+      "task_case": "G1",
+      "conflict": "none",
+      "aggregate": {
+        "R_cov_mean": 0.27,
+        "R_cov_std": 0.0,
+        "R_task_mean": 0.25999999999999995,
+        "R_task_std": 5.551115123125783e-17,
+        "R_fail_given_cov_mean": 0.03703703703703709,
+        "R_fail_given_cov_std": 0.0,
+        "R_home_mean": 0.0,
+        "R_home_std": 0.0,
+        "R_oob_mean": 0.0,
+        "R_oob_std": 0.0,
+        "T_ret_s_mean": 0.0,
+        "T_ret_s_std": 0.0,
+        "T_nf_s_mean": 0.0,
+        "T_nf_s_std": 0.0,
+        "T_deg_s_mean": 0.0,
+        "T_deg_s_std": 0.0,
+        "energy_remaining_ratio_mean": 0.0007331805736747074,
+        "energy_remaining_ratio_std": 0.0,
+        "n_replan_mean": 0.0,
+        "n_replan_std": 0.0,
+        "episode_steps_mean": 10001.0,
+        "episode_steps_std": 0.0
+      }
+    },
+    {
+      "job_id": "greedy_distance_C3_G2_M0",
+      "experiment": "greedy_distance",
+      "label": "Greedy-Distance",
+      "comm_case": "C3",
+      "task_case": "G2",
+      "conflict": "M0",
+      "aggregate": {
+        "R_cov_mean": 0.74,
+        "R_cov_std": 0.0,
+        "R_task_mean": 0.74,
+        "R_task_std": 0.0,
+        "R_fail_given_cov_mean": 0.0,
+        "R_fail_given_cov_std": 0.0,
+        "R_home_mean": 0.0,
+        "R_home_std": 0.0,
+        "R_oob_mean": 0.0,
+        "R_oob_std": 0.0,
+        "T_ret_s_mean": 0.0,
+        "T_ret_s_std": 0.0,
+        "T_nf_s_mean": 0.0,
+        "T_nf_s_std": 0.0,
+        "T_deg_s_mean": 0.0,
+        "T_deg_s_std": 0.0,
+        "energy_remaining_ratio_mean": 0.0009090296850956635,
+        "energy_remaining_ratio_std": 0.0,
+        "n_replan_mean": 0.0,
+        "n_replan_std": 0.0,
+        "episode_steps_mean": 10001.0,
+        "episode_steps_std": 0.0
+      }
+    }
+  ]
+}

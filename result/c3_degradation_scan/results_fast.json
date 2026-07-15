@@ -1,0 +1,94 @@
+{
+  "low": {
+    "greedy_distance": {
+      "R_task": 0.42,
+      "R_task_std": 0.0,
+      "R_cov": 0.43,
+      "R_fail": 0.0233,
+      "R_oob": 0.0
+    },
+    "epa_rhp_centralized": {
+      "R_task": 0.53,
+      "R_task_std": 0.0,
+      "R_cov": 0.56,
+      "R_fail": 0.0536,
+      "R_oob": 0.0
+    },
+    "d_epa_rhp": {
+      "R_task": 0.55,
+      "R_task_std": 0.0,
+      "R_cov": 0.57,
+      "R_fail": 0.0351,
+      "R_oob": 0.0
+    }
+  },
+  "medium": {
+    "greedy_distance": {
+      "R_task": 0.58,
+      "R_task_std": 0.0,
+      "R_cov": 0.65,
+      "R_fail": 0.1077,
+      "R_oob": 0.0
+    },
+    "epa_rhp_centralized": {
+      "R_task": 0.54,
+      "R_task_std": 0.0,
+      "R_cov": 0.54,
+      "R_fail": 0.0,
+      "R_oob": 0.0
+    },
+    "d_epa_rhp": {
+      "R_task": 0.6,
+      "R_task_std": 0.0,
+      "R_cov": 0.63,
+      "R_fail": 0.0476,
+      "R_oob": 0.0
+    }
+  },
+  "high": {
+    "greedy_distance": {
+      "R_task": 0.18,
+      "R_task_std": 0.0,
+      "R_cov": 0.2,
+      "R_fail": 0.1,
+      "R_oob": 0.0
+    },
+    "epa_rhp_centralized": {
+      "R_task": 0.41,
+      "R_task_std": 0.0,
+      "R_cov": 0.43,
+      "R_fail": 0.0465,
+      "R_oob": 0.0
+    },
+    "d_epa_rhp": {
+      "R_task": 0.13,
+      "R_task_std": 0.0,
+      "R_cov": 0.15,
+      "R_fail": 0.1333,
+      "R_oob": 0.0
+    }
+  },
+  "severe": {
+    "greedy_distance": {
+      "R_task": 0.1,
+      "R_task_std": 0.0,
+      "R_cov": 0.11,
+      "R_fail": 0.0909,
+      "R_oob": 0.0
+    },
+    "epa_rhp_centralized": {
+      "R_task": 0.14,
+      "R_task_std": 0.0,
+      "R_cov": 0.15,
+      "R_fail": 0.0667,
+      "R_oob": 0.0
+    },
+    "d_epa_rhp": {
+      "R_task": 0.12,
+      "R_task_std": 0.0,
+      "R_cov": 0.14,
+      "R_fail": 0.1429,
+      "R_oob": 0.0
+    }
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "aggregate": {
+    "R_cov_mean": 0.21000000000000002,
+    "R_cov_std": 2.7755575615628914e-17,
+    "R_task_mean": 0.21000000000000002,
+    "R_task_std": 2.7755575615628914e-17,
+    "R_fail_given_cov_mean": 0.0,
+    "R_fail_given_cov_std": 0.0,
+    "R_home_mean": 0.0,
+    "R_home_std": 0.0,
+    "R_oob_mean": 0.0,
+    "R_oob_std": 0.0,
+    "T_ret_s_mean": 0.0,
+    "T_ret_s_std": 0.0,
+    "T_nf_s_mean": 0.0,
+    "T_nf_s_std": 0.0,
+    "T_deg_s_mean": 0.0,
+    "T_deg_s_std": 0.0,
+    "energy_remaining_ratio_mean": 0.0005064460588699285,
+    "energy_remaining_ratio_std": 1.0842021724855044e-19,
+    "n_replan_mean": 6525.0,
+    "n_replan_std": 0.0,
+    "episode_steps_mean": 10001.0,
+    "episode_steps_std": 0.0,
+    "n_feedback_mean": 3923.0,
+    "n_feedback_std": 0.0
+  },
+  "config": "configs/experiments/paper2/c3_g2_m2_d_epa_rhp.yaml",
+  "experiment": "d_epa_rhp"
+}

@@ -1,0 +1,62 @@
+{
+  "greedy_distance": {
+    "R_task_mean": 0.79,
+    "R_task_std": 0.0,
+    "R_cov_mean": 0.79,
+    "R_cov_std": 0.0,
+    "R_fail_given_cov_mean": 0.0,
+    "R_home_mean": 0.0,
+    "n_replan_mean": 0.0,
+    "n_feedback_mean": 0
+  },
+  "centralized_rhp": {
+    "R_task_mean": 0.588,
+    "R_task_std": 0.034871191548325374,
+    "R_cov_mean": 0.5900000000000001,
+    "R_cov_std": 0.03633180424916989,
+    "R_fail_given_cov_mean": 0.0032258064516129,
+    "R_home_mean": 0.0,
+    "n_replan_mean": 0.0,
+    "n_feedback_mean": 0
+  },
+  "periodic_dual_rhp": {
+    "R_task_mean": 0.622,
+    "R_task_std": 0.026758176320519297,
+    "R_cov_mean": 0.622,
+    "R_cov_std": 0.026758176320519297,
+    "R_fail_given_cov_mean": 0.0,
+    "R_home_mean": 0.0,
+    "n_replan_mean": 0.0,
+    "n_feedback_mean": 0
+  },
+  "event_dual_rhp": {
+    "R_task_mean": 0.622,
+    "R_task_std": 0.019390719429665335,
+    "R_cov_mean": 0.622,
+    "R_cov_std": 0.019390719429665335,
+    "R_fail_given_cov_mean": 0.0,
+    "R_home_mean": 0.0,
+    "n_replan_mean": 0.0,
+    "n_feedback_mean": 0
+  },
+  "epa_rhp_centralized": {
+    "R_task_mean": 0.75,
+    "R_task_std": 0.0,
+    "R_cov_mean": 0.76,
+    "R_cov_std": 0.0,
+    "R_fail_given_cov_mean": 0.013157894736842146,
+    "R_home_mean": 0.0,
+    "n_replan_mean": 0.0,
+    "n_feedback_mean": 0
+  },
+  "d_epa_rhp": {
+    "R_task_mean": 0.16999999999999998,
+    "R_task_std": 2.7755575615628914e-17,
+    "R_cov_mean": 0.18,
+    "R_cov_std": 0.0,
+    "R_fail_given_cov_mean": 0.05555555555555547,
+    "R_home_mean": 0.0,
+    "n_replan_mean": 69.0,
+    "n_feedback_mean": 1083.0
+  }
+}

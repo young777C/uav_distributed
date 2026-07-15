@@ -1,0 +1,28 @@
+{
+  "aggregate": {
+    "R_cov_mean": 0.79,
+    "R_cov_std": 0.0,
+    "R_task_mean": 0.79,
+    "R_task_std": 0.0,
+    "R_fail_given_cov_mean": 0.0,
+    "R_fail_given_cov_std": 0.0,
+    "R_home_mean": 0.0,
+    "R_home_std": 0.0,
+    "R_oob_mean": 0.0,
+    "R_oob_std": 0.0,
+    "T_ret_s_mean": 0.0,
+    "T_ret_s_std": 0.0,
+    "T_nf_s_mean": 0.0,
+    "T_nf_s_std": 0.0,
+    "T_deg_s_mean": 0.0,
+    "T_deg_s_std": 0.0,
+    "energy_remaining_ratio_mean": 0.0014280138268039592,
+    "energy_remaining_ratio_std": 0.0,
+    "n_replan_mean": 0.0,
+    "n_replan_std": 0.0,
+    "episode_steps_mean": 10001.0,
+    "episode_steps_std": 0.0
+  },
+  "config": "configs/experiments/paper2/c3_g2_m2_d_epa_rhp.yaml",
+  "experiment": "greedy_distance"
+}
