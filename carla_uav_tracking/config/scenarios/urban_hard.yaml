@@ -1,0 +1,58 @@
+# Heavy occlusion urban tracking scenario
+scenario:
+  name: "urban_hard_occlusion"
+  description: "Urban tracking with frequent building occlusion — tests recovery behavior"
+
+environment:
+  towns: ["Town01", "Town02", "Town03", "Town05"]
+  weather:
+    cloudiness: [10, 90]
+    precipitation: [0, 80]
+    precipitation_deposits: [0, 80]
+    sun_altitude: [-30, 60]
+    fog_density: [0, 30]
+    wetness: [0, 60]
+  fps: 10
+  max_duration_seconds: 180
+
+target:
+  types:
+    vehicles:
+      - "vehicle.audi.a2"
+      - "vehicle.tesla.model3"
+      - "vehicle.bmw.grandtourer"
+      - "vehicle.mini.cooper_s"
+    pedestrians:
+      - "walker.pedestrian.0005"
+      - "walker.pedestrian.0007"
+  speed_range: [5, 20]
+  maneuver:
+    sudden_stop_prob: 0.08
+    sharp_turn_prob: 0.06
+    acceleration_prob: 0.03
+    u_turn_prob: 0.02
+
+uav:
+  start:
+    distance_range: [25, 60]
+    altitude_range: [10, 30]
+    viewing_angle_range: [-45, 45]
+  expert_policy:
+    pid_params:
+      kp_xy: [1.5, 3.0]
+      kp_z:  [0.8, 2.0]
+      kp_yaw: [1.0, 2.5]
+    velocity_limits:
+      xy_max: 12.0
+      z_max: 4.0
+      yaw_rate_max: 50.0
+    noise_scale: [0.02, 0.12]
+    dead_reckon_timeout: 6.0
+
+occlusion:
+  heavy_occlusion_target: true
+  min_occlusion_ratio: 0.4
+
+output:
+  save_depth: false
+  save_segmentation: false

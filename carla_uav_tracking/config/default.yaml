@@ -1,0 +1,82 @@
+# ACoT-UAV-Track Data Generation — Default Configuration
+# All values can be overridden per-scenario
+
+environment:
+  fps: 10
+  max_duration_seconds: 180
+  towns: ["Town01", "Town02", "Town03", "Town04", "Town05"]  # Town10HD excluded — load_world hangs
+  carla:
+    host: "172.17.208.1"  # Windows host IP from WSL2: ip route | grep default | awk '{print $3}'
+    port: 2000
+    timeout: 20.0
+
+weather:
+  cloudiness: [10, 60]
+  precipitation: [0, 30]
+  precipitation_deposits: [0, 20]
+  sun_altitude: [15, 70]   # daytime only
+  fog_density: [0, 0]      # no fog — clear visibility
+  wetness: [0, 30]
+
+uav:
+  start:
+    distance_range: [8, 20]       # start very close to target
+    altitude_range: [22, 32]      # above buildings, target still >1 patch
+    viewing_angle_range: [-15, 15] # behind the target
+    lateral_offset_range: [10, 20] # to the side, avoid tree line
+
+  expert_policy:
+    type: "pid"                   # "pid" or "pid_with_injection"
+    pid_params:
+      kp_xy: [0.5, 0.8]          # moderate proportional gain
+      ki_xy: [0.0, 0.0]          # NO integral — teleport drone has no inertia to overcome
+      kd_xy: [0.0, 0.0]          # NO derivative — no oscillation risk with P-only
+      kp_z:  [0.3, 0.5]          # gentle altitude
+      ki_z:  [0.0, 0.0]
+      kd_z:  [0.0, 0.0]
+      kp_yaw: [0.3, 0.5]
+      ki_yaw: [0.0, 0.0]
+      kd_yaw: [0.0, 0.0]
+    velocity_limits:
+      xy_max: 12.0                # m/s (fast enough to catch target)
+      z_max: 2.0                  # m/s
+      yaw_rate_max: 30.0          # deg/s
+    noise_scale: [0.01, 0.15]    # expert action noise → driving style diversity
+    dead_reckon_timeout: 5.0      # seconds before giving up on lost target
+
+target:
+  types:
+    vehicles:
+      - "vehicle.audi.a2"
+      - "vehicle.tesla.model3"
+      - "vehicle.bmw.grandtourer"
+      - "vehicle.mercedes.coupe"
+      - "vehicle.mini.cooper_s"
+      - "vehicle.nissan.patrol"
+      - "vehicle.carlamotors.carlacola"
+    pedestrians:
+      - "walker.pedestrian.0001"
+      - "walker.pedestrian.0005"
+      - "walker.pedestrian.0007"
+  speed_range: [5, 25]           # m/s for vehicles, pedestrians ~1-3
+  maneuver:
+    sudden_stop_prob: 0.05        # per-frame probability
+    sharp_turn_prob: 0.03
+    acceleration_prob: 0.02
+    u_turn_prob: 0.01
+
+occlusion:
+  heavy_occlusion_target: true
+  min_occlusion_ratio: 0.3        # episode must have ≥30% partial occlusion
+  raycast:
+    num_rays: 8                   # from target bbox corners to UAV
+    min_hit_ratio: 0.5            # ≥50% rays blocked → occluded
+
+output:
+  rgb_resolution: [336, 336]
+  save_depth: false
+  save_segmentation: false
+  compression: "jpeg85"           # PIL JPEG quality
+  format: "hdf5"                  # "hdf5" or "directory"
+  data_dir: "/mnt/d/data/carla_data/"
+  max_size_gb: 10.0               # Stop generation when total data exceeds this

@@ -1,0 +1,52 @@
+# Rural high-speed tracking — less occlusion, higher speeds
+scenario:
+  name: "rural_highspeed"
+  description: "Rural open-road tracking with high target speeds and long sightlines"
+
+environment:
+  towns: ["Town04", "Town06"]  # highway/rural maps
+  weather:
+    cloudiness: [0, 60]
+    precipitation: [0, 40]
+    sun_altitude: [10, 70]
+    fog_density: [0, 10]
+  fps: 10
+  max_duration_seconds: 120
+
+target:
+  types:
+    vehicles:
+      - "vehicle.tesla.model3"
+      - "vehicle.bmw.grandtourer"
+      - "vehicle.mercedes.coupe"
+  speed_range: [15, 35]
+  maneuver:
+    sudden_stop_prob: 0.02
+    sharp_turn_prob: 0.05
+    acceleration_prob: 0.08
+    u_turn_prob: 0.01
+
+uav:
+  start:
+    distance_range: [40, 100]
+    altitude_range: [20, 50]
+    viewing_angle_range: [-20, 20]
+  expert_policy:
+    pid_params:
+      kp_xy: [2.0, 3.5]
+      kp_z:  [0.5, 1.5]
+      kp_yaw: [1.5, 3.0]
+    velocity_limits:
+      xy_max: 18.0
+      z_max: 6.0
+      yaw_rate_max: 70.0
+    noise_scale: [0.01, 0.08]
+    dead_reckon_timeout: 4.0
+
+occlusion:
+  heavy_occlusion_target: false
+  min_occlusion_ratio: 0.1
+
+output:
+  save_depth: false
+  save_segmentation: false
