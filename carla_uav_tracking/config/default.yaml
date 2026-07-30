@@ -4,11 +4,70 @@
 environment:
   fps: 10
   max_duration_seconds: 180
-  towns: ["Town01", "Town02", "Town03", "Town04", "Town05"]  # Town10HD excluded — load_world hangs
+  seed: null                       # set per-episode by generate_batch (seed + episode_id)
+  max_lost_seconds: 15             # OFF-screen tolerated this long — the UAV flies to re-acquire
+                                   # (aerial tracking: no road constraint → cut to re-appearance);
+                                   # truncate only if recovery genuinely fails. Was 5 (too eager).
+  max_occluded_seconds: 12         # in-frame but structurally occluded → tolerated this long (A1c③)
+  towns: ["Town01", "Town02", "Town04", "Town05", "Town10HD"]  # Town06 not in this image
   carla:
-    host: "172.17.208.1"  # Windows host IP from WSL2: ip route | grep default | awk '{print $3}'
+    host: "127.0.0.1"  # server runs in the same container (docker: cyh-carla)
     port: 2000
     timeout: 20.0
+
+# Multi-actor scene composition (design §5.1/§6.3): >=2 look-alike distractors,
+# co-located with the target so language must carry the discriminating attribute.
+scene:
+  num_distractors: [4, 8]
+  min_similar_distractors: 3        # >=3 look-alikes so >=2 stay co-visible
+  distractor_ahead_bias: 0.75       # (legacy layout only; ignored when decorrelate_position on)
+  decorrelate_position:             # break the target's geometric-position shortcut (data-fix-spec.md)
+    enabled: true                   # L1: target + similar drawn from one symmetric slot band (target random slot)
+    cluster_band_m: 10.0            # L1: target + similar share this ± slot band. Tight → the whole
+                                    #     cluster (incl. target) stays near the framed centroid → target
+                                    #     mostly IN-frame (occasional loss+recovery, not constant edge-flicker);
+                                    #     still exchangeable → decorrelated. (24 m put the target at the edge.)
+                                    # L2: expert frames the {target+similar} CENTROID (not the target), so the
+                                    #     target is a random cluster member → position/depth/rank == a distractor's.
+  ambient:                          # background traffic density (official generate_traffic style)
+    vehicles: 80                    # diverse vehicle.* : cars, bus, trucks, motorcycles, bicycles
+    walkers: 25                     # background pedestrians (manual WalkerControl)
+    radius: 70                      # tighter → more of them land in the camera view
+  convoy:                           # set_route can force bad turns (off-road) — off.
+    enabled: false
+    straight_bias: 0.7
+    route_len: 80
+  covisibility:                     # teleport recycle caused collisions/off-road — off.
+    enabled: false                  # prioritise smooth, rule-abiding autopilot driving.
+    recycle_radius: 55.0      # fraction placed ahead of the target (into UAV view)
+  target_class_weights:            # tracked target = vehicles only; pedestrians are
+    car: 0.65                       # background distractors (ambient), never targets
+    motorcycle: 0.18
+    bicycle: 0.10                  # 非机动车
+    scooter: 0.07                  # 电动 / 踏板
+    pedestrian: 0.0                # 行人 — 仅背景干扰,不作目标
+  similarity_strategy_weights:     # only applies when target class == car
+    same_color_diff_shape: 0.40    # look-alikes share COLOR, differ in MODEL → name the model
+    same_shape_diff_color: 0.40    # look-alikes share MODEL, differ in COLOR → name the color
+    distinct: 0.20                 # easy tail (distractors visually distinct)
+
+# Tracking-distance tiers: the UAV maintains ~this altitude (≈ slant distance), which
+# drives the numeric distance in the language ("about 15/30/45 m").
+distance_tiers:                    # UAV altitude above ground = 20-60 m
+  close:    {weight: 0.34, altitude: [20, 30]}
+  suitable: {weight: 0.33, altitude: [35, 45]}
+  long:     {weight: 0.33, altitude: [50, 60]}
+
+# Camera depression angle (A1c③). Default steep top-down; a fraction of episodes may
+# use a shallower, lower-altitude oblique view to surface urban side-wall occlusion.
+camera:
+  pitch_deg: -50.0
+  oblique:
+    fraction: 0.0                  # scenarios override (occlusion_heavy → 0.30)
+    pitch_deg: -38.0
+    altitude_range: [16, 24]       # lower altitude
+    behind_range: [22, 30]         # MUST match pitch: depression=atan(alt/behind)≈38° so
+                                   # the target starts frame-centred (else it drops off-screen)
 
 weather:
   cloudiness: [10, 60]
@@ -19,11 +78,25 @@ weather:
   wetness: [0, 30]
 
 uav:
+  # Start geometry corrected so the target lands in-frame: camera pitch is -30°
+  # (drone.get_camera_transform) with 90° FOV → keep depression atan(alt/dist)
+  # roughly ≤ 65°, i.e. alt/dist ≲ 2.1.
   start:
-    distance_range: [8, 20]       # start very close to target
-    altitude_range: [22, 32]      # above buildings, target still >1 patch
+    distance_range: [12, 22]      # behind the target
+    altitude_range: [16, 26]      # above buildings but target stays in frame
     viewing_angle_range: [-15, 15] # behind the target
-    lateral_offset_range: [10, 20] # to the side, avoid tree line
+    lateral_offset_range: [6, 14]  # to the side, avoid tree line
+
+  perturbation:                    # APF recovery-trajectory injection (design §5.1)
+    # Gentler than the original 20-50m pushes: those exceed the ~17m tracking
+    # distance and threw the target out of frame for whole recovery windows.
+    probability: 0.015
+    min_interval: 10.0
+    push_aside_range: [5, 15]
+    lag_behind_range: [8, 20]
+    overshoot_range: [5, 15]
+    altitude_drop_range: [4, 10]
+    recovery_time_range: [1.5, 4.0]
 
   expert_policy:
     type: "pid"                   # "pid" or "pid_with_injection"
@@ -59,11 +132,11 @@ target:
       - "walker.pedestrian.0005"
       - "walker.pedestrian.0007"
   speed_range: [5, 25]           # m/s for vehicles, pedestrians ~1-3
-  maneuver:
-    sudden_stop_prob: 0.05        # per-frame probability
-    sharp_turn_prob: 0.03
-    acceleration_prob: 0.02
-    u_turn_prob: 0.01
+  maneuver:                        # OFF by default → target on pure autopilot (smooth,
+    sudden_stop_prob: 0.0          # rule-abiding). Motion-intent labels come from the
+    sharp_turn_prob: 0.0           # target's NATURAL turns/stops at junctions & lights.
+    acceleration_prob: 0.0         # (maneuver_heavy.yaml can enable the TM-smooth version)
+    u_turn_prob: 0.0
 
 occlusion:
   heavy_occlusion_target: true
@@ -71,6 +144,18 @@ occlusion:
   raycast:
     num_rays: 8                   # from target bbox corners to UAV
     min_hit_ratio: 0.5            # ≥50% rays blocked → occluded
+  # A1c③ in-frame structural-occlusion routing. Off by default; occlusion scenarios
+  # enable it to spawn the target so it drives under overhead structures.
+  enabled: false
+  bias_fraction: 0.0              # scenarios override (occlusion_heavy → 0.6)
+  cache_dir: /data/occ_cache      # per-town occluder-anchor cache (built once)
+  look_ahead_m: 60.0              # search this far forward from a spawn point
+  step_m: 4.0
+  up_ray_m: 45.0
+  min_clearance_m: 2.0            # overhead structure must be within this clearance band
+  max_clearance_m: 22.0           # (UAV-reachable — a 20-60 m UAV sees it occlude)
+  min_enter_m: 12.0               # lane must be clear for this long first (drive INTO it)
+  max_cover_span_m: 26.0          # covered span must be short (bridge, not tunnel/elevated hwy)
 
 output:
   rgb_resolution: [336, 336]
@@ -78,5 +163,5 @@ output:
   save_segmentation: false
   compression: "jpeg85"           # PIL JPEG quality
   format: "hdf5"                  # "hdf5" or "directory"
-  data_dir: "/mnt/d/data/carla_data/"
+  data_dir: "/data/"                # host /nvidia/hque/data/carla_data (docker bind mount)
   max_size_gb: 10.0               # Stop generation when total data exceeds this

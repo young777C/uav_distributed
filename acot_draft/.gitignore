@@ -1,0 +1,19 @@
+# Tectonic binary (14 MB) — re-download per README if needed
+.tools/
+
+# LaTeX build intermediates
+*.aux
+*.log
+*.out
+*.bbl
+*.blg
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
+# The compiled PDF is a build artifact. It is committed by default so the
+# rendered draft travels with the repo; uncomment to stop tracking it:
+# main.pdf

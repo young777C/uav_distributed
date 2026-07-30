@@ -1,0 +1,28 @@
+# Pilot — fast pipeline validation (a few SHORT episodes). NOT training data.
+# Verifies: co-visible look-alike distractors, distractor recording, seeding,
+# both similarity strategies, and all target classes spawn.
+environment:
+  max_duration_seconds: 40
+  towns: ["Town03"]
+
+scene:
+  num_distractors: [5, 7]
+  min_similar_distractors: 2
+  distractor_ahead_bias: 0.8
+  target_class_weights:
+    car: 0.55
+    motorcycle: 0.15
+    bicycle: 0.10
+    scooter: 0.10
+    pedestrian: 0.10
+  similarity_strategy_weights:
+    same_color_diff_shape: 0.5
+    same_shape_diff_color: 0.5
+    distinct: 0.0
+
+target:
+  maneuver:      # keep maneuvers rare during the pilot
+    sudden_stop_prob: 0.01
+    sharp_turn_prob: 0.01
+    acceleration_prob: 0.01
+    u_turn_prob: 0.0

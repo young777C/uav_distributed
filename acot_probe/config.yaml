@@ -1,0 +1,48 @@
+# Layer-16 grounding probe — config (design doc §3.4 selection gate).
+# Goal: for each frozen backbone × decoder layer, measure Target-Selection Accuracy
+# (can the layer-L representation pick the referred target among distractors?).
+
+backbones:
+  paligemma:
+    kind: paligemma
+    model_id: google/paligemma2-3b-mix-448
+    device: cuda:0                     # A40 #0
+  qwen3vl:
+    kind: qwen3vl
+    model_id: Qwen/Qwen3-VL-4B-Instruct
+    device: cuda:1                     # A40 #1
+
+# Decoder layers to probe. 16 is the design's truncation point; the sweep shows
+# WHERE each backbone consolidates grounding (PaliGemma≈18 layers → 16 is ~done;
+# Qwen≈36 → expect 16 weak, 24 stronger). -1 = last layer.
+layers: [8, 12, 16, 20, 24, -1]
+
+probe:
+  epochs: 40
+  lr: 1.0e-3
+  weight_decay: 1.0e-4
+  hidden: 256
+  batch_groups: 64
+  val_frac: 0.2
+  head_device: cpu                     # probe head is tiny; keep GPUs for backbones
+
+data:
+  episodes_glob: "data/probe/episode_*.h5"   # point at a SMALL similar-distractor set
+  frame_stride: 5
+  max_frames_per_episode: 40
+  min_candidates: 2                    # need target + >=1 in-frame distractor
+
+image:
+  width: 336
+  height: 336
+  fov_deg: 90.0
+  vehicle_size_m: 4.0                  # pseudo-box physical size (no true bbox stored)
+  box_min_px: 10
+  box_max_px: 140
+
+cache_dir: runs/probe_cache
+out_dir: runs/probe_out
+seed: 0
+
+# Decision threshold: a backbone "passes" layer 16 if TSA >> chance and clears this.
+pass_tsa_at_16: 0.80

@@ -47,6 +47,7 @@ class KinematicDrone:
         world: carla.World,
         start_transform: carla.Transform,
         initial_energy: float = 1.0,
+        camera_pitch: float = -50.0,
     ):
         self._world = world
         self._spectator = world.get_spectator()
@@ -54,6 +55,9 @@ class KinematicDrone:
 
         self.transform = start_transform
         self.energy = initial_energy
+        # Camera depression angle. Default -50° (steep top-down); A1c③ oblique episodes
+        # pass a shallower value (~-38°) to surface urban side-wall occlusion.
+        self._camera_pitch = float(camera_pitch)
 
         # Previous state for velocity computation
         self._prev_location = start_transform.location
@@ -127,7 +131,10 @@ class KinematicDrone:
             z=self.transform.location.z - 0.3,
         )
         cam_rot = carla.Rotation(
-            pitch=-30.0,  # shallow angle — target is close and slightly ahead
+            # Depression angle (default -50° steep top-down keeps the target vertically
+            # in-frame across the start-geometry range; -30° was too much sky). A1c③
+            # oblique episodes use a shallower pitch to expose side-wall occlusion.
+            pitch=self._camera_pitch,
             yaw=self.transform.rotation.yaw,
             roll=0.0,
         )

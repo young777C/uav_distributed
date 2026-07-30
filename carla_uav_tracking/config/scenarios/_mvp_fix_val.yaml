@@ -1,0 +1,27 @@
+# TEMP — validate the position-decorrelation fix (data-fix-spec.md) on MVP settings.
+# Same as mvp.yaml but short episodes for a fast leak-probe check. decorrelate_position
+# + occlusion(off) inherit from default. Throwaway.
+environment:
+  max_duration_seconds: 45
+  towns: ["Town01", "Town02", "Town04", "Town05", "Town10HD"]
+
+scene:
+  num_distractors: [4, 8]
+  min_similar_distractors: 3
+  target_class_weights:
+    car: 0.65
+    motorcycle: 0.18
+    bicycle: 0.10
+    scooter: 0.07
+    pedestrian: 0.0
+  similarity_strategy_weights:
+    same_color_diff_shape: 0.40
+    same_shape_diff_color: 0.40
+    distinct: 0.20
+
+target:
+  maneuver:
+    sudden_stop_prob: 0.0
+    sharp_turn_prob: 0.0
+    acceleration_prob: 0.0
+    u_turn_prob: 0.0

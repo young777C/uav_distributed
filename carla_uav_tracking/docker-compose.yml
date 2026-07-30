@@ -1,0 +1,56 @@
+# Isolated CARLA data-generation stack for ACoT-UAV-Track.
+# All resources are namespaced `cyh-carla*` so they never collide with the
+# repo-root `cyh-project1*` web stack or anything else on the host.
+name: cyh-carla
+
+services:
+  carla:
+    build:
+      context: .
+      dockerfile: docker/carla.Dockerfile
+      args:
+        HOST_UID: ${CYH_UID:-1003}
+        HOST_GID: ${CYH_GID:-1015}
+    image: cyh-carla:0.9.15
+    container_name: cyh-carla
+    hostname: cyh-carla
+
+    # Use the daemon's registered `nvidia` runtime for GPU access.
+    runtime: nvidia
+    environment:
+      # Restrict GPUs with e.g. CYH_CARLA_GPUS=0,1,2,3 ; default = all 8 A40s.
+      NVIDIA_VISIBLE_DEVICES: ${CYH_CARLA_GPUS:-all}
+      NVIDIA_DRIVER_CAPABILITIES: all
+      CARLA_ROOT: /home/carla
+      TZ: Asia/Shanghai
+
+    working_dir: /workspace
+    init: true
+    stdin_open: true
+    tty: true
+
+    # Unreal Engine's offscreen renderer needs a roomy shared-memory segment.
+    shm_size: "2gb"
+    ulimits:
+      memlock: -1
+
+    volumes:
+      # Repo code (read-write so you can edit on the host and run in-container).
+      - type: bind
+        source: .
+        target: /workspace
+      # Bulk output on the 2 TB /nvidia volume. Override with CYH_CARLA_DATA=...
+      - type: bind
+        source: ${CYH_CARLA_DATA:-/nvidia/hque/data/carla_data}
+        target: /data
+
+    networks:
+      - cyh-carla-net
+
+    # Stay up as a long-running dev container; exec in to launch servers + gen.
+    command: sleep infinity
+
+networks:
+  cyh-carla-net:
+    name: cyh-carla-net
+    driver: bridge

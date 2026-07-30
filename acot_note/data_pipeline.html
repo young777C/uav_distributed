@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ACoT-UAV · 数据流水线:原始视频 → 样本 → 预计算 → 模型</title>
+<style>
+  :root{
+    --page:#f9f9f7;--surface-1:#fcfcfb;--surface-2:#f2f1ec;--text-primary:#0b0b0b;--text-secondary:#52514e;--text-muted:#898781;
+    --grid:#e1e0d9;--border:rgba(11,11,11,.12);--chip:#eeede7;
+    --input:#2a78d6;--superv:#1baf7a;--transform:#4a3aa7;--warn:#fab219;--warn-ink:#8a5a00;
+  }
+  @media (prefers-color-scheme:dark){html:not(.light){
+    --page:#0d0d0d;--surface-1:#1a1a19;--surface-2:#232320;--text-primary:#fff;--text-secondary:#c3c2b7;--text-muted:#898781;
+    --grid:#2c2c2a;--border:rgba(255,255,255,.12);--chip:#2a2a27;
+    --input:#3987e5;--superv:#199e70;--transform:#9085e9;--warn:#fab219;--warn-ink:#fab219;}}
+  html.dark{--page:#0d0d0d;--surface-1:#1a1a19;--surface-2:#232320;--text-primary:#fff;--text-secondary:#c3c2b7;--text-muted:#898781;
+    --grid:#2c2c2a;--border:rgba(255,255,255,.12);--chip:#2a2a27;
+    --input:#3987e5;--superv:#199e70;--transform:#9085e9;--warn:#fab219;--warn-ink:#fab219;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--page);color:var(--text-primary);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.5}
+  .wrap{max-width:940px;margin:0 auto;padding:26px 20px 60px}
+  header{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+  h1{font-size:20px;font-weight:650;margin:0}
+  .sub{color:var(--text-secondary);font-size:13px;margin:4px 0 0}
+  .toggle{border:1px solid var(--border);background:var(--surface-1);color:var(--text-secondary);border-radius:8px;padding:6px 12px;font-size:12.5px;cursor:pointer;font-family:inherit}
+  .legend{display:flex;gap:18px;flex-wrap:wrap;margin:16px 0 4px;font-size:12.5px;color:var(--text-secondary)}
+  .lg{display:flex;align-items:center;gap:7px}.sw{width:14px;height:14px;border-radius:4px;flex:none}
+  /* pipeline */
+  .stage{background:var(--surface-1);border:1px solid var(--border);border-radius:14px;padding:16px 18px;margin-top:0;position:relative}
+  .arrow{display:flex;justify-content:center;align-items:center;color:var(--text-muted);height:34px;font-size:13px}
+  .arrow svg{display:block}
+  .stitle{display:flex;align-items:center;gap:10px;margin:0 0 10px}
+  .badge{width:26px;height:26px;border-radius:50%;background:var(--text-primary);color:var(--page);font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:none}
+  .stitle h2{font-size:15.5px;font-weight:640;margin:0}
+  .stitle .tag{font-size:11.5px;color:var(--text-muted);margin-left:auto;font-variant-numeric:tabular-nums}
+  .body{font-size:13px;color:var(--text-secondary)}
+  .body b{color:var(--text-primary);font-weight:620}
+  .chip{display:inline-block;font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:12px;background:var(--chip);border:1px solid var(--border);border-radius:6px;padding:1px 7px;color:var(--text-primary);white-space:nowrap;font-variant-numeric:tabular-nums}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:8px 0}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:6px}
+  @media (max-width:640px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:11px 12px}
+  .card h3{font-size:12.5px;margin:0 0 7px;font-weight:640;display:flex;align-items:center;gap:6px}
+  .dot{width:9px;height:9px;border-radius:50%;flex:none}
+  .kv{font-size:12px;color:var(--text-secondary);margin:3px 0;font-variant-numeric:tabular-nums}
+  .callout{border-left:3px solid var(--warn);background:color-mix(in srgb,var(--warn) 9%,transparent);border-radius:0 8px 8px 0;padding:8px 12px;margin:10px 0 2px;font-size:12.5px;color:var(--text-primary)}
+  .callout b{color:var(--warn-ink)}
+  ul{margin:6px 0;padding-left:18px}li{margin:2px 0;font-size:12.5px;color:var(--text-secondary)}
+  li b{color:var(--text-primary)}
+  .barwrap{margin:8px 0 2px}
+  .barlab{display:flex;justify-content:space-between;font-size:11.5px;color:var(--text-secondary);margin-bottom:3px;font-variant-numeric:tabular-nums}
+  .bar{height:16px;border-radius:5px;overflow:hidden;display:flex;background:var(--chip);gap:2px}
+  .seg{height:100%}
+  .metric{display:flex;gap:22px;flex-wrap:wrap;margin-top:8px}
+  .metric .m{font-variant-numeric:tabular-nums}
+  .metric .m .n{font-size:19px;font-weight:680;color:var(--text-primary)}
+  .metric .m .l{font-size:11px;color:var(--text-muted)}
+  table{border-collapse:collapse;width:100%;margin-top:8px;font-size:12px;font-variant-numeric:tabular-nums}
+  th,td{border:1px solid var(--grid);padding:5px 9px;text-align:left}th{color:var(--text-secondary);font-weight:600;background:var(--surface-2)}
+  .foot{font-size:12px;color:var(--text-muted);margin-top:22px;line-height:1.6}
+  details{margin-top:18px}summary{cursor:pointer;font-size:12.5px;color:var(--text-secondary)}
+  .flowsvg{width:100%;height:auto;overflow:visible;margin-top:4px}
+</style>
+</head>
+<body data-palette="#2a78d6,#1baf7a,#4a3aa7" data-mode="light">
+<div class="wrap">
+  <header>
+    <div>
+      <h1>ACoT-UAV · 数据流水线</h1>
+      <p class="sub">原始 CARLA 视频 → 切样本 → 冻结 VLM 预计算 → 进入模型训练 · 逐级形状与信息量</p>
+    </div>
+    <button class="toggle" onclick="document.documentElement.classList.toggle('dark');document.documentElement.classList.remove('light')">◑ 明/暗</button>
+  </header>
+
+  <div class="legend">
+    <span class="lg"><span class="sw" style="background:var(--input)"></span>输入 / 感知路径(含 proprio)</span>
+    <span class="lg"><span class="sw" style="background:var(--transform)"></span>预计算产物(冻结 VLM 编码)</span>
+    <span class="lg"><span class="sw" style="background:var(--superv)"></span>监督目标</span>
+    <span class="lg"><span class="sw" style="background:var(--warn)"></span>关键设计标注</span>
+  </div>
+
+  <!-- STAGE 1 -->
+  <section class="stage">
+    <div class="stitle"><span class="badge">1</span><h2>原始 Episode 视频(CARLA 随机生成)</h2><span class="tag">60 段 .h5</span></div>
+    <div class="body">
+      每段是一段无人机跟车视频:<b>RGB 帧 336×336×3</b> @ <b>10 fps</b>,附带逐帧标注。
+      <div class="row">
+        <span class="chip">rgb (T, 336, 336, 3)</span>
+        <span class="chip">target/tx·ty·tz</span>
+        <span class="chip">state/cam · 速度</span>
+        <span class="chip">annotation/search_mode · 遮挡 · waypoints</span>
+      </div>
+      <div class="barwrap">
+        <div class="barlab"><span>60 段缓存的用途划分</span><span>按 episode 划分</span></div>
+        <div class="bar">
+          <div class="seg" style="width:73.3%;background:var(--input)"></div>
+          <div class="seg" style="width:10%;background:var(--superv)"></div>
+          <div class="seg" style="width:16.7%;background:var(--text-muted)"></div>
+        </div>
+        <div class="barlab" style="margin-top:4px"><span style="color:var(--input)">train 44 段</span><span style="color:var(--superv)">val 6 段</span><span>Town05 测试留出 ~10 段</span></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="arrow"><svg width="20" height="30"><path d="M10 0 V22 M4 16 L10 24 L16 16" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></div>
+
+  <!-- STAGE 2 -->
+  <section class="stage">
+    <div class="stitle"><span class="badge">2</span><h2>切成训练样本(滑动窗口)</h2><span class="tag">→ 8447 train · 1200 val</span></div>
+    <div class="body">
+      <ul>
+        <li>砍掉每段<b>尾部 60 帧</b>(horizon = max_horizon 6s × 10fps),保证最远 waypoint(i+60)存在 → <span class="chip">valid = n − 60</span></li>
+        <li>取窗口起点 <span class="chip">i = 0, 3, 6, …</span>(stride 3),<b>每段封顶 200</b> 个样本</li>
+        <li>每段产出 <span class="chip">min(⌈(n−60)/3⌉, 200)</span> —— 实测每段 min 11 / 中位 <b>200</b> / max 200</li>
+        <li>每个样本 = <b>单帧锚点 i</b> + 一个难度标签 <b>a/b/c</b>(按该帧有无相似干扰车)</li>
+      </ul>
+      <div class="barwrap">
+        <div class="barlab"><span>train 池的 tier 原始分布(共 8447)</span><span>数据本身已偏难(c 占 63%)</span></div>
+        <div class="bar">
+          <div class="seg" style="width:9.5%;background:var(--input)"></div>
+          <div class="seg" style="width:27.2%;background:var(--warn)"></div>
+          <div class="seg" style="width:63.3%;background:var(--transform)"></div>
+        </div>
+        <div class="barlab" style="margin-top:4px"><span style="color:var(--input)">a 800 · 无干扰</span><span style="color:var(--warn-ink)">b 2300 · 同类</span><span style="color:var(--transform)">c 5347 · 近同款,需语言</span></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="arrow"><svg width="20" height="30"><path d="M10 0 V22 M4 16 L10 24 L16 16" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></div>
+
+  <!-- STAGE 3 -->
+  <section class="stage">
+    <div class="stitle"><span class="badge">3</span><h2>预计算:冻结 Qwen3-VL-4B 前向(离线)</h2><span class="tag">★ 关键变换</span></div>
+    <div class="body">
+      把每个样本的<b>单帧 RGB + 语言 prompt</b> 送进<b>冻结</b>的 Qwen3-VL-4B 跑一次,抽出中间层 token 存盘。
+      <div class="row" style="margin:10px 0">
+        <span class="chip" style="border-color:var(--input)">RGB 336×336 + 语言 prompt</span>
+        <span style="color:var(--text-muted)">──冻结 Qwen3-VL──▶</span>
+        <span class="chip" style="border-color:var(--transform)">vlm_ctx_layers (5, 100, 2560)</span>
+      </div>
+      <ul>
+        <li>抽 <b>5 个层</b>:第 4 / 8 / 12 / 16 / 24 层(供 IAR 逐层查询)</li>
+        <li><b>100 个 token</b> = 10×10 空间网格;<b>2560</b> = 隐藏维(Qwen3-VL-4B)</li>
+        <li>存 <span class="chip">runs/ctx_cache_ml/*.npz</span> ≈ <b>27 GB</b>,60 shard,<b>6 卡并行</b>抽取</li>
+      </ul>
+      <div class="callout">
+        <b>为什么离线跑一次:</b> VLM 是<b>冻结</b>的,对同一帧输出恒定 → 没必要每轮重算。
+        预计算:每帧 <b>1 次</b>前向;若训练时在线跑 = 8447 样本 × 50 epoch = <b>约 42 万次</b>。
+        这也是「多卡预计算 → 单卡训练」成立的原因,以及换 backbone/分辨率必须<b>重建缓存</b>的原因。
+      </div>
+    </div>
+  </section>
+
+  <div class="arrow"><svg width="20" height="30"><path d="M10 0 V22 M4 16 L10 24 L16 16" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></div>
+
+  <!-- STAGE 4 -->
+  <section class="stage">
+    <div class="stitle"><span class="badge">4</span><h2>一个样本物化后的信息量</h2><span class="tag">输入 vs 监督 ≈ 13000 : 1</span></div>
+    <div class="body">
+      <div class="grid2">
+        <div class="card">
+          <h3><span class="dot" style="background:var(--input)"></span>输入(喂进模型)· ≈ 5.15 MB</h3>
+          <div class="kv"><span class="chip" style="border-color:var(--transform)">vlm_ctx_layers (5,100,2560)</span> = 1,280,000 <b style="color:var(--text-primary)">(99.4%)</b></div>
+          <div class="kv"><span class="chip" style="border-color:var(--transform)">cand_feats (3,2560)</span> = 7,680</div>
+          <div class="kv"><span class="chip" style="border-color:var(--input)">proprio (5)</span> = 5 <span style="color:var(--text-muted)">(高度·俯仰·三轴速度)</span></div>
+          <div class="barwrap" style="margin-top:8px">
+            <div class="bar" style="height:12px">
+              <div class="seg" style="width:99.4%;background:var(--transform)" title="vlm_ctx 99.4%"></div>
+              <div class="seg" style="width:0.6%;background:var(--input)" title="cand+proprio 0.6%"></div>
+            </div>
+            <div class="barlab" style="margin-top:3px"><span>≈ 129 万 float32</span><span>99.4% 是冻结 VLM 编码</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3><span class="dot" style="background:var(--superv)"></span>监督目标 · 仅 ≈ 96 个数</h3>
+          <div class="kv"><span class="chip" style="border-color:var(--superv)">action (16,5)</span> = 80 <span style="color:var(--text-muted)">Δ动作×16 + search_mode</span></div>
+          <div class="kv"><span class="chip" style="border-color:var(--superv)">waypoint (4,3)</span> = 12 <span style="color:var(--text-muted)">相机系 1/2/4/6s</span></div>
+          <div class="kv"><span class="chip" style="border-color:var(--superv)">target_idx</span> · <span class="chip" style="border-color:var(--superv)">occ_struct</span> · <span class="chip" style="border-color:var(--superv)">maneuver</span> · <span class="chip" style="border-color:var(--superv)">visible</span> = 4</div>
+          <div class="kv" style="margin-top:8px;color:var(--text-primary)"><b>形态:重感知 → 轻动作</b>。巨大的一帧感知输入,只对应一小段动作 + 少量标签。</div>
+        </div>
+      </div>
+      <div class="callout" style="border-color:var(--input);background:color-mix(in srgb,var(--input) 8%,transparent)">
+        <b style="color:var(--input)">注意「数值量 ≠ 真实信息量」:</b> 那 129 万个 float 是<b>同一张单帧 + 语言</b>的冗余再表示,内在信息 ≈「一帧场景 + 目标此刻姿态」——其中<b>缺"目标速率"</b>,正是远期 waypoint 欠定、误差随 horizon 增长的根因。
+      </div>
+    </div>
+  </section>
+
+  <div class="arrow"><svg width="20" height="30"><path d="M10 0 V22 M4 16 L10 24 L16 16" fill="none" stroke="currentColor" stroke-width="1.6"/></svg></div>
+
+  <!-- STAGE 5 -->
+  <section class="stage">
+    <div class="stitle"><span class="badge">5</span><h2>进入模型:Stage-2 联合训练</h2><span class="tag">50 epoch · batch 64</span></div>
+    <div class="body">
+      <b>课程采样</b>:每 epoch 用 WeightedRandomSampler <b>带放回抽 8447 次</b>,按 tier 加权,从偏 a(ep0 ≈61%)退火到偏 c(ep49 ≈61%)→ batch 64 ≈ <b>132 iter/epoch</b>。
+      <svg viewBox="0 0 900 250" class="flowsvg" role="img" aria-label="样本各部分进入 EAR/IAR/DiT/target_id 模块的数据流">
+        <defs>
+          <marker id="ah" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 Z" fill="var(--text-muted)"/></marker>
+        </defs>
+        <!-- left: sample pieces -->
+        <g font-size="12" font-family="ui-monospace,Menlo,monospace">
+          <rect x="8" y="18" width="150" height="26" rx="6" fill="none" stroke="var(--transform)"/><text x="83" y="35" text-anchor="middle" fill="var(--text-primary)">vlm_ctx_layers</text>
+          <rect x="8" y="70" width="150" height="26" rx="6" fill="none" stroke="var(--transform)"/><text x="83" y="87" text-anchor="middle" fill="var(--text-primary)">vlm_ctx (末层)</text>
+          <rect x="8" y="122" width="150" height="26" rx="6" fill="none" stroke="var(--input)"/><text x="83" y="139" text-anchor="middle" fill="var(--text-primary)">proprio</text>
+          <rect x="8" y="174" width="150" height="26" rx="6" fill="none" stroke="var(--transform)"/><text x="83" y="191" text-anchor="middle" fill="var(--text-primary)">cand_feats</text>
+        </g>
+        <!-- middle: modules -->
+        <g font-size="12.5" font-family="system-ui">
+          <rect x="330" y="14" width="120" height="34" rx="8" fill="color-mix(in srgb,var(--transform) 14%,transparent)" stroke="var(--transform)"/><text x="390" y="36" text-anchor="middle" fill="var(--text-primary)">IAR</text>
+          <rect x="330" y="70" width="120" height="34" rx="8" fill="color-mix(in srgb,var(--input) 14%,transparent)" stroke="var(--input)"/><text x="390" y="92" text-anchor="middle" fill="var(--text-primary)">EAR</text>
+          <rect x="560" y="120" width="120" height="34" rx="8" fill="color-mix(in srgb,var(--input) 14%,transparent)" stroke="var(--input)"/><text x="620" y="142" text-anchor="middle" fill="var(--text-primary)">DiT 动作头</text>
+          <rect x="330" y="178" width="120" height="34" rx="8" fill="color-mix(in srgb,var(--superv) 14%,transparent)" stroke="var(--superv)"/><text x="390" y="200" text-anchor="middle" fill="var(--text-primary)">target_id</text>
+        </g>
+        <!-- right: outputs -->
+        <g font-size="12" font-family="system-ui">
+          <text x="892" y="35" text-anchor="end" fill="var(--text-secondary)">z_im(隐式动作)</text>
+          <text x="892" y="91" text-anchor="end" fill="var(--text-secondary)">waypoint 粗轨迹 (z_ex)</text>
+          <text x="892" y="143" text-anchor="end" fill="var(--superv)">→ 16 步动作块</text>
+          <text x="892" y="199" text-anchor="end" fill="var(--superv)">→ 选中哪辆车</text>
+        </g>
+        <!-- arrows -->
+        <g fill="none" stroke="var(--text-muted)" stroke-width="1.4" marker-end="url(#ah)">
+          <path d="M158 31 H326"/>            <!-- ctx_layers -> IAR -->
+          <path d="M158 83 H326"/>            <!-- ctx -> EAR -->
+          <path d="M158 135 C240 135 250 87 326 87"/>  <!-- proprio -> EAR -->
+          <path d="M158 187 H326"/>           <!-- cand -> target_id -->
+          <path d="M450 31 H560 C580 31 620 60 620 118"/>  <!-- IAR z_im -> DiT -->
+          <path d="M450 87 C500 87 540 120 556 122"/>      <!-- EAR z_ex -> DiT -->
+          <path d="M450 31 H720"/>            <!-- IAR out -->
+          <path d="M450 87 H720"/>            <!-- EAR out -->
+          <path d="M680 137 H720"/>           <!-- DiT out -->
+          <path d="M450 195 H720"/>           <!-- tid out -->
+        </g>
+      </svg>
+      <div class="metric">
+        <div class="m"><div class="n" style="color:var(--superv)">~3%</div><div class="l">mis-follow(语言消歧)</div></div>
+        <div class="m"><div class="n">0.049</div><div class="l">act_mse(best,ep30)</div></div>
+        <div class="m"><div class="n">L = L_act +0.3·ear +0.1·vis +0.1·man +0.2·tid</div><div class="l">多任务损失</div></div>
+      </div>
+    </div>
+  </section>
+
+  <details>
+    <summary>▸ 表格视图(逐级形状 / 数值)</summary>
+    <table>
+      <tr><th>阶段</th><th>对象</th><th>形状 / 数量</th><th>说明</th></tr>
+      <tr><td>1 原始视频</td><td>rgb</td><td>(T, 336, 336, 3) @10fps</td><td>60 段 = 44 train + 6 val + ~10 测试</td></tr>
+      <tr><td>2 切样本</td><td>起点 i</td><td>stride 3,砍尾 60,封顶 200</td><td>44 段 → 8447;每段中位 200</td></tr>
+      <tr><td>3 预计算</td><td>vlm_ctx_layers</td><td>(5, 100, 2560)</td><td>冻结 Qwen3-VL 层 4/8/12/16/24;27GB 缓存</td></tr>
+      <tr><td>4 输入</td><td>ctx + cand + proprio</td><td>1,287,685 float ≈ 5.15MB</td><td>vlm_ctx 占 99.4%</td></tr>
+      <tr><td>4 监督</td><td>action/waypoint/标签</td><td>80 + 12 + 4 = 96 个数</td><td>重感知 / 轻动作</td></tr>
+      <tr><td>5 训练</td><td>每 epoch 抽样</td><td>8447(带放回,tier 加权)</td><td>batch 64 ≈132 iter × 50 epoch</td></tr>
+    </table>
+  </details>
+
+  <p class="foot">
+    形状与数字均取自 <span class="chip">train/dataset_stage2.py</span> · <span class="chip">train/backbone_kv.py</span> · <span class="chip">train/config.yaml</span> 的实测索引(2026-07-28)。
+    颜色:蓝=输入/感知,紫=冻结 VLM 预计算产物,青=监督目标,黄=关键设计标注;调色板经 CVD 验证(最差相邻 ΔE 61+)。
+  </p>
+</div>
+</body>
+</html>

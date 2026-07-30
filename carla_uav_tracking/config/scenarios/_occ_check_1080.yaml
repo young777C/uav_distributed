@@ -1,0 +1,38 @@
+# TEMP — high-res (1080×1080) INSPECTION render of the latest occlusion method.
+# Same scenes as occlusion_heavy (identical seed → identical trajectories/events),
+# just a sharper camera. NOT training data — h5 deleted after videos are made.
+# 1080×1080 (square) keeps the same 90° FOV framing as the 336² training data.
+# Shortened to 60s: 1080²+gzip-9 is compute-heavy (~2.5 fps), and 60s still captures
+# the occlusion crossings (ep0's is ~40s in). Same seed → same scene start as the 336² set.
+max_duration_seconds: 60
+
+environment:
+  towns: ["Town03", "Town05", "Town04", "Town10HD"]
+  max_occluded_seconds: 10
+
+occlusion:
+  enabled: true
+  bias_fraction: 0.8
+  max_cover_span_m: 40.0
+
+output:
+  rgb_resolution: [1080, 1080]
+
+uav:
+  perturbation:
+    probability: 0.05
+    min_interval: 6.0
+
+scene:
+  num_distractors: [5, 8]
+  min_similar_distractors: 2
+  target_class_weights:
+    car: 0.85
+    motorcycle: 0.15
+    bicycle: 0.0
+    scooter: 0.0
+    pedestrian: 0.0
+  similarity_strategy_weights:
+    same_color_diff_shape: 0.5
+    same_shape_diff_color: 0.5
+    distinct: 0.0

@@ -1,184 +1,111 @@
-"""Inject maneuver events into target behavior during tracking episodes.
+"""Inject SMOOTH, rule-abiding maneuver events into the target via the
+TrafficManager (never raw control / never autopilot-off).
 
-Creates diverse scenarios: sudden stops, sharp turns, accelerations, U-turns.
-These are the events that make tracking non-trivial — without them, tracking
-is just "follow a car in a straight line."
+The old version turned autopilot OFF and applied random steering, which made the
+target swerve, break traffic rules, and collide. This version keeps the target on
+autopilot the whole time and only modulates its TM speed / lane, so it stays on the
+road and obeys rules. Motion-intent language labels are derived post-hoc from the
+actual trajectory, so we don't need violent control to get 'about to turn/stop'.
 """
 
 from __future__ import annotations
 
 import random
-import time
 from dataclasses import dataclass
 from enum import Enum, auto
 from typing import Any
 
-import carla
-
 
 class ManeuverType(Enum):
     NONE = auto()
-    SUDDEN_STOP = auto()
-    SHARP_TURN = auto()
-    ACCELERATION = auto()
-    U_TURN = auto()
+    SUDDEN_STOP = auto()      # smooth slow-down (TM speed → ~10%)
+    ACCELERATION = auto()     # speed up (TM speed → +60%)
+    LANE_CHANGE = auto()      # TM-forced lane change (smooth)
 
 
 @dataclass
 class ManeuverConfig:
-    sudden_stop_prob: float = 0.05
-    sharp_turn_prob: float = 0.03
-    acceleration_prob: float = 0.02
-    u_turn_prob: float = 0.01
-    min_interval: float = 5.0  # seconds between maneuvers
+    sudden_stop_prob: float = 0.0
+    sharp_turn_prob: float = 0.0        # kept for config back-compat → lane change
+    acceleration_prob: float = 0.0
+    u_turn_prob: float = 0.0            # kept for config back-compat → ignored
+    min_interval: float = 6.0
+    base_speed_diff: float = 15.0       # calm cruising speed to restore to (% slower)
 
 
 @dataclass
 class ManeuverEvent:
     type: ManeuverType
     timestamp: float
-    duration: float           # how long it lasts
-    metadata: dict[str, Any]  # e.g., {"from_speed": 15.0, "to_speed": 0.0}
+    duration: float
+    metadata: dict[str, Any]
 
 
 class ManeuverInjector:
-    """Inject random maneuvers into a CARLA vehicle target.
+    """Modulate a TM-driven target's speed/lane to create smooth maneuver diversity."""
 
-    Usage:
-        injector = ManeuverInjector(config)
-        for each frame:
-            maneuver = injector.maybe_inject(vehicle, timestamp)
-            if maneuver:
-                record_maneuver_event(maneuver)
-    """
-
-    def __init__(self, config: ManeuverConfig | None = None):
+    def __init__(self, config: ManeuverConfig | None = None, traffic_manager=None):
         self._cfg = config or ManeuverConfig()
-        self._last_maneuver_time = -999.0
-        self._active_maneuver: ManeuverEvent | None = None
-        self._maneuver_history: list[ManeuverEvent] = []
+        self._tm = traffic_manager
+        self._last = -999.0
+        self._active: ManeuverEvent | None = None
+        self._history: list[ManeuverEvent] = []
 
     def reset(self) -> None:
-        self._last_maneuver_time = -999.0
-        self._active_maneuver = None
-        self._maneuver_history = []
+        self._last = -999.0
+        self._active = None
+        self._history = []
 
-    def maybe_inject(
-        self,
-        vehicle: carla.Vehicle,
-        timestamp: float,
-    ) -> ManeuverEvent | None:
-        """Check if a new maneuver should start. Returns event if so.
-
-        Call this every frame. Currently-active maneuvers are managed internally.
-        """
-        # Don't inject if one is already active
-        if self._active_maneuver is not None:
-            if timestamp - self._active_maneuver.timestamp > self._active_maneuver.duration:
-                # Maneuver complete — restore normal autopilot
-                self._restore_autopilot(vehicle)
-                self._active_maneuver = None
+    def maybe_inject(self, vehicle, timestamp: float) -> ManeuverEvent | None:
+        if self._tm is None or vehicle is None:
+            return None
+        # End an active maneuver → restore calm cruising speed.
+        if self._active is not None:
+            if timestamp - self._active.timestamp > self._active.duration:
+                self._safe(lambda: self._tm.vehicle_percentage_speed_difference(
+                    vehicle, float(self._cfg.base_speed_diff)))
+                self._active = None
+            return None
+        if timestamp - self._last < self._cfg.min_interval:
             return None
 
-        # Check cooldown
-        if timestamp - self._last_maneuver_time < self._cfg.min_interval:
-            return None
-
-        # Roll for each maneuver type
         roll = random.random()
-        cumulative = 0.0
-
-        # Sudden stop
-        cumulative += self._cfg.sudden_stop_prob
-        if roll < cumulative:
-            return self._execute_stop(vehicle, timestamp)
-
-        # Sharp turn
-        cumulative += self._cfg.sharp_turn_prob
-        if roll < cumulative:
-            return self._execute_sharp_turn(vehicle, timestamp)
-
-        # Acceleration
-        cumulative += self._cfg.acceleration_prob
-        if roll < cumulative:
-            return self._execute_acceleration(vehicle, timestamp)
-
-        # U-turn
-        cumulative += self._cfg.u_turn_prob
-        if roll < cumulative:
-            return self._execute_u_turn(vehicle, timestamp)
-
+        cum = self._cfg.sudden_stop_prob
+        if roll < cum:
+            return self._start(vehicle, timestamp, ManeuverType.SUDDEN_STOP,
+                               lambda: self._tm.vehicle_percentage_speed_difference(vehicle, 92.0),
+                               random.uniform(2.0, 4.0))
+        cum += self._cfg.acceleration_prob
+        if roll < cum:
+            return self._start(vehicle, timestamp, ManeuverType.ACCELERATION,
+                               lambda: self._tm.vehicle_percentage_speed_difference(vehicle, -60.0),
+                               random.uniform(2.0, 4.0))
+        cum += self._cfg.sharp_turn_prob + self._cfg.u_turn_prob
+        if roll < cum:
+            direction = random.choice([True, False])
+            return self._start(vehicle, timestamp, ManeuverType.LANE_CHANGE,
+                               lambda: self._tm.force_lane_change(vehicle, direction),
+                               random.uniform(1.0, 2.0))
         return None
 
     # ------------------------------------------------------------------
-    # Maneuver implementations
-    # ------------------------------------------------------------------
+    def _start(self, vehicle, t, mtype, action, duration) -> ManeuverEvent | None:
+        if not self._safe(action):
+            return None
+        ev = ManeuverEvent(type=mtype, timestamp=t, duration=duration, metadata={})
+        self._active = ev
+        self._last = t
+        self._history.append(ev)
+        return ev
 
-    def _execute_stop(self, vehicle: carla.Vehicle, t: float) -> ManeuverEvent:
-        vehicle.set_autopilot(False)
-        control = carla.VehicleControl(throttle=0.0, brake=1.0, steer=0.0)
-        vehicle.apply_control(control)
-        event = ManeuverEvent(
-            type=ManeuverType.SUDDEN_STOP,
-            timestamp=t,
-            duration=random.uniform(1.5, 4.0),
-            metadata={"action": "emergency_brake"},
-        )
-        self._record(event)
-        return event
-
-    def _execute_sharp_turn(self, vehicle: carla.Vehicle, t: float) -> ManeuverEvent:
-        vehicle.set_autopilot(False)
-        steer = random.uniform(-1.0, 1.0)
-        control = carla.VehicleControl(throttle=0.4, brake=0.0, steer=steer)
-        vehicle.apply_control(control)
-        event = ManeuverEvent(
-            type=ManeuverType.SHARP_TURN,
-            timestamp=t,
-            duration=random.uniform(1.0, 3.0),
-            metadata={"steer": steer},
-        )
-        self._record(event)
-        return event
-
-    def _execute_acceleration(self, vehicle: carla.Vehicle, t: float) -> ManeuverEvent:
-        vehicle.set_autopilot(False)
-        control = carla.VehicleControl(throttle=1.0, brake=0.0, steer=0.0)
-        vehicle.apply_control(control)
-        event = ManeuverEvent(
-            type=ManeuverType.ACCELERATION,
-            timestamp=t,
-            duration=random.uniform(1.5, 3.0),
-            metadata={"throttle": 1.0},
-        )
-        self._record(event)
-        return event
-
-    def _execute_u_turn(self, vehicle: carla.Vehicle, t: float) -> ManeuverEvent:
-        vehicle.set_autopilot(False)
-        control = carla.VehicleControl(
-            throttle=0.4, brake=0.0,
-            steer=random.choice([-1.0, 1.0]),
-        )
-        vehicle.apply_control(control)
-        event = ManeuverEvent(
-            type=ManeuverType.U_TURN,
-            timestamp=t,
-            duration=random.uniform(3.0, 6.0),
-            metadata={"direction": "left" if control.steer < 0 else "right"},
-        )
-        self._record(event)
-        return event
-
-    def _restore_autopilot(self, vehicle: carla.Vehicle) -> None:
-        """Return vehicle to autopilot after maneuver ends."""
-        vehicle.set_autopilot(True, 8000)
-
-    def _record(self, event: ManeuverEvent) -> None:
-        self._active_maneuver = event
-        self._last_maneuver_time = event.timestamp
-        self._maneuver_history.append(event)
+    @staticmethod
+    def _safe(fn) -> bool:
+        try:
+            fn()
+            return True
+        except (RuntimeError, AttributeError):
+            return False
 
     @property
     def history(self) -> list[ManeuverEvent]:
-        return self._maneuver_history
+        return self._history

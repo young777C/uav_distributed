@@ -1,0 +1,25 @@
+# Maneuver emphasis — frequent sudden stops / sharp turns / U-turns (trains IAR, H2).
+environment:
+  towns: ["Town03", "Town04"]
+
+target:
+  maneuver:
+    sudden_stop_prob: 0.08
+    sharp_turn_prob: 0.06
+    acceleration_prob: 0.04
+    u_turn_prob: 0.02
+    min_interval: 4.0
+
+scene:
+  num_distractors: [4, 7]
+  min_similar_distractors: 2
+  target_class_weights:      # weights are MERGED onto default → list all classes
+    car: 0.7
+    motorcycle: 0.2
+    bicycle: 0.1
+    scooter: 0.0
+    pedestrian: 0.0
+  similarity_strategy_weights:
+    same_color_diff_shape: 0.5
+    same_shape_diff_color: 0.5
+    distinct: 0.0

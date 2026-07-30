@@ -1,0 +1,26 @@
+# Main training distribution — cars with >=3 look-alikes, no easy tail.
+# This is the core "language must disambiguate among similar vehicles" data (§6.3).
+environment:
+  towns: ["Town03", "Town04"]
+
+scene:
+  num_distractors: [5, 8]
+  min_similar_distractors: 3
+  distractor_ahead_bias: 0.75
+  target_class_weights:      # cars only (weights are MERGED onto default → list all)
+    car: 1.0
+    motorcycle: 0.0
+    bicycle: 0.0
+    scooter: 0.0
+    pedestrian: 0.0
+  similarity_strategy_weights:
+    same_color_diff_shape: 0.5
+    same_shape_diff_color: 0.5
+    distinct: 0.0
+
+target:
+  maneuver:                # OFF — pure smooth autopilot
+    sudden_stop_prob: 0.0
+    sharp_turn_prob: 0.0
+    acceleration_prob: 0.0
+    u_turn_prob: 0.0

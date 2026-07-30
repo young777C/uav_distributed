@@ -1,0 +1,12 @@
+# Layer-16 grounding probe deps. Install on the 4×A40 box.
+# transformers must be recent enough to expose PaliGemma2 + Qwen3-VL.
+torch>=2.4
+transformers>=4.57          # needs Qwen3-VL + PaliGemma2 support; bump if load fails
+accelerate>=0.34
+h5py>=3.10
+numpy>=1.26
+pillow>=10.0
+pyyaml>=6.0
+sentencepiece                # PaliGemma/Gemma tokenizer
+# Qwen3-VL image handling (only if your transformers routes through it):
+# qwen-vl-utils

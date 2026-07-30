@@ -1,0 +1,18 @@
+# Class diversity — heavier on pedestrians (行人) / bicycles (非机动车) /
+# motorcycles (摩托) / scooters (电动). Same-class look-alikes for non-car targets.
+environment:
+  towns: ["Town03", "Town04"]
+
+scene:
+  num_distractors: [4, 8]
+  min_similar_distractors: 2
+  target_class_weights:      # heavier on two-wheelers; pedestrians are background only
+    car: 0.40
+    motorcycle: 0.28
+    bicycle: 0.20
+    scooter: 0.12
+    pedestrian: 0.0
+  similarity_strategy_weights:
+    same_color_diff_shape: 0.4
+    same_shape_diff_color: 0.4
+    distinct: 0.2

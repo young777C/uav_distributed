@@ -1,9 +1,9 @@
-r"""Quick CARLA connectivity test — run after starting CARLA server on Windows.
+r"""Quick CARLA connectivity test.
 
-Usage:
-    1. On Windows: start CarlaUE4.exe from the WindowsNoEditor folder
-    2. Wait for the 3D window to appear
-    3. In WSL2: python3 carla_quick_test.py
+Usage (inside the cyh-carla container):
+    1. Start a server:  bash $CARLA_ROOT/CarlaUE4.sh -RenderOffScreen -carla-rpc-port=2000 &
+    2. Wait ~15s for it to boot
+    3. python carla_quick_test.py
 """
 
 import sys
@@ -16,9 +16,11 @@ except ImportError:
     print("❌ carla not installed. Run: pip3 install carla")
     sys.exit(1)
 
-# Connect to CARLA server (running on Windows, accessible from WSL2 via localhost)
-HOST = "172.17.208.1"  # Windows host IP from WSL2 (use: ip route | grep default)
-PORT = 2000
+# Connect to CARLA server. In the cyh-carla container the server runs locally,
+# so default to localhost; override with CARLA_HOST / CARLA_PORT if needed.
+import os
+HOST = os.environ.get("CARLA_HOST", "127.0.0.1")
+PORT = int(os.environ.get("CARLA_PORT", "2000"))
 
 print(f"Connecting to CARLA at {HOST}:{PORT}...")
 client = carla.Client(HOST, PORT)

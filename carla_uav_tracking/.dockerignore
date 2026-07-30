@@ -1,0 +1,7 @@
+# Keep the build context tiny — only docker/requirements.txt is COPYed in; the
+# repo itself is bind-mounted at runtime, not baked into the image.
+**/__pycache__/
+**/*.pyc
+**/.pytest_cache/
+data/
+*.hdf5

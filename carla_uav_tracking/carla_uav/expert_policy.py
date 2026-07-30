@@ -74,7 +74,9 @@ class ExpertPolicy:
             z=PIDGains(kp=_sample("kp_z", 1.2), ki=_sample("ki_z", 0.05), kd=_sample("kd_z", 0.2), output_max=5.0),
             yaw=PIDGains(kp=_sample("kp_yaw", 1.5), ki=_sample("ki_yaw", 0.02), kd=_sample("kd_yaw", 0.1), output_max=60.0),
             limits=limits,
-            viewing_height_offset=random.uniform(20.0, 30.0),  # above buildings, still visible
+            # Tracking altitude ≈ maintained slant distance; set per distance tier.
+            viewing_height_offset=random.uniform(
+                *self._cfg.get("viewing_height_range", [20.0, 30.0])),
             dead_reckon_timeout=self._cfg.get("dead_reckon_timeout", 5.0),
         )
 

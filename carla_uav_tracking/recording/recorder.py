@@ -48,6 +48,8 @@ class EpisodeRecorder:
         self._occlusions: list[float] = []
         self._maneuvers: list[dict] = []
         self._target_positions: list[list[float]] = []  # for waypoint GT
+        self._distractor_positions: list[np.ndarray] = []  # each (D, 6): xyz + vxyz
+        self._episode_attrs: dict = {}                     # written once on file create
 
     # ------------------------------------------------------------------
     # Public API
@@ -59,7 +61,29 @@ class EpisodeRecorder:
         metadata = self._scene.setup_episode()
         assert self._scene.drone is not None
 
-        max_duration = self._scene._config.get("max_duration_seconds", 180)
+        # Episode-level attributes written into the HDF5 file (design §5.2 attrs).
+        self._episode_attrs = {
+            "language": metadata.get("language", ""),
+            "target_bp": metadata.get("target_blueprint", ""),
+            "target_desc": metadata.get("target_desc", ""),
+            "target_class": metadata.get("target_class", ""),
+            "target_color": str(metadata.get("target_color")),
+            "strategy": metadata.get("strategy", ""),
+            "num_similar": int(metadata.get("num_similar", 0)),
+            "town": self._world.get_map().name.split("/")[-1],
+            "seed": str(metadata.get("seed")),
+            "weather": json.dumps(metadata.get("weather", {})),
+            "distractors": json.dumps(metadata.get("distractors", [])),
+            "occlusion_biased": bool(metadata.get("occlusion_biased", False)),
+            "camera_pitch": float(metadata.get("camera_pitch", -50.0)),
+        }
+
+        # Scenarios set this under `environment:` (like the other env keys); fall back to
+        # a top-level value, then the default. (Was read only at top level → scenario
+        # `environment.max_duration_seconds` was silently ignored, e.g. mvp's 150 ran 180.)
+        cfg = self._scene._config
+        max_duration = cfg.get("environment", {}).get(
+            "max_duration_seconds", cfg.get("max_duration_seconds", 180))
         max_steps = max_steps or int(max_duration * self._fps)
 
         # Setup synchronous mode
@@ -69,9 +93,9 @@ class EpisodeRecorder:
         settings.fixed_delta_seconds = self._dt
         self._world.apply_settings(settings)
 
-        # Validate target is moving AND let UAV catch up (tick 50x = 5 seconds)
+        # Validate target is moving AND let traffic disperse (tick 90x = 9 seconds)
         max_speed = 0.0
-        for _ in range(50):
+        for _ in range(90):
             self._scene.step_target(0.1)
             # Also move UAV toward target during warmup
             tpos, _, _, _ = self._scene.get_target_state()
@@ -83,9 +107,13 @@ class EpisodeRecorder:
             self._world.tick()
             _, _, _, ts = self._scene.get_target_state()
             max_speed = max(max_speed, ts)
-        if max_speed < 2.0:
-            self._world.apply_settings(original_settings)
+        if max_speed < 1.2:
             self._scene.cleanup()
+            try:
+                self._world.tick()
+            except RuntimeError:
+                pass
+            self._world.apply_settings(original_settings)
             return {"episode_id": self._episode_id, "steps": 0,
                     "duration_seconds": 0, "fps_actual": 0,
                     "metadata": metadata, "skipped": True,
@@ -94,7 +122,20 @@ class EpisodeRecorder:
         # Create RGB sensor (manually positioned each tick)
         rgb_sensor = self._create_attached_sensor()
 
+        # Structural-occlusion detector: rays from target bbox corners → camera. Gives
+        # a graded occlusion level (target hidden by building/tunnel while still in
+        # frame) — the label §6.2/§6.4/H2 need. Computed live, stored per frame.
+        from scene.occlusion import OcclusionDetector
+        occ_detector = OcclusionDetector(self._world, num_rays=8, hit_threshold=0.5)
+        target_actor = (getattr(self._scene._target, "_vehicle", None)
+                        or getattr(self._scene._target, "_walker", None))
+
         start_time = time.time()
+        off_lost = 0     # consecutive frames the target is OFF-screen (truly lost)
+        occ_lost = 0     # consecutive frames the target is in-frame but occluded
+        env_cfg = self._scene._config.get("environment", {})
+        max_lost = int(env_cfg.get("max_lost_seconds", 5.0) / self._dt)
+        max_occluded = int(env_cfg.get("max_occluded_seconds", 10.0) / self._dt)
 
         try:
             for step in range(max_steps):
@@ -103,9 +144,16 @@ class EpisodeRecorder:
                 # Step target vehicle (route following)
                 self._scene.step_target(self._dt)
 
-                # Get current states
-                tpos, tvel, tyaw, tspeed = self._scene.get_target_state()
+                # Possibly inject a target maneuver (sudden stop / sharp turn / ...)
+                man_event = self._scene.check_maneuver(elapsed)
+
+                # Recycle off-screen look-alikes back near the target (co-visibility).
                 drone_state = self._scene.drone.get_state()
+                self._scene.recycle_lost_lookalikes()
+
+                # Get current states (reflect any recycling)
+                tpos, tvel, tyaw, tspeed = self._scene.get_target_state()
+                dstates = self._scene.get_distractor_states()  # (D, 6)
                 target_visible = True
 
                 # Expert action with perturbation injection
@@ -123,10 +171,26 @@ class EpisodeRecorder:
                 self._scene.step_drone(action)
                 cam_t = self._scene.drone.get_camera_transform()
                 rgb_sensor._sensor.set_transform(cam_t)
+                cam_pose = [
+                    cam_t.location.x, cam_t.location.y, cam_t.location.z,
+                    cam_t.rotation.pitch, cam_t.rotation.yaw,
+                ]
 
                 # Single tick — advances simulation AND captures sensor frame
                 self._world.tick()
                 rgb_frame = rgb_sensor.get_frame(timeout=0.5)
+
+                # Graded structural occlusion [0,1] (fraction of target→camera rays
+                # blocked by geometry — building / tunnel roof).
+                occ_raycast = 0.0
+                if target_actor is not None:
+                    try:
+                        occ_raycast = float(occ_detector.check(
+                            target_actor,
+                            np.array([cam_t.location.x, cam_t.location.y,
+                                      cam_t.location.z]))[1])
+                    except RuntimeError:
+                        occ_raycast = 0.0
 
                 # Record
                 self._record_frame(
@@ -135,7 +199,38 @@ class EpisodeRecorder:
                     is_turning=self._scene.is_target_turning(),
                     pert_event=pert_event,
                     obs_event=obs_event,
+                    distractor_states=dstates,
+                    cam_pose=cam_pose,
+                    man_event=man_event,
+                    occ_raycast=occ_raycast,
                 )
+
+                # A1c③ — separate truncation. A target driven OFF-screen (truly lost,
+                # e.g. off-map / expert can't follow) truncates fast (max_lost). A target
+                # IN frame but structurally occluded (bridge/overpass/tunnel) is tolerated
+                # much longer (max_occluded) so the occlusion event SURVIVES as recoverable
+                # data — that is exactly the signal §6.2/§6.4/H2 need. Both counters reset
+                # on a clean re-acquire.
+                in_frame = self._point_in_frame(cam_t, tpos)
+                # Expose visibility so the expert can switch to target-recovery framing
+                # (fly toward the true target to re-acquire) once it drifts off-screen,
+                # instead of staying with the group centroid and losing it.
+                self._scene._target_in_frame = bool(in_frame)
+                if not in_frame:
+                    off_lost += 1
+                    occ_lost = 0
+                elif occ_raycast >= 0.6:
+                    occ_lost += 1
+                    off_lost = 0
+                else:
+                    off_lost = 0
+                    occ_lost = 0
+                if off_lost >= max_lost or occ_lost >= max_occluded:
+                    why = "off-screen" if off_lost >= max_lost else "structural occlusion"
+                    print(f"[Episode {self._episode_id}] target {why} too long "
+                          f"(off={off_lost}/{max_lost} occ={occ_lost}/{max_occluded}) "
+                          f"— truncating at step {step}")
+                    break
 
                 # Flush buffer periodically
                 if len(self._frames) >= self._buffer_size:
@@ -145,10 +240,19 @@ class EpisodeRecorder:
             print(f"[Episode {self._episode_id}] Error at step {step}: {e}")
             metadata["error"] = str(e)
         finally:
-            # Restore settings
-            self._world.apply_settings(original_settings)
-            rgb_sensor.destroy()
+            # Destroy actors while STILL in synchronous mode, then tick once so the
+            # server finalizes destruction before we switch back / start the next
+            # episode (prevents 'operate on a destroyed actor' aborts from the TM).
+            try:
+                rgb_sensor.destroy()
+            except RuntimeError:
+                pass
             self._scene.cleanup()
+            try:
+                self._world.tick()
+            except RuntimeError:
+                pass
+            self._world.apply_settings(original_settings)
 
             # Final flush
             if self._frames:
@@ -186,6 +290,32 @@ class EpisodeRecorder:
         sensor.listen(rgb._queue.put)
         return rgb
 
+    def _target_occluded(self, cam_t, tpos) -> bool:
+        """Whether the line of sight from the camera to the target is blocked by
+        geometry (building / tunnel roof) — i.e. the target is hidden even if it
+        still projects inside the frame. One ray per call."""
+        try:
+            end = carla.Location(float(tpos[0]), float(tpos[1]), float(tpos[2]) + 0.8)
+            d_target = cam_t.location.distance(end)
+            for h in self._world.cast_ray(cam_t.location, end):
+                if cam_t.location.distance(h.location) < d_target - 3.0:
+                    return True   # something substantial between camera and target
+        except (RuntimeError, AttributeError):
+            return False
+        return False
+
+    def _point_in_frame(self, cam_t, wp) -> bool:
+        """Whether a world point projects inside the RGB frame (90° FOV camera)."""
+        M = np.array(cam_t.get_inverse_matrix())
+        q = M @ np.array([float(wp[0]), float(wp[1]), float(wp[2]), 1.0])
+        if q[0] <= 0.1:
+            return False
+        W, H = self._resolution
+        f = W / (2.0 * np.tan(np.radians(90.0) / 2.0))
+        u = f * (q[1] / q[0]) + W / 2.0
+        v = f * (-q[2] / q[0]) + H / 2.0
+        return 0 <= u < W and 0 <= v < H
+
     def _record_frame(
         self,
         rgb: np.ndarray,
@@ -200,11 +330,17 @@ class EpisodeRecorder:
         is_turning: bool = False,
         pert_event: Any = None,
         obs_event: Any = None,
+        distractor_states: Any = None,
+        cam_pose: Any = None,
+        man_event: Any = None,
+        occ_raycast: float = 0.0,
     ) -> None:
         self._frames.append(rgb)
         self._actions.append(list(action))
+        cam_pose = cam_pose or [0.0, 0.0, 0.0, 0.0, 0.0]
         self._states.append({
             "t": elapsed,
+            "occ_raycast": float(occ_raycast),
             "uav_x": float(drone_state.position[0]),
             "uav_y": float(drone_state.position[1]),
             "uav_z": float(drone_state.position[2]),
@@ -216,12 +352,19 @@ class EpisodeRecorder:
             "is_turning": int(is_turning),
             "perturbation": int(pert_event is not None),
             "obstacle_avoid": int(obs_event is not None),
+            "maneuver": int(man_event is not None),
+            "cam_x": float(cam_pose[0]), "cam_y": float(cam_pose[1]),
+            "cam_z": float(cam_pose[2]), "cam_pitch": float(cam_pose[3]),
+            "cam_yaw": float(cam_pose[4]),
         })
         self._target_positions.append([
             float(tpos[0]), float(tpos[1]), float(tpos[2]),
             float(tvel[0]), float(tvel[1]), float(tvel[2]),
             float(tspeed), float(tyaw),
         ])
+        if distractor_states is None:
+            distractor_states = np.zeros((0, 6), dtype=np.float32)
+        self._distractor_positions.append(np.asarray(distractor_states, dtype=np.float32))
         self._occlusions.append(0.0)  # placeholder, filled in postprocess
 
     def _flush_buffer(self) -> None:
@@ -246,6 +389,9 @@ class EpisodeRecorder:
                     dtype=np.uint8, chunks=(1, *self._resolution, 3),
                     compression="gzip", compression_opts=9,
                 )
+                # Episode-level attributes (language, target/distractor meta, seed...)
+                for k, v in self._episode_attrs.items():
+                    f.attrs[k] = v
             else:
                 f["rgb"].resize(total, axis=0)
 
@@ -258,7 +404,8 @@ class EpisodeRecorder:
             state_group = f.require_group("state")
             for key in ["t", "uav_x", "uav_y", "uav_z", "uav_vx", "uav_vy",
                          "uav_vz", "uav_yaw", "uav_energy",
-                         "is_turning", "perturbation", "obstacle_avoid"]:
+                         "is_turning", "perturbation", "obstacle_avoid", "maneuver",
+                         "cam_x", "cam_y", "cam_z", "cam_pitch", "cam_yaw", "occ_raycast"]:
                 vals = [s[key] for s in self._states]
                 if key not in state_group:
                     state_group.create_dataset(
@@ -299,9 +446,26 @@ class EpisodeRecorder:
                     ds.resize(total, axis=0)
                     ds[n_existing:] = tgt_arr[:, j]
 
+            # Distractor per-frame tracks (T, D, 6): [x, y, z, vx, vy, vz]  (P1-a)
+            if self._distractor_positions and self._distractor_positions[0].shape[0] > 0:
+                darr = np.stack(self._distractor_positions, axis=0)
+                D = darr.shape[1]
+                dgrp = f.require_group("distractors")
+                if "positions" not in dgrp:
+                    dgrp.create_dataset(
+                        "positions", data=darr, maxshape=(None, D, 6),
+                        chunks=(min(64, n_new), D, 6),
+                        compression="gzip", compression_opts=4,
+                    )
+                else:
+                    ds = dgrp["positions"]
+                    ds.resize(total, axis=0)
+                    ds[n_existing:] = darr
+
         # Clear buffers
         self._frames.clear()
         self._actions.clear()
         self._states.clear()
         self._target_positions.clear()
+        self._distractor_positions.clear()
         self._occlusions.clear()

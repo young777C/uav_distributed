@@ -1,0 +1,18 @@
+# Easy tail — distractors visually DISTINCT from the target (no look-alikes).
+# Used to measure the easy/hard gap = evidence that language is load-bearing (§7.4).
+environment:
+  towns: ["Town03", "Town04"]
+
+scene:
+  num_distractors: [4, 8]
+  min_similar_distractors: 0
+  target_class_weights:      # cars only (weights are MERGED onto default → list all)
+    car: 1.0
+    motorcycle: 0.0
+    bicycle: 0.0
+    scooter: 0.0
+    pedestrian: 0.0
+  similarity_strategy_weights:
+    same_color_diff_shape: 0.0
+    same_shape_diff_color: 0.0
+    distinct: 1.0

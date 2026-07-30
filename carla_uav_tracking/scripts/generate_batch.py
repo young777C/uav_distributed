@@ -26,11 +26,14 @@ def main():
     parser = argparse.ArgumentParser(description="Batch generate tracking episodes")
     parser.add_argument("--num-episodes", type=int, default=100)
     parser.add_argument("--config", type=str, default=None)
-    parser.add_argument("--host", type=str, default="localhost")
+    parser.add_argument("--host", type=str, default="127.0.0.1")
     parser.add_argument("--port", type=int, default=2000)
-    parser.add_argument("--output", type=str, default="/mnt/d/data/carla_data")
+    parser.add_argument("--output", type=str, default="/data",
+                        help="Output dir; container /data == host carla_data mount")
     parser.add_argument("--start-id", type=int, default=0)
-    parser.add_argument("--max-size-gb", type=float, default=5.0,
+    parser.add_argument("--seed", type=int, default=42,
+                        help="Base seed; per-episode seed = seed + episode_id")
+    parser.add_argument("--max-size-gb", type=float, default=45.0,
                         help="Stop when total data exceeds this")
     parser.add_argument("--postprocess", action="store_true", default=True)
     args = parser.parse_args()
@@ -42,20 +45,32 @@ def main():
     max_bytes = int(args.max_size_gb * 1024**3)
     town_list = cfg.get("environment", {}).get("towns", ["Town01"])
 
-    # Connect
+    # Connect (generous timeout: first map load compiles shaders)
     client = carla.Client(args.host, args.port)
-    client.set_timeout(30.0)
+    client.set_timeout(60.0)
 
     summaries = []
     postproc = PostProcessor(output_dir)
 
+    # Load the scenario's first town up front (skip if the server is already on
+    # it — important for crash-resume so we don't reload every restart).
+    first_town = town_list[0] if town_list else "Town10HD"
+    cur_map = client.get_world().get_map().name.split("/")[-1]
+    if cur_map != first_town:
+        try:
+            print(f"Loading initial map: {first_town}")
+            client.load_world(first_town)
+            time.sleep(3.0)
+        except RuntimeError:
+            print("  Initial map load failed; using current map")
+
+    progress_file = output_dir / ".attempted"
     for ep_id in range(args.start_id, args.start_id + args.num_episodes):
+        # Record attempt so a supervisor can resume past a crashing episode.
+        progress_file.write_text(str(ep_id))
         # Map switch every 10 episodes (with crash guard)
         if ep_id % 10 == 0 and len(town_list) > 1:
             town = town_list[(ep_id // 10) % len(town_list)]
-            # Skip known-problematic maps
-            if town in ("Town10HD", "Town10HD_Opt"):
-                town = "Town03"
             print(f"[{ep_id}] Loading map: {town}")
             try:
                 client.load_world(town)
@@ -69,10 +84,14 @@ def main():
         if "towns" not in cfg.get("environment", {}):
             cfg["environment"]["towns"] = town_list
 
+        # Per-episode seed for reproducibility (P1-b)
+        cfg.setdefault("environment", {})["seed"] = args.seed + ep_id
+
         scene = SceneManager(world, cfg, client)
         recorder = EpisodeRecorder(
             scene=scene, world=world, output_dir=output_dir,
             episode_id=ep_id, fps=cfg.get("environment", {}).get("fps", 10),
+            resolution=tuple(cfg.get("output", {}).get("rgb_resolution", [336, 336])),
         )
 
         print(f"[{ep_id}] Starting...", end=" ", flush=True)

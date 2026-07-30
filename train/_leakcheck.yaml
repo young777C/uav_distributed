@@ -1,0 +1,77 @@
+action:
+  horizon: 16
+  scale: 5.0
+backbone:
+  ctx_grid: 10
+  device: cuda:0
+  kind: qwen3vl
+  layer: 24
+  model_id: Qwen/Qwen3-VL-4B-Instruct
+data:
+  context_cache: runs/ctx_cache
+  episodes_glob: /nvidia/hque/data/carla_data/mvp_fix_val/episode_*.h5
+  frame_stride: 3
+  max_frames_per_episode: 200
+  stage2_context_cache: runs/ctx_cache_ml
+  test_town: Town05
+  val_frac: 0.2
+ear:
+  d_model: 256
+  n_heads: 4
+  n_layers: 4
+eval:
+  every: 5
+  gate_mse_6s_m: 10.0
+flow:
+  sample_steps: 8
+fps: 10
+image:
+  box_max_px: 140
+  box_min_px: 10
+  fov_deg: 90.0
+  height: 336
+  vehicle_size_m: 4.0
+  width: 336
+loss:
+  ear: 0.3
+  maneuver: 0.1
+  target_id: 0.2
+  vis: 0.1
+model:
+  cond_dim: 2560
+  dit:
+    d_model: 512
+    n_heads: 8
+    n_layers: 32
+  ear:
+    d_model: 256
+    n_heads: 4
+    n_layers: 4
+  iar:
+    d: 256
+    n_heads: 4
+    n_im: 8
+  tid_d: 256
+seed: 0
+train:
+  batch_size: 64
+  ckpt_dir: runs/stage1_ear
+  device: auto
+  ear_ckpt: runs/stage1_ear/stage1_ear_best.pt
+  epochs: 50
+  lr: 0.0002
+  staleness_noise: 0.2
+  staleness_p: 0.3
+  weight_decay: 0.0001
+  workers: 4
+waypoint:
+  K: 4
+  camera_frame: true
+  max_horizon_s: 6
+  offsets_s:
+  - 1
+  - 2
+  - 4
+  - 6
+  relative_to_uav: true
+  scale: 50.0

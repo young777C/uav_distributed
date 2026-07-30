@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import random
 from dataclasses import dataclass
 from typing import Any
@@ -35,53 +36,78 @@ class VehicleTarget:
         spawn_point: carla.Transform,
         speed_kmh: float = 30.0,
         carla_client: carla.Client | None = None,
+        color: str | None = None,
+        role_name: str = "target_vehicle",
+        tm_port: int = 8000,
+        speed_diff: float | None = None,
     ):
         bp = world.get_blueprint_library().find(blueprint_name)
         if bp is None:
             raise ValueError(f"Vehicle blueprint not found: {blueprint_name}")
-        bp.set_attribute("role_name", "target_vehicle")
+        bp.set_attribute("role_name", role_name)
+        # Optional color control (for same-shape/different-color similarity).
+        if color is not None and bp.has_attribute("color"):
+            try:
+                bp.set_attribute("color", color)
+            except (RuntimeError, ValueError):
+                pass
 
         carla_map = world.get_map()
-        spawn_points = carla_map.get_spawn_points()
-        if spawn_points:
-            pt = random.choice(spawn_points)
-            pt.location.x += random.uniform(-0.5, 0.5)
-            pt.location.y += random.uniform(-0.5, 0.5)
-        else:
-            pt = spawn_point
+        # P0-a fix: RESPECT the requested spawn point (snap to the nearest driving
+        # lane so it stays on-road), instead of teleporting to a random map spawn
+        # point. This is what keeps target + distractors co-located and co-visible.
+        wp = carla_map.get_waypoint(
+            spawn_point.location, project_to_road=True,
+            lane_type=carla.LaneType.Driving,
+        )
+        base = wp.transform if wp is not None else spawn_point
 
         self._vehicle = None
-        for attempt in range(5):
+        for attempt in range(8):
+            jitter = 1.5 * attempt  # first attempt = exact requested point
+            pt = carla.Transform(
+                carla.Location(
+                    x=base.location.x + random.uniform(-jitter, jitter),
+                    y=base.location.y + random.uniform(-jitter, jitter),
+                    z=base.location.z + 0.3,
+                ),
+                base.rotation,
+            )
             try:
                 self._vehicle = world.spawn_actor(bp, pt)
                 break
             except RuntimeError:
-                if attempt == 4: raise
-                pt.location.x += random.uniform(-3, 3)
-                pt.location.y += random.uniform(-3, 3)
+                if attempt == 7:
+                    raise
 
         self._world = world
         self._map = carla_map
         self._target_speed_ms = random.uniform(6.0, 12.0)  # moderate speed — stay on road
         self._is_turning = False
-        self._direction = self._compute_direction(pt.rotation.yaw)
+        self._direction = self._compute_direction(base.rotation.yaw)
         self._stuck_counter = 0
         self._total_distance = 0.0
         self._turn_cooldown = 0.0
         self._steer = 0.0
 
-        self._cached_transform = pt
+        self._cached_transform = base
         self._cached_velocity = np.zeros(3)
         self._cached_speed = 0.0
 
-        # CARLA autopilot — follows road network, obeys traffic lights
+        # CARLA autopilot — follows road network, obeys traffic lights.
+        # Per-vehicle speed difference (negative = faster than the limit).
         if carla_client is not None:
-            tm = carla_client.get_trafficmanager(8000)
+            tm = carla_client.get_trafficmanager(tm_port)
             tm.set_synchronous_mode(True)
-            tm.global_percentage_speed_difference(
-                -random.uniform(10, 40)  # 10-40% above speed limit
-            )
-        self._vehicle.set_autopilot(True, 8000)
+            try:
+                if speed_diff is not None:
+                    tm.vehicle_percentage_speed_difference(self._vehicle, float(speed_diff))
+                # Stay in-lane & orderly (no weaving); recycling provides the dynamics.
+                tm.auto_lane_change(self._vehicle, False)
+                tm.distance_to_leading_vehicle(self._vehicle, 2.5)
+            except (RuntimeError, AttributeError):
+                pass
+        self._vehicle.set_autopilot(True, tm_port)
 
     # ------------------------------------------------------------------
     # Public API
@@ -142,6 +168,10 @@ class VehicleTarget:
 
     def destroy(self) -> None:
         if self._vehicle is not None and self._vehicle.is_alive:
+            try:
+                self._vehicle.set_autopilot(False)  # let the TM drop it first
+            except RuntimeError:
+                pass
             self._vehicle.destroy()
 
     def is_alive(self) -> bool:
@@ -157,44 +187,66 @@ class VehicleTarget:
 
 
 class PedestrianTarget:
-    """CARLA walker with AI controller."""
+    """CARLA walker driven by manual WalkerControl (no AI controller / navmesh).
+
+    The walker AI controller + navigation mesh segfaults the client in this
+    offscreen build, so we move the walker directly: apply WalkerControl(direction,
+    speed) every step and let it stroll along the road with gentle heading drift.
+    """
 
     def __init__(
         self,
         world: carla.World,
         blueprint_name: str,
         spawn_point: carla.Transform,
-        walk_speed: float = 2.0,
+        walk_speed: float = 1.6,
+        carla_client: carla.Client | None = None,
+        snap_to_road: bool = True,
+        role_name: str = "target_pedestrian",
     ):
         bp = world.get_blueprint_library().find(blueprint_name)
         if bp is None:
             raise ValueError(f"Walker blueprint not found: {blueprint_name}")
-        bp.set_attribute("role_name", "target_pedestrian")
+        bp.set_attribute("role_name", role_name)
+
+        if snap_to_road:
+            carla_map = world.get_map()
+            wp = carla_map.get_waypoint(
+                spawn_point.location, project_to_road=True, lane_type=carla.LaneType.Driving)
+            base = wp.transform if wp is not None else spawn_point
+        else:
+            base = spawn_point  # e.g. a navmesh location for ambient sidewalk walkers
 
         self._walker = None
-        for attempt in range(5):
-            pt = spawn_point
-            if attempt > 0:
-                pt = carla.Transform(
-                    carla.Location(
-                        x=spawn_point.location.x + random.uniform(-5, 5),
-                        y=spawn_point.location.y + random.uniform(-5, 5),
-                        z=spawn_point.location.z + random.uniform(1, 3),
-                    ),
-                    spawn_point.rotation,
-                )
+        for attempt in range(8):
+            jitter = 1.0 * attempt
+            pt = carla.Transform(
+                carla.Location(
+                    x=base.location.x + random.uniform(-jitter, jitter),
+                    y=base.location.y + random.uniform(-jitter, jitter),
+                    z=base.location.z + 1.0,
+                ),
+                base.rotation,
+            )
             try:
                 self._walker = world.spawn_actor(bp, pt)
                 break
             except RuntimeError:
-                if attempt == 4: raise
+                if attempt == 7:
+                    raise
 
         self._world = world
-        controller_bp = world.get_blueprint_library().find("controller.ai.walker")
-        self._controller = world.spawn_actor(controller_bp, carla.Transform(), self._walker)
-        self._controller.start()
-        self._controller.go_to_location(world.get_random_location_from_navigation())
-        self._controller.set_max_speed(walk_speed)
+        self._speed = float(walk_speed)
+        self._heading = base.rotation.yaw
+
+    def step(self, dt: float = 0.1) -> None:
+        # Stroll forward with a gentle random heading drift.
+        self._heading += random.uniform(-3.0, 3.0)
+        yaw = math.radians(self._heading)
+        self._walker.apply_control(carla.WalkerControl(
+            direction=carla.Vector3D(x=math.cos(yaw), y=math.sin(yaw), z=0.0),
+            speed=self._speed, jump=False,
+        ))
 
     def get_state(self) -> tuple[np.ndarray, np.ndarray, float, float]:
         t = self._walker.get_transform()
@@ -215,8 +267,6 @@ class PedestrianTarget:
     def transform(self) -> carla.Transform: return self._walker.get_transform()
 
     def destroy(self) -> None:
-        if self._controller is not None and self._controller.is_alive:
-            self._controller.stop(); self._controller.destroy()
         if self._walker is not None and self._walker.is_alive:
             self._walker.destroy()
 

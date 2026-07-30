@@ -59,15 +59,17 @@ class OcclusionDetector:
 
         blocked = 0
         for corner in corners:
-            result = self._world.cast_ray(
-                carla.Location(x=corner[0], y=corner[1], z=corner[2]),
-                uav_loc,
-            )
-            # result.hit == True means there's an obstacle between corner and UAV
-            if result.hit:
-                blocked += 1
+            c = carla.Location(x=float(corner[0]), y=float(corner[1]), z=float(corner[2]))
+            d_cam = c.distance(uav_loc)
+            # cast_ray returns a LIST of labelled points where the ray crosses geometry;
+            # a corner is blocked if something lies strictly between it and the camera
+            # (2 m buffers skip the target's own body and the camera end).
+            for h in self._world.cast_ray(c, uav_loc):
+                if 2.0 < c.distance(h.location) < d_cam - 2.0:
+                    blocked += 1
+                    break
 
-        level = blocked / self._num_rays
+        level = blocked / max(len(corners), 1)
         return level >= self._hit_threshold, level
 
     @staticmethod

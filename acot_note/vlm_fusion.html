@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ACoT-UAV · 语言如何融入视觉 + 训练/推理流程</title>
+<style>
+  :root{
+    --page:#f9f9f7;--surface-1:#fcfcfb;--surface-2:#f2f1ec;--text-primary:#0b0b0b;--text-secondary:#52514e;--text-muted:#898781;
+    --grid:#e1e0d9;--border:rgba(11,11,11,.12);--chip:#eeede7;
+    --vision:#2a78d6;--action:#1baf7a;--fuse:#4a3aa7;--lang:#eda100;--lang-ink:#8a5a00;
+  }
+  @media (prefers-color-scheme:dark){html:not(.light){
+    --page:#0d0d0d;--surface-1:#1a1a19;--surface-2:#232320;--text-primary:#fff;--text-secondary:#c3c2b7;--text-muted:#898781;
+    --grid:#2c2c2a;--border:rgba(255,255,255,.12);--chip:#2a2a27;
+    --vision:#3987e5;--action:#199e70;--fuse:#9085e9;--lang:#eda100;--lang-ink:#eda100;}}
+  html.dark{--page:#0d0d0d;--surface-1:#1a1a19;--surface-2:#232320;--text-primary:#fff;--text-secondary:#c3c2b7;--text-muted:#898781;
+    --grid:#2c2c2a;--border:rgba(255,255,255,.12);--chip:#2a2a27;
+    --vision:#3987e5;--action:#199e70;--fuse:#9085e9;--lang:#eda100;--lang-ink:#eda100;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--page);color:var(--text-primary);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.5}
+  .wrap{max-width:960px;margin:0 auto;padding:26px 20px 60px}
+  header{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:4px}
+  h1{font-size:20px;font-weight:650;margin:0}.sub{color:var(--text-secondary);font-size:13px;margin:4px 0 0}
+  .toggle{border:1px solid var(--border);background:var(--surface-1);color:var(--text-secondary);border-radius:8px;padding:6px 12px;font-size:12.5px;cursor:pointer;font-family:inherit}
+  .legend{display:flex;gap:18px;flex-wrap:wrap;margin:14px 0 2px;font-size:12.5px;color:var(--text-secondary)}
+  .lg{display:flex;align-items:center;gap:7px}.sw{width:14px;height:14px;border-radius:4px;flex:none}
+  .panel{background:var(--surface-1);border:1px solid var(--border);border-radius:14px;padding:16px 18px;margin-top:18px}
+  .ptitle{font-size:15.5px;font-weight:640;margin:0 0 4px}
+  .pnote{font-size:12.5px;color:var(--text-secondary);margin:0 0 10px}
+  .basics{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+  @media (max-width:640px){.basics{grid-template-columns:1fr}}
+  .b{background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:10px 12px}
+  .b h3{font-size:12.5px;margin:0 0 5px;font-weight:640}
+  .b p{font-size:12px;color:var(--text-secondary);margin:0}
+  .b b{color:var(--text-primary)}
+  svg{display:block;width:100%;height:auto;overflow:visible}
+  .flowsvg{margin-top:6px}
+  .cap{font-size:11.5px;color:var(--text-muted);margin-top:8px;line-height:1.6}
+  .cap b{color:var(--text-primary)}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media (max-width:680px){.cols{grid-template-columns:1fr}}
+  .col{border:1px solid var(--border);border-radius:12px;padding:12px 14px;background:var(--surface-2)}
+  .col h3{font-size:13.5px;margin:0 0 8px;display:flex;align-items:center;gap:8px}
+  .step{display:flex;gap:9px;margin:7px 0;font-size:12px;color:var(--text-secondary)}
+  .step .n{width:18px;height:18px;border-radius:50%;flex:none;background:var(--text-primary);color:var(--page);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center}
+  .step b{color:var(--text-primary)}
+  .chip{display:inline-block;font-family:ui-monospace,Menlo,monospace;font-size:11px;background:var(--chip);border:1px solid var(--border);border-radius:5px;padding:0 5px;color:var(--text-primary)}
+  .tagrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}
+  .diff{font-size:11.5px;color:var(--text-muted);margin-top:10px;border-top:1px dashed var(--border);padding-top:8px}
+</style>
+</head>
+<body data-palette="#2a78d6,#4a3aa7,#1baf7a" data-mode="light">
+<div class="wrap">
+  <header>
+    <div><h1>语言如何融入视觉 · 训练/推理流程</h1>
+    <p class="sub">给非 VLM 背景:从 token 讲起 → 注意力融合 → 冻结缓存 → 训练与部署</p></div>
+    <button class="toggle" onclick="document.documentElement.classList.toggle('dark');document.documentElement.classList.remove('light')">◑ 明/暗</button>
+  </header>
+  <div class="legend">
+    <span class="lg"><span class="sw" style="background:var(--lang)"></span>语言 token</span>
+    <span class="lg"><span class="sw" style="background:var(--vision)"></span>图像 token(100)</span>
+    <span class="lg"><span class="sw" style="background:var(--fuse)"></span>融合后·被语言点亮</span>
+    <span class="lg"><span class="sw" style="background:var(--action)"></span>动作输出</span>
+  </div>
+
+  <!-- PANEL 0: basics -->
+  <section class="panel">
+    <p class="ptitle">先补 4 个 VLM 基础概念</p>
+    <div class="basics">
+      <div class="b"><h3>① Token(令牌)</h3><p>把输入切成小块再各自变成一个向量。<b>文字</b>切成子词(the / yellow / Jeep…);<b>图像</b>切成小块 patch(本项目 100 块 = 10×10)。</p></div>
+      <div class="b"><h3>② Embedding(向量)</h3><p>每个 token 变成一个 <b>2560 维向量</b> —— 它在"语义空间"里的坐标。相近含义→相近坐标。</p></div>
+      <div class="b"><h3>③ Self-Attention(自注意力)</h3><p>核心机制:每个 token <b>环顾其它 token</b>,决定"听谁多一点"(注意力权重),再把它们的信息按权重<b>汇入自己</b>。逐层堆叠→不断吸收上下文。</p></div>
+      <div class="b"><h3>④ Causal Mask(因果遮罩)</h3><p>每个 token 只能看<b>它左边</b>(前面)的 token。所以<b>顺序很重要</b>:本项目把<b>文本放在图像前面</b>,图像才能"看到"指令。</p></div>
+    </div>
+  </section>
+
+  <!-- PANEL 1: fusion -->
+  <section class="panel">
+    <p class="ptitle">语言如何融入视觉:注意力让"匹配指令的图块被点亮"</p>
+    <p class="pnote">一条序列 = <span class="chip">[文本 token] + [图像 token×100]</span>。逐层自注意力中,每个图像 token 向前 attend 到文本词;与描述匹配的图块把"yellow/Jeep"的语义汇入自己。</p>
+    <svg id="fuse" viewBox="0 0 900 300" role="img" aria-label="文本 token 与图像 token 通过注意力融合,目标车图块被点亮"></svg>
+    <p class="cap"><b>读法:</b>目标车所在的图块(紫)对 <b>yellow / Jeep</b> 产生<b>强注意力</b>(粗线),把语言语义吸进自己的 2560 维向量;背景图块对语言注意力弱(细线),保持"暗"。
+      堆叠多层后,输出的 <span class="chip">(100, 2560)</span> 已是<b>语言染色的视觉特征</b> —— 换指令(如"track the <b>red</b> car")会点亮<b>不同</b>图块。这就是"不是纯图像特征"的含义。</p>
+  </section>
+
+  <!-- PANEL 1b: connector vs fusion -->
+  <section class="panel">
+    <p class="ptitle">延伸:connector ≠ 融合 —— 视觉如何接入 LLM(分层)</p>
+    <p class="pnote">上面的"融合"发生在 <b>LLM 内部的自注意力</b>。它前面还有一站叫 <b>connector</b>:把 ViT 视觉特征"搬进" LLM(对齐维度 / 压缩 token),<b>本身不做语义融合</b>。你说的 5 种,前 3 种是 connector 的互斥架构,后 2 种是正交的 token 管理。</p>
+    <svg viewBox="0 0 900 100" role="img" aria-label="图像→ViT→connector→LLM融合的分层流水线">
+      <defs><marker id="ca" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 Z" fill="var(--text-muted)"/></marker></defs>
+      <g font-family="system-ui" font-size="12.5">
+        <rect x="6" y="30" width="70" height="44" rx="8" fill="color-mix(in srgb,var(--vision) 12%,transparent)" stroke="var(--vision)"/><text x="41" y="57" text-anchor="middle" fill="var(--text-primary)">图像</text>
+        <rect x="112" y="30" width="104" height="44" rx="8" fill="color-mix(in srgb,var(--vision) 12%,transparent)" stroke="var(--vision)"/><text x="164" y="57" text-anchor="middle" fill="var(--text-primary)">ViT patch16</text>
+        <rect x="252" y="30" width="150" height="44" rx="8" fill="var(--surface-2)" stroke="var(--text-muted)"/><text x="327" y="51" text-anchor="middle" fill="var(--text-primary)">Connector</text><text x="327" y="66" text-anchor="middle" font-size="10.5" fill="var(--text-muted)">对齐·投影·压缩</text>
+        <rect x="470" y="30" width="200" height="44" rx="8" fill="color-mix(in srgb,var(--fuse) 16%,transparent)" stroke="var(--fuse)"/><text x="570" y="51" text-anchor="middle" fill="var(--text-primary)">LLM decoder 自注意力</text><text x="570" y="66" text-anchor="middle" font-size="10" fill="var(--fuse)">← 融合发生在这里</text>
+        <text x="686" y="57" fill="var(--text-secondary)" font-family="ui-monospace,Menlo,monospace" font-size="12">→ (5,100,2560)</text>
+      </g>
+      <g fill="none" stroke="var(--text-muted)" stroke-width="1.4" marker-end="url(#ca)">
+        <path d="M76 52 H108"/><path d="M216 52 H248"/><path d="M402 52 H466"/><path d="M670 52 H682"/>
+      </g>
+      <line x1="436" y1="10" x2="436" y2="90" stroke="var(--border)" stroke-width="1.4" stroke-dasharray="4 4"/>
+      <text x="322" y="20" text-anchor="middle" font-size="10.5" fill="var(--text-muted)">进 LLM 前:只搬运,不融合</text>
+      <text x="556" y="20" text-anchor="middle" font-size="10.5" fill="var(--fuse)">进 LLM 后:才融合</text>
+    </svg>
+    <div class="cols" style="margin-top:12px">
+      <div class="col">
+        <h3><span class="sw" style="background:var(--text-muted)"></span>Connector:3 种互斥架构</h3>
+        <div class="step"><span class="n">·</span><div><b>MLP 投影 ★</b> 线性投到 LLM 维,图像 token <b>拼进序列</b>,融合甩给 LLM 自注意力(本项目/LLaVA/Qwen)</div></div>
+        <div class="step"><span class="n">·</span><div><b>交叉注意力</b> LLM 里插专门 cross-attn 层做文本→图像(Flamingo)——<b>connector 里就融合了</b></div></div>
+        <div class="step"><span class="n">·</span><div><b>Q-Former</b> 可学习 query 蒸馏出固定少量 token(BLIP-2)——<b>进 LLM 前的部分融合</b></div></div>
+      </div>
+      <div class="col">
+        <h3><span class="sw" style="background:var(--vision)"></span>正交的 token 管理(可叠加)</h3>
+        <div class="step"><span class="n">·</span><div><b>空间重排 ★</b> 2×2 patch 折叠 → <b>减 token</b>(→~10×10)。本项目 spatial_merge=2</div></div>
+        <div class="step"><span class="n">·</span><div><b>动态分辨率 ★</b> token 数随图尺寸变(min/max_pixels 控制)</div></div>
+        <div class="diff">★ = 本项目:<span class="chip">动态分辨率 + 空间merge2×2 + MLP投影 → LLM自注意力融合</span></div>
+      </div>
+    </div>
+    <p class="cap" style="margin-top:10px"><b>关键:</b>connector 决定"融合在哪发生"。<b>MLP 投影(本项目)= connector 只对齐、融合留给 LLM</b>,所以两者是清楚的两站;而<b>交叉注意力 / Q-Former 把两步合并</b>。这就是"它俩不是一回事"的准确含义。</p>
+  </section>
+
+  <!-- PANEL 2: train vs infer -->
+  <section class="panel">
+    <p class="ptitle">训练 vs 推理:同一套模型,两种用法</p>
+    <div class="cols">
+      <div class="col">
+        <h3><span class="sw" style="background:var(--vision)"></span>训练(离线,有标签)</h3>
+        <div class="step"><span class="n">1</span><div><b>预计算一次</b>:每(帧+指令)过<b>冻结</b> Qwen → 存 <span class="chip">(5,100,2560)</span> 缓存。VLM 之后不再前向。</div></div>
+        <div class="step"><span class="n">2</span><div>每步从缓存取一批,喂给<b>小模型</b> IAR/EAR/DiT/target_id。</div></div>
+        <div class="step"><span class="n">3</span><div>EAR/DiT 用 <b>flow-matching</b>:学一个"噪声→轨迹/动作"的<b>向量场</b>(预测该往哪推)。</div></div>
+        <div class="step"><span class="n">4</span><div>与真实标签算 <b>loss</b>(动作MSE+ear+vis+man+tid)→ <b>反传只更新小模型</b>(VLM 冻结)。</div></div>
+        <div class="step"><span class="n">5</span><div>重复 50 epoch,课程 a→c。</div></div>
+        <div class="diff">产物:<span class="chip">stage2_best.pt</span> · 指标 mis_follow ~3%</div>
+      </div>
+      <div class="col">
+        <h3><span class="sw" style="background:var(--action)"></span>推理(在线,无标签,闭环)</h3>
+        <div class="step"><span class="n">1</span><div><b>实时</b>相机帧 + 指令 → 慢系统 <b>S2(~1Hz)</b>跑 Qwen → 得到当前 ctx。</div></div>
+        <div class="step"><span class="n">2</span><div>快系统 <b>S1(~20Hz)</b>:EAR/IAR/DiT 用最新 ctx,<b>采样</b>生成 16 步动作块。</div></div>
+        <div class="step"><span class="n">3</span><div>flow-matching <b>反过来用</b>:从随机噪声出发,沿学到的向量场<b>积分 ODE</b> → 采样出动作。</div></div>
+        <div class="step"><span class="n">4</span><div>target_id 用指令选<b>哪辆车</b> → 执行动作第一步 → <b>重新观测</b>。</div></div>
+        <div class="step"><span class="n">5</span><div><b>滚动重规划</b>:每步用新帧闭环,趋势靠高频纠正累积。</div></div>
+        <div class="diff">无 loss、无反传;VLM <b>在线</b>跑(而非缓存)。</div>
+      </div>
+    </div>
+    <p class="cap" style="margin-top:12px"><b>一句话对照:</b>训练 = VLM 预计算成缓存 + 算 loss + 反传(更新小模型);推理 = VLM 实时跑 + 采样生成动作 + 闭环执行。flow-matching 在训练时学"向量场"、推理时"沿向量场积分采样"——同一个网络,一个算损失、一个做生成。</p>
+  </section>
+
+  <p class="cap" style="margin-top:18px">配色经 CVD 验证(蓝/紫/青最差相邻 ΔE 61+);黄为语言强调(配可见文字标签,满足 relief 规则)。明暗双模式各自取色。</p>
+</div>
+
+<script>
+(function(){
+  const svg=document.getElementById('fuse'), ns='http://www.w3.org/2000/svg';
+  const add=(t,a,txt)=>{const e=document.createElementNS(ns,t);for(const k in a)e.setAttribute(k,a[k]);if(txt!=null)e.textContent=txt;svg.appendChild(e);return e};
+  // text tokens (top-left)
+  const toks=[['Track',0],['the',0],['yellow',1],['Jeep',1],['Wrangler',0]];
+  let x=8; const ty=34, chipY=18;
+  const chipX={};
+  toks.forEach(([w,hot],i)=>{
+    const wpx=w.length*8.2+18;
+    add('rect',{x,y:chipY,width:wpx,height:26,rx:7,fill:hot?'color-mix(in srgb,var(--lang) 22%,transparent)':'var(--chip)',stroke:hot?'var(--lang)':'var(--border)','stroke-width':hot?1.6:1});
+    add('text',{x:x+wpx/2,y:ty+2,'text-anchor':'middle','font-size':12.5,fill:'var(--text-primary)','font-family':'ui-monospace,Menlo,monospace'},w);
+    chipX[w]=[x+wpx/2, chipY+26];
+    x+=wpx+7;
+  });
+  add('text',{x:8,y:70,'font-size':11.5,fill:'var(--text-muted)'},'语言 token(文本在前)');
+  // image grid 10x10 (right)
+  const gx=560, gy=14, cell=24, gap=2;
+  add('text',{x:gx,y:70+ (0), 'font-size':11.5, fill:'var(--text-muted)', 'transform':`translate(0,${10*(cell)+ (0)+18-10})`},'');
+  const targetCells=[[4,5],[5,5]]; // row,col highlighted
+  const tset=new Set(targetCells.map(c=>c[0]+'_'+c[1]));
+  let tgtCX=0,tgtCY=0;
+  for(let r=0;r<10;r++)for(let c=0;c<10;c++){
+    const cx=gx+c*(cell+gap), cy=gy+r*(cell+gap), hot=tset.has(r+'_'+c);
+    add('rect',{x:cx,y:cy,width:cell,height:cell,rx:4,
+      fill:hot?'var(--fuse)':'color-mix(in srgb,var(--vision) 14%,transparent)',
+      stroke:hot?'var(--fuse)':'var(--border)','stroke-width':hot?1.6:.8});
+    if(hot){tgtCX=cx+cell/2;tgtCY=cy+cell/2;}
+  }
+  add('text',{x:gx,y:gy+10*(cell+gap)+14,'font-size':11.5,fill:'var(--text-muted)'},'100 个图像 token(10×10)·紫=目标车图块被点亮');
+  // attention arrows: from target cell to yellow & Jeep (strong), and one background cell to text (weak)
+  const arr=(x1,y1,x2,y2,w,op)=>add('path',{d:`M${x1} ${y1} C ${(x1+x2)/2} ${y1-30}, ${(x1+x2)/2} ${y2+20}, ${x2} ${y2}`,fill:'none',stroke:'var(--fuse)','stroke-width':w,opacity:op,'marker-end':'url(#a1)'});
+  const defs=add('defs',{}); const mk=document.createElementNS(ns,'marker');
+  mk.setAttribute('id','a1');mk.setAttribute('markerWidth','8');mk.setAttribute('markerHeight','8');mk.setAttribute('refX','6');mk.setAttribute('refY','3');mk.setAttribute('orient','auto');
+  const mp=document.createElementNS(ns,'path');mp.setAttribute('d','M0 0 L6 3 L0 6 Z');mp.setAttribute('fill','var(--fuse)');mk.appendChild(mp);defs.appendChild(mk);
+  // strong: target -> yellow, target -> Jeep
+  arr(tgtCX,tgtCY, chipX['yellow'][0], chipX['yellow'][1], 3, .95);
+  arr(tgtCX,tgtCY, chipX['Jeep'][0], chipX['Jeep'][1], 3, .95);
+  add('text',{x:(tgtCX+chipX['Jeep'][0])/2-10,y:150,'font-size':11,fill:'var(--fuse)','font-weight':600},'强注意力');
+  // weak: a background cell -> 'the'
+  const bgcx=gx+1*(cell+gap)+cell/2, bgcy=gy+1*(cell+gap)+cell/2;
+  add('path',{d:`M${bgcx} ${bgcy} C ${(bgcx+chipX['the'][0])/2} ${bgcy-30}, ${(bgcx+chipX['the'][0])/2} ${chipX['the'][1]+20}, ${chipX['the'][0]} ${chipX['the'][1]}`,fill:'none',stroke:'var(--text-muted)','stroke-width':1,opacity:.5,'stroke-dasharray':'3 3'});
+  add('text',{x:bgcx-60,y:105,'font-size':10.5,fill:'var(--text-muted)'},'背景图块:弱');
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,216 @@
+% =====================================================================
+%  references.bib for ACoT-UAV-Track
+%
+%  SOURCE OF TRUTH: acot_note/ + positioning-analysis.md.
+%  positioning-analysis.md already ran a source-verification pass; entries it
+%  confirmed are marked  [VERIFIED in positioning-analysis].
+%  Entries drawn from general knowledge or the design doc but NOT independently
+%  re-verified are marked  [VERIFY]  and MUST be checked (arXiv id, authors,
+%  venue, year) before submission. Per the writing-skill ethics rule, do not
+%  submit an AI-suggested reference without checking it.
+%
+%  Known non-existent reference (do NOT re-add): "CosFly-VLA" is a hallucination
+%  flagged in positioning-analysis.md; the real works are CosFly-Track and CosFly.
+% =====================================================================
+
+% ---- Core mechanism (transferred from) -----------------------------------
+@article{acotvla,
+  title  = {{ACoT-VLA}: Action Chain-of-Thought for Vision-Language-Action Models},
+  author = {Zhong, {and others}},
+  journal= {arXiv preprint arXiv:2601.11404},
+  year   = {2026},
+  note   = {[VERIFIED in positioning-analysis] Beihang University and AgiBot; CVPR 2026. TITLE/AUTHOR LIST TO CONFIRM from source.}
+}
+
+% ---- Primary competitor --------------------------------------------------
+@article{uavtrackvla,
+  title  = {{UAV-Track VLA}: Aerial Embodied Tracking with a Vision-Language-Action Model},
+  author = {{Anonymous / to confirm}},
+  journal= {arXiv preprint arXiv:2604.02241},
+  year   = {2026},
+  note   = {[VERIFIED in positioning-analysis] BIT/CASIA; pi0.5/PaliGemma-3B + temporal compression + explicit 3D-localisation head + flow-matching; ~890K CARLA frames. TITLE/AUTHORS TO CONFIRM.}
+}
+
+% ---- Distractor-robust / action-CoT precedents ---------------------------
+@article{trackvlapp,
+  title  = {{TrackVLA++}: Polar Chain-of-Thought and Target-Identification Memory for Embodied Tracking},
+  author = {{To confirm}},
+  journal= {arXiv preprint arXiv:2510.07134},
+  year   = {2025},
+  note   = {[VERIFIED in positioning-analysis] Ground/quadruped; Polar-CoT + TIM. TITLE/AUTHORS TO CONFIRM.}
+}
+@article{trackvla,
+  title  = {{TrackVLA}: Embodied Visual Tracking via Anchor Diffusion},
+  author = {{To confirm}},
+  journal= {arXiv preprint arXiv:2505.23189},
+  year   = {2025},
+  note   = {[VERIFIED in positioning-analysis] CoRL 2025. TITLE/AUTHORS TO CONFIRM.}
+}
+@article{detrack,
+  title  = {{DeTrack}: Closed-Loop UAV Tracking with Moving Distractors},
+  author = {{To confirm}},
+  journal= {arXiv preprint arXiv:2605.17451},
+  year   = {2026},
+  note   = {[VERIFIED in positioning-analysis] UAV closed-loop + moving distractors + obstacle avoidance; 11,368 trajectories; no language. TITLE/AUTHORS TO CONFIRM.}
+}
+@article{distractionrobust,
+  title  = {Towards Distraction-Robust Active Visual Tracking},
+  author = {{To confirm}},
+  journal= {arXiv preprint arXiv:2106.10110},
+  year   = {2021},
+  note   = {[VERIFIED in positioning-analysis] ICML 2021. TITLE/AUTHORS TO CONFIRM.}
+}
+@article{empoweringevt,
+  title  = {Empowering Embodied Visual Tracking with Free-3D Viewpoints and Distractors},
+  author = {{To confirm}},
+  journal= {arXiv preprint arXiv:2404.09857},
+  year   = {2024},
+  note   = {[VERIFIED in positioning-analysis] ECCV 2024. TITLE/AUTHORS TO CONFIRM.}
+}
+@inproceedings{advat,
+  title     = {{AD-VAT}: An Asymmetric Dueling Mechanism for Learning Visual Active Tracking},
+  author    = {{To confirm}},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2019},
+  note      = {[VERIFY] PKU active-tracking lineage; confirm exact title/authors/id.}
+}
+
+% ---- UAV language referring (passive) ------------------------------------
+@misc{uavnlt,
+  title        = {{UAVNLT}: UAV Natural-Language Tracking},
+  author       = {{To confirm}},
+  howpublished = {\url{https://github.com/Lich-King000/UAVNLT}},
+  year         = {2026},
+  note         = {[VERIFIED in positioning-analysis] Passive UAV/vehicle referring with similar distractors. CONFIRM citation form / any paper.}
+}
+@article{aerialmind,
+  title  = {{AerialMind}: Referring Multi-Object Tracking from the Aerial Viewpoint},
+  author = {{To confirm}},
+  journal= {arXiv preprint arXiv:2511.21053},
+  year   = {2025},
+  note   = {[VERIFIED in positioning-analysis] AAAI 2026; passive UAV referring MOT. TITLE/AUTHORS TO CONFIRM.}
+}
+
+% ---- Motivation: text ambiguity under distractors ------------------------
+@article{uss,
+  title  = {{USS}: Text Ambiguity under Similar Distractors in Embodied Settings},
+  author = {{To confirm}},
+  journal= {arXiv preprint arXiv:2606.25880},
+  year   = {2026},
+  note   = {[VERIFIED in positioning-analysis] Motivation citation. TITLE/AUTHORS TO CONFIRM.}
+}
+
+% ---- Reasoning-representation branch -------------------------------------
+@article{ecot,
+  title  = {{ECoT}: Embodied Chain-of-Thought Reasoning for Vision-Language-Action Policies},
+  author = {{To confirm}},
+  journal= {arXiv preprint arXiv:2407.08693},
+  year   = {2024},
+  note   = {[VERIFIED in positioning-analysis] Language-CoT representative. TITLE/AUTHORS TO CONFIRM.}
+}
+@article{cognitivedrone,
+  title  = {{CognitiveDrone-R1}: Cognitive Reasoning for UAV Control},
+  author = {{To confirm}},
+  journal= {arXiv preprint arXiv:2503.01378},
+  year   = {2025},
+  note   = {[VERIFIED in positioning-analysis] 77.2% SR; dual-system, not tracking. TITLE/AUTHORS TO CONFIRM.}
+}
+@article{coarse2control,
+  title  = {Coarse-to-Control: Action-Token Planning for Manipulation},
+  author = {{To confirm}},
+  journal= {arXiv preprint arXiv:2606.07107},
+  year   = {2026},
+  note   = {[VERIFIED in positioning-analysis] Concurrent action-space CoT. TITLE/AUTHORS TO CONFIRM.}
+}
+@article{lara,
+  title  = {{LaRA-VLA}: Latent Reasoning for Vision-Language-Action Models},
+  author = {{To confirm}},
+  journal= {arXiv preprint (ICML 2026)},
+  year   = {2026},
+  note   = {[VERIFY] Latent-CoT; positioning lists ICML 2026 but no arXiv id confirmed. FIND id.}
+}
+@article{hyt,
+  title  = {{HyT}: Hybrid Chain-of-Thought at Training, Skippable at Inference},
+  author = {{To confirm}},
+  journal= {arXiv preprint arXiv:2510.00600},
+  year   = {2025},
+  note   = {[VERIFY] Latent-CoT branch. CONFIRM title/authors.}
+}
+@article{thinkact,
+  title  = {{ThinkAct}: Reasoning before Acting in Embodied Agents},
+  author = {{To confirm}},
+  journal= {arXiv preprint arXiv:2507.16815},
+  year   = {2025},
+  note   = {[VERIFY] Latent-CoT branch. CONFIRM title/authors.}
+}
+@article{cotvla,
+  title  = {{CoT-VLA}: Visual Chain-of-Thought via Future-Frame Synthesis},
+  author = {{To confirm}},
+  journal= {CVPR},
+  year   = {2025},
+  note   = {[VERIFY] Goal-image CoT; positioning lists CVPR'25. FIND arXiv id.}
+}
+@article{tracevla,
+  title  = {{TraceVLA}: Pixel-Trajectory Prompting for Vision-Language-Action Models},
+  author = {{To confirm}},
+  journal= {ICLR},
+  year   = {2025},
+  note   = {[VERIFY] Pixel-trajectory CoT; positioning lists ICLR'25. FIND arXiv id.}
+}
+@article{atm,
+  title  = {Any-point Trajectory Modeling for Policy Learning},
+  author = {{To confirm}},
+  journal= {arXiv preprint},
+  year   = {2024},
+  note   = {[VERIFY] Cited as "predict coarse trajectory is older" (ATM/Track2Act/RT-Trajectory). PICK the exact reference(s) and confirm.}
+}
+
+% ---- UAV VLA / navigation ------------------------------------------------
+@article{uavvla,
+  title  = {{UAV-VLA}: Vision-Language-Action for High-Level UAV Mission Generation},
+  author = {{To confirm}},
+  journal= {arXiv preprint arXiv:2501.05014},
+  year   = {2025},
+  note   = {[VERIFY] High-level mission generation. CONFIRM title/authors.}
+}
+@article{aerialvla,
+  title  = {{AerialVLA}: End-to-End Aerial Navigation},
+  author = {{To confirm}},
+  journal= {arXiv preprint arXiv:2603.14363},
+  year   = {2026},
+  note   = {[VERIFY] CONFIRM title/authors.}
+}
+@article{vlaan,
+  title  = {{VLA-AN}: Aerial Navigation VLA with Staged Training},
+  author = {{To confirm}},
+  journal= {arXiv preprint arXiv:2512.15258},
+  year   = {2025},
+  note   = {[VERIFY] positioning lists 98.1% SR / 8.3x speedup. CONFIRM title/authors.}
+}
+
+% ---- Baseline VLA backbones ----------------------------------------------
+@article{pizerohalf,
+  title  = {{$\pi_{0.5}$}: A Vision-Language-Action Model with Open-World Generalization},
+  author = {{Physical Intelligence}},
+  journal= {arXiv preprint arXiv:2504.16054},
+  year   = {2025},
+  note   = {[VERIFIED in positioning-analysis] Physical Intelligence. CONFIRM exact title/authors.}
+}
+
+% ---- Referring MOT -------------------------------------------------------
+@inproceedings{rmot,
+  title     = {Referring Multi-Object Tracking (TransRMOT)},
+  author    = {{To confirm}},
+  booktitle = {CVPR},
+  year      = {2023},
+  note      = {[VERIFY] CONFIRM title/authors/id.}
+}
+
+% ---- Simulator -----------------------------------------------------------
+@inproceedings{carla,
+  title     = {{CARLA}: An Open Urban Driving Simulator},
+  author    = {Dosovitskiy, Alexey and Ros, German and Codevilla, Felipe and L{\'o}pez, Antonio and Koltun, Vladlen},
+  booktitle = {Conference on Robot Learning (CoRL)},
+  year      = {2017},
+  note      = {[VERIFY] Well-known; confirm the canonical citation your venue expects.}
+}

@@ -1,0 +1,12 @@
+# CARLA Python client — pin MUST match the server image tag (carlasim/carla:0.9.15)
+carla==0.9.15
+
+# Data-generation client deps (imports found in the repo: cv2, h5py, numpy, PIL,
+# scipy, yaml, pytest). numpy pinned <2 for ABI compatibility with the wheels above.
+numpy<2
+scipy
+h5py
+opencv-python-headless
+pillow
+pyyaml
+pytest
