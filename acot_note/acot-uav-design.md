@@ -7,7 +7,7 @@
 ## 一、研究背景与动机
 
 ### 1.1 从 D-EPA-RHP 到 VLA 的范式转变
-
+****
 原研究方向 D-EPA-RHP（GCS-UAV 双环分布式协同，通信退化巡检）存在三个结构性天花板：
 
 | 天花板 | 根因 | 文献证据 |
@@ -26,6 +26,18 @@ ACoT-VLA (Zhong et al., 2026) 的核心洞察："在动作空间中推理，而�
 - EAR 的粗粒度 waypoint = 预测的 3D 拦截点，与 UAV 动作空间同构
 - IAR 的隐式先验可以提取通信质量、遮挡风险、目标机动等"说不出来"的信息
 
+**范式定位：predictive / world-model-augmented VLA（诚实落点，deep-research 2026-07-31）**
+
+范式光谱上有三档确立的边界（NVIDIA WAM glossary + 3 篇 2026 survey 一致）：**纯 VLA**=反应式 obs→action、不建模世界动力学（π0/OpenVLA）；**World Model**=预测未来观测/状态但本身非策略（Dreamer/JEPA/Genie）；**World-Action Model(WAM)/world-model-augmented VLA**=**联合**预测未来世界状态 + 动作。
+
+> **本工作 = 光谱轻量端的 world-model-augmented VLA**：骨干是标准 VLA（冻结 VLM + flow-matching 动作头，谱系承 ACoT-VLA/π0.5），但装了一个**目标中心的预测核 EAR**（显式预测目标未来 3D 轨迹/拦截点）。**"world-model-augmented VLA" 是已发表的确切术语**（DUST 2510.27607；同类 WorldVLA 2506.21539「action world model」、DriveWorld-VLA ICML 2026、UWM RSS 2025；survey 2605.00080 §3.5 列为公认活跃子线）。
+
+**★ 核心洞察（可作卖点，但诚实定位）——跟踪任务的状态-动作同构**：一般任务里"世界状态预测（物体去哪）"与"动作（我该怎么动）"隔着语义-运动鸿沟；但在 UAV 拦截跟踪里，**我关心的世界状态 = 目标 3D 位置，我的动作目标 = 飞到该 3D 点，两者近乎同构**。故 EAR 的 3D 拦截点**同时是**世界状态预测**和**动作计划——ACoT"在动作空间推理"的本质，是利用该同构**把世界预测折叠进动作空间**，从而以 VLA 的成本吃到 world-model 式的预测-拦截红利。
+
+**两条诚实边界（避免过度声称，写进 limitation/positioning）**：
+1. **不是完整 WAM**：WAM 教科书判据是预测未来**观测/视频**（world dynamics）；EAR 只预测**目标状态**、无观测预测/imagined rollout → 只**部分**满足，故措辞用 "world-model-augmented"，**不自称 WAM/world model**。
+2. **融合本身不新 + 同构洞察非全新原理**：world-model-augmented VLA 已有 WorldVLA/DUST；状态-动作同构未见直接先例（可作任务特定新 framing），但**呼应 goal-conditioned RL(state=goal) 与 pursuit-as-prediction** → novelty 押在**域（空中具身跟踪）+ 同构洞察的具体兑现（EAR 预测拦截）**，不 claim "首个融合"。（详见 `related-work-and-positioning.md` §4C。）
+
 ### 1.3 对标研究与定位
 
 > 定位依据见 `positioning-analysis.md`（2026-07 领域扫描）。本工作是一篇 **新任务 + 新 benchmark + 方法迁移** 的贡献：核心动作思维链机制迁移自 ACoT-VLA，真正的新颖性在于一个此前无人占据的任务交集——**空中主动飞行 + 语言指定目标车辆 + 多辆视觉相似干扰车辆消歧 + 具身闭环跟踪**。
@@ -36,8 +48,8 @@ ACoT-VLA (Zhong et al., 2026) 的核心洞察："在动作空间中推理，而�
 |---|---|---|---|
 | **UAV-Track VLA** | 2604.02241 (2026.04) | 空中主动语言跟踪 VLA：π₀.₅/PaliGemma-3B + 时序压缩 + **显式 3D 定位辅助头** + flow-matching；~890K CARLA 帧；行人/车辆目标 | **+ 干扰物消歧**（它不强调相似干扰物）、**+ 语言 load-bearing 证据** |
 | **TrackVLA++** | 2510.07134 (2025.10) | 地面四足：**Polar-CoT**（动作空间 CoT）+ **Target Identification Memory**，抗遮挡/抗相似干扰物 | **+ 空中 6-DoF、+ 车辆目标、+ 语言指定**（其为地面/人） |
-| **DeTrack** | 2605.17451 (2026.05) | 无人机闭环跟踪 + **移动干扰物** + 避障；11,368 轨迹 | **+ 语言指定 + 车辆消歧**（DeTrack 无语言） |
-| **UAVNLT / AerialMind** | github / 2511.21053 | UAV 视角 + 语言 + 多相似车辆 referring（**被动感知**，不控制无人机） | **+ 主动飞行闭环控制** |
+| **DeTrack**（✅号已核） | 2605.17451 (2026.05, 预印本) | *A Benchmark and Altitude-Aware Dual World Model for Drone-embodied Tracking*：无人机**主动闭环** + **动态遮挡物**(车/人,非相似车) + 避障；11,368 轨迹；**纯视觉 world-model(AaDWorlds)，无语言** | **+ 语言消歧 + world-model-augmented VLA**（它撞"具身跟踪/world-model"两词但**无语言、无相似车消歧**，须切清；⚠️勿混 NeurIPS'24 被动 SOT 同名 DeTrack 2501.02467） |
+| **AerialMind**（✅号已核,**升级**） | 2511.21053 → **AAAI-26 已发表**(Proc.AAAI 40(4):2805-2813) | *Towards Referring Multi-Object Tracking in UAV Scenarios*：首个 UAV **RMOT** benchmark；语言指定 referring 消歧(扩自 VisDrone/UAVDT,方法 HawkEyeTrack)；**被动感知，不控制无人机** | **+ 主动飞行闭环控制**（peer-reviewed 强竞品,与 UAVNLT 是**两篇不同工作**） |
 
 **推理范式对标（本工作所在的"动作空间 CoT"分支）**：
 
@@ -444,15 +456,35 @@ IAR 的逐层 KV-cache 查询机制**继承自 ACoT-VLA**；本文的适配在�
 | 目标突然加速/变向 | "机动意图" | 调整跟踪激进程度 |
 | 多辆相似车辆出现 | "身份混淆风险" | 更依赖运动模型 |
 
-### 6.3 多车辆语言指定消歧跟踪 —— 核心贡献
+### 6.3 多车辆语言指定消歧 + 长丢失预测重捕获 —— 核心贡献
 
-**可辩护的新颖性（收窄后的精确主张）**：截至 2026-07，"**主动飞行 + 语言指定目标车辆 + 多辆视觉相似干扰车辆消歧 + 具身闭环**"这一交集无先例发表。逐一切割：
+**可辩护的新颖性（收窄后的精确主张）**：截至 2026-07，"**主动飞行 + 语言指定目标车辆 + 多辆视觉相似干扰车辆消歧 + 具身闭环**"这一交集无先例发表。**关键的"杀手场景"把这个交集从静态消歧推向动态**：
 
-- **vs UAV-Track VLA (2604.02241)**：它已做空中·主动·语言跟踪，但**不强调相似干扰物消歧**；本工作补上该环，并给出语言 load-bearing 证据（§7.4）。
-- **vs UAVNLT / AerialMind (2511.21053)**：它们做 UAV 语言 + 相似车辆 referring，但为**被动感知**，不控制无人机；本工作是**主动飞行闭环**。
-- **vs TrackVLA++ (2510.07134) / DeTrack (2605.17451)**：它们做抗干扰具身跟踪，但为**地面/人**或**无语言**；本工作是**空中·车辆·语言指定**。
+> **★ 长丢失预测-拦截重捕获**：目标拐弯/遮挡/出画导致**视觉连续性彻底断裂**,重现时画面里**同时有 ≥2 辆 look-alike 干扰车**——空间预测(EAR)能把无人机带到目标大致重现区域,但"这几辆相似车里哪辆才是目标"**只有语言能定**。此刻**位置捷径失效、视觉连续性失效、外观不可分**三者叠加,语言成为**唯一**可区分信号(H0 在此最强),同时兑现 aerial 预测拦截(H1)。
 
-> ⚠️ 不再声称"首个 UAV 语言跟踪 / 首个动作 CoT 跟踪"——这二者分别被 UAV-Track VLA 与 TrackVLA++ 占据。主张严格限定在上述四轴交集。
+逐一切割（编号均已核验 2026-08-05，见 `related-work-and-positioning.md` §2/§3/§9）：
+
+- **空中闭环不止一家,但都不做语言消歧**（措辞收口）：空中·主动·闭环现有**两家**——**UAV-Track VLA**(2604.02241,预印本,语言)与 **DeTrack**(2605.17451,预印本,**无语言**)。故 intro 不再写"空中闭环稀缺",改写"空中闭环已有两家、但**无一做语言指定的相似车消歧**"。
+- **vs UAV-Track VLA (2604.02241)**：已做空中·主动·语言跟踪，但**不强调相似干扰物消歧**、更无长丢失语言重捕获；本工作补上该环 + 语言 load-bearing 证据（§7.4）。
+- **vs DeTrack (2605.17451)** ⚠️**须切三点**：它做空中主动闭环 + 避障,但 ① **纯视觉 world-model(AaDWorlds)、无语言**;② "distractors"是**动态遮挡物(车/人)非视觉相似车**,不做消歧;③ 它撞了"drone-embodied tracking"和"world-model"两个词——本工作切割为 **world-model-augmented VLA + 语言消歧**(它是无语言 pure world-model)。**⚠️ 勿混 NeurIPS'24 同名被动 SOT "DeTrack" (2501.02467),引用须用全称+编号。**
+- **vs AerialMind (2511.21053 → AAAI-26 已发表)** ⚠️**最接近的已发表语言消歧竞品**：它做 UAV 视角 **referring MOT**(语言指定相似目标消歧),**peer-reviewed**,但为**被动感知**(建于 VisDrone/UAVDT 录像),不控制无人机。差别**收窄到一条轴:主动飞行闭环 vs 被动感知**——须写得特别干净。(**AerialMind ≠ UAVNLT**,两篇不同工作;UAVNLT 为 Electronics'24。)
+- **vs TrackVLA++ (2510.07134)**：抗干扰具身跟踪，重捕获**靠非语言空间连续性 + 显式记忆(TIM / Polar-CoT)**，且为**地面/人**。**在"连续性断裂 + look-alike 共视"的重捕获时刻,非语言空间记忆无法回答"哪辆才是目标",而本工作以语言 + 预测拦截可以**——最锐利差异化。
+
+**★ 杀手场景的先例切割（deep-research 2026-07-30 锁定；详证与 cut 措辞见 `related-work-and-positioning.md` §4B/§4B.1）**：升级创新点=三能力**同时叠加**为真空白，但每个"零件"已被占据，故须逐件切割、novelty 押在**耦合**：
+
+| 零件 | 已占据先例(venue) | 用语言? | 切割 |
+|---|---|---|---|
+| 预测未来位置+飞向拦截(抄近路) | Fast-Tracker(ICRA'21)、PN·ATPNG 制导(Springer'21–22) | ❌ 纯几何,身份已知 | 拦截机制不新→别押;它们是"保持在视野"非"完全丢失后 rendezvous" |
+| FOV 离开-重入时刻消歧 | **DAM4SAM/SAM2.1++(CVPR'25)** | ❌ 外观 anchor 记忆 | 它**点名**该时刻却用外观解→语言消歧此刻空位 |
+| 完全丢失后重检测 | GlobalTrack(AAAI'20)/SiamR-CNN(CVPR'20)/LTMU(CVPR'20) | ❌ 外观/运动 | 重识别只有外观先例 |
+| 中途/丢失后用语言 | **TNL2K AdaSwitcher(CVPR'21)、Li'17(CVPR'17)** 全局重检测;Feng(WACV'20)、SNLT(CVPR'21) 逐帧;**QueryNLT(CVPR'24)** 连续消歧 | ⚠️ 有,但**均为外观驱动全局重定位/逐帧定位/连续消歧,非"丢失重现时刻 look-alike 唯一消歧"** | 逐一切割(见下正面弹药) |
+
+- **🟢 正面弹药 DecoupleTNL (ICCV 2023)**：已发表地论证"语言分支**倾向最大化同类相似度**、干扰分离**交给视觉分支**"——**直接反证** pre-VLA NL-tracking 不把语言当 look-alike 消歧器,坐实本工作设定是新的。
+- **cut 措辞(可直接改写)**：先前 NL-tracker 用语言做首帧指定与逐帧定位;两篇(TNL2K、Li'17)另用语言做**全局重检测**,但均靠外观相似度找回**同一模板**;DecoupleTNL 更表明语言干扰分离交给视觉。**无任何工作把细粒度语言用作"长丢失后重现、多辆共视 look-alike 中挑目标"的唯一消歧信号**(与 QueryNLT 区分:它只在连续跟踪消歧,从不在丢失重现时刻)。
+
+**消歧证据精确到"重捕获时刻"（呼应数据侧修订，`data-fix-spec.md` §3/§4）**：语言必要性**不要求全局 look-alike 高共视**,而要求**断裂后的重捕获帧 ≥2 辆 look-alike 共视 + 足够多的重捕获事件**。全局共视率可放宽,消歧证据聚焦在最能体现"语言唯一可分"的时刻——避免退化成纯预测(那会与 TrackVLA++ 的非语言空间重捕获同质)。
+
+> ⚠️ 不再声称"首个 UAV 语言跟踪 / 首个动作 CoT 跟踪 / 首个中途用语言"——这三者分别被 UAV-Track VLA、TrackVLA++、Feng/TNL2K 占据。主张严格限定在四轴交集 **+ 长丢失语言重捕获杀手场景（语言=丢失重现时刻的唯一消歧信号）**。残余未穷尽核验(GTI/CTRNL/CiteTracker 等)→ 论文写 "to our knowledge"。
 
 ### 6.4 search_mode 连续维度
 
@@ -485,8 +517,11 @@ search_mode = f(EAR 置信度, IAR 遮挡先验, 目标丢失时长)
 | ACoT-UAV w/o EAR | 消融 | EAR 的显式推理贡献 |
 | ACoT-UAV w/o IAR | 消融 | IAR 的隐式先验贡献 |
 | ACoT-UAV w/o Language | 消融 | 语言引导的贡献（配合 §7.4） |
+| **视觉重检测重捕获**（Siam R-CNN / DAM4SAM 风格,自建） | **杀手场景关键对照** | 证明重捕获时刻语言 > 纯外观重检测(H0 在重现时刻);非语言空间记忆无法在 look-alike 间选对 |
+| **纯预测拦截无语言**（EAR-only 拦截,去 target-id 语言） | **杀手场景关键对照** | 证明抄近路到重现区后"哪辆是目标"必须靠语言;否则退化成 Fast-Tracker/PN 式几何拦截 |
 
 > 已移除"CosFly-VLA (reproduced)"——该模型不存在，无法复现（见 §1.3）。TrackVLA++ 为地面工作，作为相关工作讨论；若作实验基线需说明其地面→空中的适配限制。
+> **重捕获时刻的先例切割（must-cut，详见 §6.3 表 + `related-work-and-positioning.md` §4B/§4B.1）**：Fast-Tracker/PN(预测拦截,纯几何)、DAM4SAM(离开-重入,外观解)、Feng WACV'20(中途语言,逐帧)、TNL2K/Li'17(语言全局重检测,外观驱动)、QueryNLT(连续消歧,非丢失重现)、DecoupleTNL(ICCV'23,🟢正面弹药:语言不做同类消歧)。**新增两条杀手场景对照**(上表末二行)把"重捕获时刻语言唯一可分"做成可量化消融。
 
 ### 7.2 核心指标
 

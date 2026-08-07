@@ -23,23 +23,27 @@ scene:
   distractor_ahead_bias: 0.75       # (legacy layout only; ignored when decorrelate_position on)
   decorrelate_position:             # break the target's geometric-position shortcut (data-fix-spec.md)
     enabled: true                   # L1: target + similar drawn from one symmetric slot band (target random slot)
-    cluster_band_m: 10.0            # L1: target + similar share this ± slot band. Tight → the whole
+    cluster_band_m: 10.0            # L1: target + look-alikes share this ± slot band (position-decorrelated,
+                                    #     ~44% geometry floor — accepted; language-ablation E1 is the real test).
+                                    #     10 keeps co-visibility ~64% (6 collided too much → 40%).
                                     #     cluster (incl. target) stays near the framed centroid → target
                                     #     mostly IN-frame (occasional loss+recovery, not constant edge-flicker);
                                     #     still exchangeable → decorrelated. (24 m put the target at the edge.)
                                     # L2: expert frames the {target+similar} CENTROID (not the target), so the
                                     #     target is a random cluster member → position/depth/rank == a distractor's.
   ambient:                          # background traffic density (official generate_traffic style)
-    vehicles: 80                    # diverse vehicle.* : cars, bus, trucks, motorcycles, bicycles
-    walkers: 25                     # background pedestrians (manual WalkerControl)
+    vehicles: 80                    # background traffic
+    walkers: 0                      # pedestrians removed (spec §4: all-vehicle scene, no walkers)
+    cars_only: true                 # only 4-wheel cars (no bikes/motos) — cleaner all-sedan scene
     radius: 70                      # tighter → more of them land in the camera view
   convoy:                           # set_route can force bad turns (off-road) — off.
     enabled: false
     straight_bias: 0.7
     route_len: 80
-  covisibility:                     # teleport recycle caused collisions/off-road — off.
-    enabled: false                  # prioritise smooth, rule-abiding autopilot driving.
-    recycle_radius: 55.0      # fraction placed ahead of the target (into UAV view)
+  covisibility:                     # smooth off-screen recycle keeps >=2 look-alikes co-visible (spec §4d)
+    enabled: true                   # robust version: on-road + collision-checked slots, only when <2 on-screen
+    recycle_radius: 55.0            # recycle a similar look-alike once it drifts this far off-camera
+    min_clearance: 6.0              # destination slot must be this clear of every nearby vehicle
   target_class_weights:            # tracked target = vehicles only; pedestrians are
     car: 0.65                       # background distractors (ambient), never targets
     motorcycle: 0.18

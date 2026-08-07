@@ -342,10 +342,8 @@ class SceneManager:
                 except RuntimeError:
                     continue
             for d in plan["distractors"]:
-                # Similar look-alikes share the target's tight ± band → they form the framed
-                # centroid cluster, so the target is a random member of it (position/depth ≡
-                # a look-alike's). Plain fillers spread moderately & SYMMETRICALLY (both
-                # nearer and farther) so they don't bias the target's depth-rank either way.
+                # Similar look-alikes share the target's ± band (framed-centroid cluster →
+                # target is a random member). Plain fillers spread moderately & symmetrically.
                 if d.get("similar"):
                     off = random.uniform(-band, band)
                 else:
@@ -375,6 +373,7 @@ class SceneManager:
                     d, self._lane_offset_transform(random.choice(lanes), off), convoy_speed)
 
         self._target_in_frame = True      # updated each step by the recorder (recovery gate)
+        self._servo_smooth = None          # reset the camera-setpoint EMA (anti-jitter)
         self._assign_convoy_route()
 
     def _lane_offset_transform(self, base_wp, offset_m: float) -> "carla.Transform":
@@ -495,7 +494,12 @@ class SceneManager:
             SpawnActor = carla.command.SpawnActor
             SetAutopilot = carla.command.SetAutopilot
             FutureActor = carla.command.FutureActor
-            vbps = self._world.get_blueprint_library().filter("vehicle.*")
+            vbps = list(self._world.get_blueprint_library().filter("vehicle.*"))
+            if amb.get("cars_only", False):        # 4-wheel cars only (no bikes/motos) — spec §4d
+                cars = [b for b in vbps if b.has_attribute("number_of_wheels")
+                        and int(b.get_attribute("number_of_wheels")) == 4]
+                if cars:
+                    vbps = cars
             sps = sorted(self._world.get_map().get_spawn_points(),
                          key=lambda sp: sp.location.distance(tloc))
             batch = []
@@ -622,12 +626,15 @@ class SceneManager:
         return self._target.get_state()
 
     def recycle_lost_lookalikes(self) -> None:
-        """Teleport any *similar* distractor that is truly OFF-CAMERA back to a slot
-        near the target, so >=2 look-alikes stay co-visible (design §6.3).
-
-        Visibility is tested with the real camera projection, so on-screen actors are
-        never touched (no visible jump). Recycled actors have their velocity zeroed so
-        they don't lurch, then autopilot smoothly drives them back into the scene."""
+        """Smooth off-screen recycle (spec §4d): keep >=2 SIMILAR look-alikes co-visible
+        with the target by teleporting one that has drifted FAR off-camera back into view
+        AHEAD of the target. Robustness guards (the two failure modes that disabled the old
+        version): only OFF-screen actors move (real-camera projection → no visible jump);
+        the destination slot is on a DRIVING lane and validated CLEAR of every nearby
+        vehicle (no collision). Only fires when <2 look-alikes are currently on-screen, so
+        it does no work (and no world query) while co-visibility is already fine. Keeping
+        the look-alikes near the target also keeps the framing centroid near the target →
+        the target stays in-frame (fixes the earlier off-screen instability)."""
         cfg = self._config.get("scene", {}).get("covisibility", {})
         if not cfg.get("enabled", True) or self._target is None or self.drone is None:
             return
@@ -651,6 +658,26 @@ class SceneManager:
             v = focal * (-q[2] / q[0]) + H / 2.0
             return 0 <= u < W and 0 <= v < H
 
+        far = float(cfg.get("recycle_radius", 55.0))
+        clr = float(cfg.get("min_clearance", 6.0))
+        tpos = np.array([tloc.x, tloc.y, tloc.z])
+        # Cheap pass: how many similar are on-screen; which off-screen ones drifted far.
+        on_screen, needy = 0, []
+        for obj, meta in zip(self._distractors, self._distractor_meta):
+            if not meta.get("similar"):
+                continue
+            try:
+                p, _, _, _ = obj.get_state()
+            except RuntimeError:
+                continue
+            if _visible(p):
+                on_screen += 1
+            elif np.linalg.norm(np.asarray(p)[:2] - tpos[:2]) > far:
+                needy.append(obj)
+        if on_screen >= 2 or not needy:
+            return                               # co-visibility already fine → do nothing
+
+        # Candidate driving lanes = target lane + same-direction neighbours.
         lanes = [tgt_wp]
         for g in ("get_left_lane", "get_right_lane"):
             try:
@@ -660,33 +687,44 @@ class SceneManager:
             if (c is not None and c.lane_type == carla.LaneType.Driving
                     and c.lane_id * tgt_wp.lane_id > 0):
                 lanes.append(c)
-        for obj, meta in zip(self._distractors, self._distractor_meta):
-            if not meta.get("similar"):
+        # Occupancy = every vehicle within 45 m of the target (collision check).
+        occupied = [tpos]
+        try:
+            for a in self._world.get_actors().filter("vehicle.*"):
+                loc = a.get_location()
+                if abs(loc.x - tloc.x) < 45 and abs(loc.y - tloc.y) < 45:
+                    occupied.append(np.array([loc.x, loc.y, loc.z]))
+        except RuntimeError:
+            pass
+
+        random.shuffle(needy)
+        for obj in needy[:max(0, 2 - on_screen)]:
+            actor = getattr(obj, "_vehicle", None)
+            if actor is None:
                 continue
-            try:
-                p, _, _, _ = obj.get_state()
-            except RuntimeError:
-                continue
-            if _visible(p):
-                continue  # on-screen — never move a visible actor
-            wp = random.choice(lanes)
-            if random.random() < 0.7:  # 70% ahead of target, 30% beside it
-                for _ in range(random.randint(1, 3)):
-                    nxt = wp.next(8.0)
-                    if nxt:
-                        wp = nxt[0]
-            loc = carla.Location(
-                wp.transform.location.x + random.uniform(-1.5, 1.5),
-                wp.transform.location.y + random.uniform(-1.5, 1.5),
-                wp.transform.location.z + 0.3)
-            actor = getattr(obj, "_vehicle", None) or getattr(obj, "_walker", None)
-            if actor is not None:
-                try:
-                    actor.set_transform(carla.Transform(loc, wp.transform.rotation))
-                    actor.set_target_velocity(carla.Vector3D(0, 0, 0))
-                    actor.set_target_angular_velocity(carla.Vector3D(0, 0, 0))
-                except RuntimeError:
-                    pass
+            for _try in range(8):                # find a clear on-road slot near the target, in view
+                wp = random.choice(lanes)
+                # SYMMETRIC ± offset around the target (behind → lower frame, ahead → upper)
+                # so the framing centroid stays ~on the target; wide enough to reliably find
+                # a collision-free slot (a too-tight slot fails and co-visibility collapses).
+                off = random.uniform(-14.0, 14.0)
+                for _ in range(int(abs(off) / 8)):
+                    nxt = wp.next(8.0) if off > 0 else wp.previous(8.0)
+                    if not nxt:
+                        break
+                    wp = nxt[0]
+                loc = wp.transform.location
+                slot = np.array([loc.x, loc.y, loc.z])
+                if all(np.linalg.norm(slot[:2] - o[:2]) > clr for o in occupied):
+                    try:
+                        actor.set_transform(carla.Transform(
+                            carla.Location(loc.x, loc.y, loc.z + 0.3), wp.transform.rotation))
+                        actor.set_target_velocity(carla.Vector3D(0, 0, 0))
+                        actor.set_target_angular_velocity(carla.Vector3D(0, 0, 0))
+                        occupied.append(slot)
+                    except RuntimeError:
+                        pass
+                    break                        # placed (or failed) → next needy actor
 
     def get_distractor_states(self) -> np.ndarray:
         """Return (D, 6) array: [x, y, z, vx, vy, vz] for each distractor (order = meta)."""
@@ -769,6 +807,15 @@ class SceneManager:
         if (target_pos is not None and getattr(self, "_frame_centroid", False)
                 and getattr(self, "_target_in_frame", True)):
             servo_pos = self._cluster_centroid(np.asarray(target_pos, dtype=float))
+        # Time-smooth the setpoint (EMA) so the camera does NOT lurch when it jumps — the
+        # centroid↔target framing switch on loss, or the centroid shift when a look-alike is
+        # teleported by the recycle. This is what fixes the severe shaking during
+        # occlusion/off-screen (the UAV eases toward the new setpoint over a few frames).
+        if servo_pos is not None:
+            sp = np.asarray(servo_pos, dtype=float)
+            prev = getattr(self, "_servo_smooth", None)
+            servo_pos = sp if prev is None else 0.3 * sp + 0.7 * prev
+            self._servo_smooth = np.asarray(servo_pos, dtype=float)
         action = self.expert.act(servo_pos, uav_pos, uav_yaw, target_visible, timestamp)
         pert_event = None
         if self._perturbation_injector is not None and target_pos is not None:
