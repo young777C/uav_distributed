@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>三臂闭环实验 vs 原基线 —— 唯一区别在 DiT 的 z_ex 注入口</title>
+<style>
+  :root{
+    --surface-1:#fcfcfb; --surface-2:#f0efec; --line:#d9d8d3;
+    --text-primary:#0b0b0b; --text-secondary:#52514e; --text-muted:#8a8984;
+    --ear:#2a78d6;      /* slot1 blue  — 原基线/对照 */
+    --cv:#1baf7a;       /* slot2 aqua  — cv_gated */
+    --zv:#eda100;       /* slot3 yellow— zerovel_gated */
+    --wm:#4a3aa7;       /* slot5 violet— WM(未来) */
+    --critical:#d03b3b; --good:#0ca30c;
+    --slot-bg:#ffffff;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --surface-1:#1a1a19; --surface-2:#232322; --line:#3a3a37;
+      --text-primary:#ffffff; --text-secondary:#c3c2b7; --text-muted:#8f8e86;
+      --ear:#3987e5; --cv:#199e70; --zv:#c98500; --wm:#9085e9;
+      --critical:#e06464; --good:#2bb42b; --slot-bg:#232322;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--surface-1);color:var(--text-primary);
+    font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,"PingFang SC","Microsoft YaHei",sans-serif;
+    padding:32px 26px 60px;}
+  .wrap{max-width:1060px;margin:0 auto}
+  h1{font-size:23px;margin:0 0 4px;letter-spacing:-.01em}
+  h2{font-size:16px;margin:34px 0 12px;color:var(--text-primary);
+    border-left:3px solid var(--text-primary);padding-left:9px}
+  .sub{color:var(--text-secondary);margin:0 0 8px;font-size:14px}
+  .banner{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;
+    padding:13px 16px;margin:16px 0 4px;font-size:14.5px}
+  .banner b{color:var(--text-primary)}
+  svg{width:100%;height:auto;display:block;background:var(--surface-1);
+    border:1px solid var(--line);border-radius:12px;margin-top:6px}
+  .legend{display:flex;flex-wrap:wrap;gap:16px;margin:14px 0 2px;font-size:13.5px}
+  .legend .it{display:flex;align-items:center;gap:7px;color:var(--text-secondary)}
+  .sw{width:14px;height:14px;border-radius:4px;flex:none}
+  table{border-collapse:collapse;width:100%;margin-top:10px;font-size:13.5px}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:var(--surface-2);font-weight:600}
+  td.same{color:var(--text-muted)}
+  .tag{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600;color:#fff}
+  .tag.ear{background:var(--ear)} .tag.cv{background:var(--cv)}
+  .tag.zv{background:var(--zv);color:#3a2c00} .tag.wm{background:var(--wm)}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:8px}
+  @media(max-width:720px){.cols{grid-template-columns:1fr}}
+  .card{border:1px solid var(--line);border-radius:10px;padding:13px 15px;background:var(--surface-2)}
+  .card h3{margin:0 0 6px;font-size:14px}
+  code{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;
+    background:var(--surface-1);border:1px solid var(--line);border-radius:4px;padding:.5px 4px}
+  .kbad{color:var(--critical);font-weight:600}
+  .kgood{color:var(--good);font-weight:600}
+  .foot{color:var(--text-muted);font-size:12.5px;margin-top:26px;border-top:1px solid var(--line);padding-top:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>三臂闭环实验 vs 原基线</h1>
+  <p class="sub">同一份权重(<code>stage2_v5/best.pt</code>),同一套 held-out 场景(Town05, seed 91000+)。
+  <b>结构上唯一的区别,是丢失帧时谁来填 DiT 的 <code>z_ex</code> 槽</b>——全部<b>训练无关</b>。</p>
+
+  <div class="banner">
+    <b>一句话:</b> 原基线(<span class="tag ear">ear</span>)= 反应式 no-WM VLA,丢失时靠单帧 EAR 预测目标未来位置
+    (实测 <span class="kbad">58–90 m 误差</span>)。另两臂只在<b>丢失</b>时把 <code>z_ex</code> 换成一个
+    <b>纯几何的记忆先验</b>(不改任何权重):<span class="tag cv">cv_gated</span> = 记忆+匀速航位推算,
+    <span class="tag zv">zerovel_gated</span> = 记忆(冻结)。这正是日后<span class="tag wm">WM 路网世界模型</span>要接入的<b>同一个槽</b>(方案 A)。
+  </div>
+
+  <!-- ============ SVG 1: 共享主干 + z_ex 开关 ============ -->
+  <h2>① 共享模型主干(四个配置完全相同)+ 唯一改动点</h2>
+  <p class="sub">RGB 单帧 → 冻结 VLM → {EAR, IAR, tid}。控制走 <code>DiT(z_ex, z_im, vlm_ctx, proprio)</code>。
+  tid 只做语言认领(不进控制)。<b>灰色 = 所有臂/基线共享且冻结</b>;彩色开关 = 唯一变量。</p>
+  <svg viewBox="0 0 1020 470" role="img" aria-label="共享主干与 z_ex 注入开关">
+    <defs>
+      <marker id="ar" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+        <path d="M0,0 L9,4.5 L0,9 z" fill="var(--text-muted)"/>
+      </marker>
+      <marker id="arw" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
+        <path d="M0,0 L9,4.5 L0,9 z" fill="var(--wm)"/>
+      </marker>
+    </defs>
+    <!-- shared backbone nodes -->
+    <g font-size="13" fill="var(--text-primary)" text-anchor="middle">
+      <!-- RGB -->
+      <rect x="16" y="200" width="86" height="46" rx="8" fill="var(--surface-2)" stroke="var(--line)"/>
+      <text x="59" y="220">RGB 单帧</text><text x="59" y="236" font-size="11" fill="var(--text-secondary)">512²</text>
+      <!-- VLM -->
+      <rect x="134" y="196" width="120" height="54" rx="8" fill="var(--surface-2)" stroke="var(--line)"/>
+      <text x="194" y="216">冻结 VLM</text><text x="194" y="232" font-size="11" fill="var(--text-secondary)">Qwen3-VL-4B</text>
+      <!-- EAR -->
+      <rect x="300" y="70" width="120" height="52" rx="8" fill="var(--surface-2)" stroke="var(--line)"/>
+      <text x="360" y="90">EAR</text><text x="360" y="106" font-size="11" fill="var(--text-secondary)">flow → 航点(K,3)</text>
+      <!-- IAR -->
+      <rect x="300" y="198" width="120" height="50" rx="8" fill="var(--surface-2)" stroke="var(--line)"/>
+      <text x="360" y="220">IAR</text><text x="360" y="236" font-size="11" fill="var(--text-secondary)">→ z_im</text>
+      <!-- tid -->
+      <rect x="300" y="326" width="120" height="50" rx="8" fill="var(--surface-2)" stroke="var(--line)" stroke-dasharray="4 3"/>
+      <text x="360" y="348">tid(语言认领)</text><text x="360" y="363" font-size="10.5" fill="var(--text-muted)">不进控制路径</text>
+      <!-- DiT -->
+      <rect x="742" y="188" width="120" height="70" rx="8" fill="var(--surface-2)" stroke="var(--line)"/>
+      <text x="802" y="212">DiT</text><text x="802" y="229" font-size="11" fill="var(--text-secondary)">32 层动作头</text>
+      <text x="802" y="245" font-size="10.5" fill="var(--text-muted)">flow → 动作块</text>
+      <!-- CARLA -->
+      <rect x="906" y="196" width="96" height="54" rx="8" fill="var(--surface-2)" stroke="var(--line)"/>
+      <text x="954" y="216">CARLA</text><text x="954" y="232" font-size="11" fill="var(--text-secondary)">下一帧</text>
+    </g>
+    <!-- z_ex GATE (the ONLY variable) -->
+    <rect x="486" y="60" width="196" height="150" rx="10" fill="var(--slot-bg)" stroke="var(--text-primary)" stroke-width="1.5"/>
+    <text x="584" y="80" text-anchor="middle" font-size="13" font-weight="700" fill="var(--text-primary)">z_ex 注入口 (K,3)</text>
+    <text x="584" y="96" text-anchor="middle" font-size="10.5" fill="var(--text-secondary)">可见 → 用 EAR;丢失 → 按臂切换</text>
+    <!-- four source chips -->
+    <g font-size="11.5" text-anchor="start">
+      <rect x="500" y="106" width="168" height="21" rx="5" fill="var(--ear)"/><text x="509" y="121" fill="#fff">ear:EAR 单帧预测(烂)</text>
+      <rect x="500" y="130" width="168" height="21" rx="5" fill="var(--cv)"/><text x="509" y="145" fill="#fff">cv_gated:记忆+匀速</text>
+      <rect x="500" y="154" width="168" height="21" rx="5" fill="var(--zv)"/><text x="509" y="169" fill="#3a2c00">zerovel_gated:记忆冻结</text>
+      <rect x="500" y="178" width="168" height="21" rx="5" fill="none" stroke="var(--wm)" stroke-width="1.4" stroke-dasharray="4 3"/><text x="509" y="193" fill="var(--wm)">WM:路网世界模型(未来)</text>
+    </g>
+    <!-- z_im small -->
+    <rect x="522" y="228" width="120" height="30" rx="7" fill="var(--surface-2)" stroke="var(--line)"/>
+    <text x="582" y="247" text-anchor="middle" font-size="12" fill="var(--text-secondary)">z_im + vlm_ctx + proprio</text>
+    <!-- arrows -->
+    <g stroke="var(--text-muted)" stroke-width="1.6" fill="none">
+      <line x1="102" y1="223" x2="130" y2="223" marker-end="url(#ar)"/>
+      <path d="M254,214 C278,214 276,96 296,96" marker-end="url(#ar)"/>
+      <line x1="254" y1="223" x2="296" y2="223" marker-end="url(#ar)"/>
+      <path d="M254,232 C278,232 276,351 296,351" marker-end="url(#ar)"/>
+      <!-- EAR -> gate -->
+      <line x1="420" y1="96" x2="482" y2="116" marker-end="url(#ar)"/>
+      <!-- IAR -> z_im -->
+      <path d="M420,223 C470,223 480,243 518,243" marker-end="url(#ar)"/>
+      <!-- gate -> DiT -->
+      <line x1="682" y1="135" x2="738" y2="205" marker-end="url(#ar)"/>
+      <!-- z_im -> DiT -->
+      <line x1="642" y1="243" x2="738" y2="230" marker-end="url(#ar)"/>
+      <!-- DiT -> CARLA -->
+      <line x1="862" y1="223" x2="902" y2="223" marker-end="url(#ar)"/>
+    </g>
+    <!-- CARLA feedback loop -->
+    <path d="M954,250 C954,430 300,432 59,432 L59,250" stroke="var(--line)" stroke-width="1.4" fill="none" stroke-dasharray="5 4" marker-end="url(#ar)"/>
+    <text x="500" y="428" text-anchor="middle" font-size="11" fill="var(--text-muted)">闭环:动作驱动 CARLA → 新一帧(20/1 Hz 双系统)</text>
+    <!-- estimator feeds cv/zv chips -->
+    <rect x="300" y="392" width="240" height="52" rx="8" fill="var(--surface-1)" stroke="var(--cv)" stroke-width="1.3"/>
+    <text x="420" y="411" text-anchor="middle" font-size="12" fill="var(--text-primary)">TargetStateEstimator(纯 numpy,无训练)</text>
+    <text x="420" y="427" text-anchor="middle" font-size="10.5" fill="var(--text-secondary)">可见:记 p_last/v_last · 丢失:世界系推算→当前相机系</text>
+    <path d="M540,410 C620,410 600,168 584,164" stroke="var(--cv)" stroke-width="1.4" fill="none" stroke-dasharray="4 3" marker-end="url(#ar)"/>
+  </svg>
+  <div class="legend">
+    <span class="it"><span class="sw" style="background:var(--surface-2);border:1px solid var(--line)"></span>共享&冻结(所有臂相同)</span>
+    <span class="it"><span class="sw" style="background:var(--ear)"></span>ear(原基线/对照)</span>
+    <span class="it"><span class="sw" style="background:var(--cv)"></span>cv_gated</span>
+    <span class="it"><span class="sw" style="background:var(--zv)"></span>zerovel_gated</span>
+    <span class="it"><span class="sw" style="background:var(--slot-bg);border:1.4px dashed var(--wm)"></span>WM(未来·同一槽)</span>
+  </div>
+
+  <!-- ============ 估计器逻辑 ============ -->
+  <h2>② 记忆先验估计器内部(cv/zerovel 臂新增,不改权重)</h2>
+  <div class="cols">
+    <div class="card">
+      <h3>观测更新 —— 目标<span class="kgood">可见</span>时(每 tick)</h3>
+      <p style="margin:0;color:var(--text-secondary)">目标在画面内 → 记录其世界位 <code>p_last</code>;
+      对最近两次可见做差分得世界速度 <code>v_last</code>;<code>t_last←now</code>。
+      <br>(世界系 → 自运动不污染速度。)</p>
+    </div>
+    <div class="card">
+      <h3>预测 —— 目标<span class="kbad">丢失</span>时 → 填 z_ex</h3>
+      <p style="margin:0;color:var(--text-secondary)">
+      <b>cv:</b> <code>p_last + v_last·(Δloss+o_k)</code><br>
+      <b>zerovel:</b> <code>p_last</code>(冻结)<br>
+      再经 <code>inverse_pose_matrix</code> 投到<b>当前</b>相机系 / scale → <code>(K,3)</code>,口径与 EAR 航点一致。</p>
+    </div>
+  </div>
+
+  <!-- ============ 对照表 ============ -->
+  <h2>③ 四个配置逐项对照</h2>
+  <table>
+    <thead><tr>
+      <th>维度</th>
+      <th><span class="tag ear">ear</span> 原基线</th>
+      <th><span class="tag cv">cv_gated</span></th>
+      <th><span class="tag zv">zerovel_gated</span></th>
+      <th><span class="tag wm">WM</span> 未来</th>
+    </tr></thead>
+    <tbody>
+      <tr><td>z_ex 来源(<b>可见</b>)</td><td class="same">EAR</td><td class="same">EAR</td><td class="same">EAR</td><td class="same">EAR</td></tr>
+      <tr><td>z_ex 来源(<b>丢失</b>)</td>
+        <td>EAR 单帧预测 <span class="kbad">(58–90m)</span></td>
+        <td>记忆 + 匀速航位推算</td>
+        <td>记忆(冻结位置)</td>
+        <td>路网世界模型(结构预测)</td></tr>
+      <tr><td>新增模块</td><td class="same">— 无</td><td>TargetStateEstimator</td><td>同左(仅零速分支)</td><td>RoadGraphPredictor</td></tr>
+      <tr><td>权重 / 训练</td><td class="same">同一 ckpt</td><td class="same">同一 ckpt · <b>零训练</b></td><td class="same">同一 ckpt · <b>零训练</b></td><td>需 Stage-1b 训练</td></tr>
+      <tr><td>是否用速度</td><td class="same">—</td><td class="kgood">是(世界系差分)</td><td>否</td><td>否(靠路网拓扑)</td></tr>
+      <tr><td>擅长</td><td>—</td><td>直路丢失(离线 CV@6s 10–23m)</td><td>目标近静止/极短丢失</td><td><b>转向 / 路口</b>(CV 崩的地方)</td></tr>
+      <tr><td>注入口</td><td colspan="4" style="text-align:center;color:var(--text-secondary)">
+        —— 全部是 DiT 的<b>同一个 <code>z_ex</code> 槽</b>;WM 日后即替换此处的预测器(方案 A) ——</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ============ 早期结果 ============ -->
+  <h2>④ 闭环三臂最终结果(20 集,scored 19)—— WHERE 补上 / WHICH 成墙</h2>
+  <p class="sub">同 ckpt、同 held-out(Town05, seed 91000+),唯一变量 = 丢失帧 <code>z_ex</code> 来源。</p>
+  <table>
+    <thead><tr><th>指标</th>
+      <th><span class="tag ear">ear</span> 基线</th>
+      <th><span class="tag cv">cv_gated</span></th>
+      <th><span class="tag zv">zerovel</span></th>
+      <th>判读</th></tr></thead>
+    <tbody>
+      <tr><td>SR</td><td>0.000</td><td>0.000</td><td>0.000</td><td class="same">需 WHERE+WHICH 同时过</td></tr>
+      <tr><td>track_seconds</td><td>22.4</td><td class="kgood">63.4</td><td>54.5</td><td>待在目标附近久 2.5–2.8×</td></tr>
+      <tr><td>reacquire_attempts</td><td>42</td><td><b>294</b></td><td>247</td><td>7×:丢了就走 → 反复重接</td></tr>
+      <tr><td>reacquire_success</td><td>0.381</td><td class="kgood">0.483</td><td>0.405</td><td>真目标重捕 +10pp;cv&gt;zerovel</td></tr>
+      <tr><td>reacquire_convergence_s</td><td>4.91</td><td>3.88</td><td>2.31</td><td>重捕更快</td></tr>
+      <tr><td>reacquire_lock_wrong</td><td>0.476</td><td class="kbad">0.793</td><td>0.781</td><td>锁 look-alike 更多(WHICH 墙)</td></tr>
+      <tr><td>mis_follow(tid 轴)</td><td>0.723</td><td>0.805</td><td>0.732</td><td class="same">grounding 天花板</td></tr>
+    </tbody>
+  </table>
+  <div class="banner" style="margin-top:14px">
+    <b>闭环首次把两失败轴分离:</b> 记忆+CV 先验<b>治好 WHERE</b>(track_s↑、真目标重捕 0.38→0.48、cv&gt;zerovel),
+    但把 <b>WHICH(语言认领)顶成墙</b>(lock_wrong 0.48→<span class="kbad">0.79</span>、SR 仍 0——基线 lock_wrong"低"只因它大多<b>超时</b>没接近到能锁)。
+    <b>路线修正:</b> CV 先验已大面积补 WHERE → <span class="tag wm">WM</span> 边际价值被压缩(只剩转向/路口残差,单靠它抬不动 SR);
+    <b>WHICH/grounding 升为并列关键</b>(更强 tid / 重捕获时刻语言仲裁)。记忆+CV 先验值得保留进闭环。
+  </div>
+
+  <p class="foot">配套:<code>rollout/target_state.py</code>(估计器)· <code>rollout/policy.py</code>(z_ex 门控注入)·
+  <code>rollout/eval_ex_source.sh</code>(三臂配对)· 离线判据 <code>train/baseline_deadreckon.py</code> ·
+  记录 <code>acot_note/transition-diary-801.md §8.6</code> / memory <code>acot-uav-wm-roadgraph</code>。
+  颜色:dataviz 已验证分类色板(蓝/青/黄/紫,固定序,CVD≥12;黄色低对比→已配文字直标)。</p>
+</div>
+</body>
+</html>

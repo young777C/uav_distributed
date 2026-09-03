@@ -89,11 +89,12 @@ class PIDVisualServo:
 
     def compute(
         self,
-        target_pos: np.ndarray,     # [x, y, z] world coords (or None if lost)
+        target_pos: np.ndarray,     # [x, y, z] world POSITION setpoint (may trail the target)
         uav_pos: np.ndarray,        # [x, y, z] world coords
         uav_yaw: float,             # degrees
         target_visible: bool,
         timestamp: float,
+        look_pos: np.ndarray | None = None,   # world point the CAMERA faces (yaw); default target_pos
     ) -> tuple[float, float, float, float]:
         """Compute control action: (dx, dy, dz, dyaw) in world frame.
 
@@ -147,11 +148,20 @@ class PIDVisualServo:
         vz_des = self._pid_step(error_z, self._cfg.z, self._state_z)
 
         # --- Layer 3: Yaw control ---
-        desired_yaw = np.degrees(
-            np.arctan2(tracking_pos[1] - uav_pos[1], tracking_pos[0] - uav_pos[0])
-        )
-        error_yaw = _normalize_angle(desired_yaw - uav_yaw)
-        yaw_rate = self._pid_step(error_yaw, self._cfg.yaw, self._state_yaw)
+        # Only yaw when there's a meaningful HORIZONTAL offset. Near-nadir (target almost
+        # directly under the UAV, as when it flies overhead to re-acquire) the atan2 heading
+        # is ill-conditioned — tiny target motion flips it wildly → the camera shakes. Hold
+        # the yaw inside that deadband instead of chasing the singular heading.
+        yaw_ref = look_pos if (look_pos is not None and target_visible) else tracking_pos
+        horiz = float(np.hypot(yaw_ref[0] - uav_pos[0], yaw_ref[1] - uav_pos[1]))
+        if horiz < 5.0:
+            yaw_rate = 0.0
+        else:
+            desired_yaw = np.degrees(
+                np.arctan2(yaw_ref[1] - uav_pos[1], yaw_ref[0] - uav_pos[0])
+            )
+            error_yaw = _normalize_angle(desired_yaw - uav_yaw)
+            yaw_rate = self._pid_step(error_yaw, self._cfg.yaw, self._state_yaw)
 
         # --- Convert velocities to displacements ---
         dx = np.clip(vx_des * self._cfg.dt, -self._cfg.limits.xy_max * self._cfg.dt,

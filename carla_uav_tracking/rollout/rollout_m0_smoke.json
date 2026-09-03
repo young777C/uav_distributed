@@ -1,0 +1,42 @@
+{
+  "aggregate": {
+    "episodes": 2,
+    "scored": 1,
+    "SR": 0.0,
+    "mis_follow_sustained": 0.23958333333333334,
+    "mis_follow_inst": 0.20833333333333334,
+    "id_switches_mean": 1.0,
+    "track_seconds_mean": 9.6,
+    "centering_rate": 0.21875,
+    "reacquire_lock_wrong_rate": 0.0,
+    "shortcut_nearest_rate": 0.04411764705882353,
+    "shortcut_target_central_rate": 0.21875
+  },
+  "episodes": [
+    {
+      "skipped": true,
+      "reason": "target stationary",
+      "episode_seed": 90000
+    },
+    {
+      "success": false,
+      "mis_follow_inst": 0.20833333333333334,
+      "mis_follow_sustained": 0.23958333333333334,
+      "id_switches": 1,
+      "track_frames": 96,
+      "track_seconds": 9.6,
+      "centering_rate": 0.21875,
+      "max_wrong_run_s": 2.3,
+      "mean_uav_target_dist": 43.32014146213804,
+      "reacquire_events": 1,
+      "reacquire_convergence_s_mean": 0.0,
+      "reacquire_lock_wrong_rate": 0.0,
+      "shortcut_nearest_rate": 0.04411764705882353,
+      "shortcut_target_central_rate": 0.21875,
+      "steps": 295,
+      "episode_seed": 90001,
+      "duration_seconds": 241.65801405906677,
+      "language": "Focus on the beige Nissan Patrol SUV directly ahead, heading west, maintaining a tracking distance of about 25 m."
+    }
+  ]
+}

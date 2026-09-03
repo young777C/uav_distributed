@@ -1,0 +1,16 @@
+{
+ "train": [
+  "episode_000002.h5",
+  "episode_000003.h5",
+  "episode_000004.h5",
+  "episode_000005.h5",
+  "episode_000006.h5",
+  "episode_000007.h5",
+  "episode_000008.h5",
+  "episode_000009.h5"
+ ],
+ "val": [
+  "episode_000010.h5",
+  "episode_000011.h5"
+ ]
+}

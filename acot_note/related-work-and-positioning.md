@@ -158,6 +158,7 @@
 
 > 背景:方案把 EAR 从"运动学目标状态预测"升级为**从输入航拍视频在线推断的结构化环境先验 SEP(Structured Environment Prior)**——只预测**时不变**的路网/车道结构,作 EAR 拦截点预测的先验;**不建完整世界、不预测观测像素、不含身份信息**。**自身侧避障已删**(≥22m 高空俯视设定下楼/树碰撞被设计掉、无任务牵引;若未来降飞行包线穿楼再议)。
 > **核心组织原则(回应"where/which 能否按时变性切"):可以,且这是最强 framing——把因子按"时间平稳性 × 身份性"分成 2×2,SEP 只占 identity-agnostic 的静态/准静态格,语言独占动态·身份格。**
+> **方法学背书**:SEP 归入长时一致性记忆的**"显式 3D/世界系状态"派**(对应 PERSIST 2603.03482 / WorldMem NeurIPS'25 的持久 3D state,可累积、抗漂移),其时不变轨道约束是 action-conditioned 世界模型漂移的缓解手段——详见 `world-model-survey.md` 第二段 (b)。⚠️ 但"显式 3D 唯一"被隐式方法(StateSpaceDiffuser NeurIPS'25、Geometry-Aware Implicit Memory 2606.02436)反驳 → SEP 措辞守"可辩护"、必做 vs 纯隐式长上下文(TTT/WorldPack)的消融。
 
 ### 4D.1 时不变/时变 × 身份 的 2×2(方案的组织原则)
 
@@ -199,6 +200,33 @@
 - 在线拓扑/航拍建图:**Online Road Topology + SD map**(2507.01397 ✅)、TopoBDA(2412.18951 ✅)、LaneExtraction **CVPR 2022**(⚠️核 He&Balakrishnan)、StreamMapNet **WACV 2024**(⚠️)
 - 斜视 UAV→BEV:Mobile Traffic Camera Calibration(2605.11900 ✅)
 - 因子化/任务相关 WM:对象中心 WM(2511.02225 ✅)、Task-Sufficient WM(2607.04409 ✅)、DBC **ICLR 2021**(2006.10742 ⚠️)、Denoised MDP **ICML 2022**(⚠️)
+
+---
+
+## 4E. 相关工作 H｜语言双功能:消歧(which)+ 意图种子(which-way)(2026-08-11,deep-research 背书)
+
+> 背景:新方向把语言从"只做身份消歧(which)"扩展为"**同时作为推理种子塑造结构化预测(which-way:意图/目的地/行为→偏置 EAR 轨迹与 SEP 路网先验)**"。方法学全景、逐件切割、风险详见 `language-seeded-prediction-survey.md`。
+> **判决**:"语言超越消歧、条件化结构化预测"是**成熟且 peer-reviewed 的范式**(语言条件轨迹预测)→ 原理无新颖性;可辩护点押 **"空中闭环 + 同一语言双功能(which + which-way)"耦合**(medium 置信空白)+ 统一 framing。
+
+### 4E.1 成熟先例与逐件切割(novelty 押耦合,非原理)
+
+| 先例线 | 代表(venue/状态) | 语言起的作用 | 切割 |
+|---|---|---|---|
+| **语言条件轨迹预测** | **Trajectory-LLM**(ICLR 2025)、**iMotion-LLM**(WACV 2026)、**LC-LLM**(CommTR 2025)、**Traj-LLM**(IEEE TIV)、**LMTraj**(CVPR 2024+TPAMI) | 指令/意图条件化塑造轨迹;L2T 数据生成;意图+轨迹双任务 | must-cut:**全为地面/离线/非闭环、语言单一功能**(要么意图、要么数据生成、要么生成基底);无 look-alike 消歧、无空中闭环 |
+| **文本→结构化布局** | **LayoutGPT**(NeurIPS 2023) | 自由文本→CSS 结构化 2D/3D 布局 | 支持"语言可条件化 SEP 结构化几何"的机制类比;非跟踪/闭环 |
+| **语言条件世界模型** | **★ Semantic World Models**(2510.19818 预印本, **PaliGemma-3B**)、GWM(2604.11751 预印本 ⚠️复核)、LGWM(**ACL 2024 工作坊**) | 指令→goal-aware 语义未来;**预测语义状态而非像素** | 🟢 **正面弹药**:SWM 用你候选骨干论证"预测状态而非像素"、"像素视觉逼真却缺决策语义"——现成 peer 背书 EAR/SEP 哲学 |
+| **生成即推理** | **Diffusion-of-Thought**(NeurIPS 2024) | CoT 嵌入扩散去噪 | EAR flow-matching 的推理注入原型(goal-based) |
+
+**⚠️ 两个易误引的反例**:**LMTraj** 的"语言"=LLM 主干世界知识(非外部意图指令)→ 证"LLM 推理增值"、非 which-way 先例;**DSC-LLM**(PMC)语言仅作**预测后解释层**→"语言只作后处理"的对立设计。
+
+### 4E.2 未占据核心 + 统一 framing(to-our-knowledge)
+> **无任何工作**在**空中闭环**里让**同一条语言同时**做 look-alike 身份消歧(which)+ 预测意图种子(which-way)。统一 framing = **"语言=解决其他通道无法确定的信号"**(重现时刻外观分不清→定 which;预测分叉处几何+运动定不了→定 which-way,同一原理两个实例):与 survey《Trajectory Prediction Meets LLMs》(2506.03408 预印本)"articulate goals + 推演 alternative futures"概念一致、**无同名先例 → 原创综合,且加强 H0**(语言承载几何无法承载的信息)。
+
+**⚠️ 诚实边界**:① "reasoning seed / which / which-way" 均本项目 framing、非原文措辞,署"我们提出";② 空白为否定性论断,强度上限 medium,投稿前定向反证检索(FlightLLM/Holodeck/DiffuScene/UniPi/Hierarchical Diffuser 及其他空中语言条件工作);③ **命名冲突**:两篇 Traj-LLM/Trajectory-LLM 别混、FlightLLM 与 FPGA 同名区分。
+
+### 4E.3 核心风险(接 experiment-design H8 / §2.0d)
+1. **打破 SEP 2×2**:语言跨进"where 列"→ "SEP 定 where、语言定 which"分工被破坏,H0 归因复杂化 → 三臂消融拆贡献。
+2. **意图冗余陷阱**(与位置捷径同构):语言意图若能被 SEP 路网+运动推出则冗余;仅在携带"路+运动推不出的信息"(视野外目的地/未显现行为/非最短路径)时 load-bearing → 须"分叉歧义"场景验证。
 
 ---
 

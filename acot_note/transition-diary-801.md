@@ -1,10 +1,10 @@
 # 研究迭代总结 · Transition Diary
 
-> 2026-07-29 · 用于近期工作汇报 · 配套:`acot-uav-design.md`、`experiment-design.md`、`data-fix-spec.md`、`learning_diary_0729.md`
+> 2026-07-29 起 · 2026-08-11 增补"研究点收敛(去发散)"(§五)· 用于近期工作汇报 · 配套:`acot-uav-design.md`、`experiment-design.md`、`data-fix-spec.md`、`world-model-survey.md`、`language-seeded-prediction-survey.md`、`learning_diary_0729.md`
 
 ## TL;DR(一句话迭代线)
 
-我们从"**空中·语言指定·多相似车消歧跟踪**"的 VLA 出发,打通了完整训练管线;但在 MVP 严谨消融中发现:**纯目标跟踪(不含长时间丢失)靠视觉/几何已能很好求解,语言几乎无净贡献,且该问题在现有工作里已相对成熟**。据此,我们把问题**难度升级为"长时间画面丢失后的预测-重捕获"(源于真实需求)**——这一升级同时**恢复了语言的必要性**、**兑现了 EAR 预测的价值**,并暴露出**架构需从反应式 VLA 向具备世界建模能力的 WAM(World-Action Model)演进**。
+我们从"**空中·语言指定·多相似车消歧跟踪**"的 VLA 出发,打通了完整训练管线;但在 MVP 严谨消融中发现:**纯目标跟踪(不含长时间丢失)靠视觉/几何已能很好求解,语言几乎无净贡献,且该问题在现有工作里已相对成熟**。据此,我们把问题**难度升级为"长时间画面丢失后的预测-重捕获"(源于真实需求)**——这一升级同时**恢复了语言的必要性**、**兑现了 EAR 预测的价值**,并暴露出**架构需从反应式 VLA 向具备世界建模能力的 WAM(World-Action Model)演进**。此后(08-05~11)又派生出三条探索线——**SEP 结构化环境先验 / world-model 方法学综述 / 语言 which-way 意图种子**;它们**不是三个平行新课题,而是同一主线的三个层**,§五做统一收敛。最后(08-18)在建 WM 之前先**公平测量原模型的预测上限**(§八):公平重训后 EAR 的出画预测**仍然失败且训练救不回**——坐实"反应式单帧模型无法预测出画位置",**为 WM(路网世界建模)提供了干净判据**。
 
 ---
 
@@ -91,15 +91,183 @@ H0 成立 ⟺ (a) 语言-only 指定(无 bbox 锚)∧ (b) 身份⊥位置 ∧ (c
 
 ---
 
-## 五、当前状态与下一步
+## 五、研究点收敛(去发散):一条主线 + 分层扩展(2026-08-11)
 
-**已完成**:训练管线打通(Stage-1/2)、EAR 定位修复、A/C 消融(C 稳健、A 修正为~20%非2×)、**语言必要性证伪 + 位置捷径量化**(核心发现)、mmap+workers 基建(8 卡可快速重训)、设计文档/实验设计/数据规格三方对齐更新。
+> 08-05~11 派生了三条新线(SEP/路线B、world-model 方法学综述、语言 which-way),有发散感。本节把它们**收回到一条主线的分层**,并明确论文范围与优先级,避免"四个方向并列"。
 
-**下一步(按依赖)**:
-1. **数据侧(关键路径)**:按 `data-fix-spec.md` 做 (b) 位置去相关 + (c) 长丢失断裂事件(专家演示拦截、目标重现、重捕获时刻 look-alike)+ (d) 聚焦共视;`benchmark_leak_probe` 作验收门。
-2. **训练侧**:mask 反转已就位(丢失帧监督拦截,`supervise_intercept` 门控);待长丢失数据到位即生效(需配套让"目标缺席帧"进样本)。
-3. **架构侧(研究重点)**:VLA→WAM 的目标状态记忆/世界模型选型与实现。
-4. **闭环侧**:建学生策略 rollout harness(兑现"具身闭环"+ 评"重捕获成功率 vs 丢失时长")。
+### 5.1 唯一核心命题(其余全部服务于它)
+> **在目标长时间不可见(>6s 丢失)时,系统靠"目标状态记忆 + 任务相关世界模型"预测目标未来 3D 位置、直飞拦截重捕获;而重现时刻的 look-alike 消歧,只有语言能定。**
+> = 一个 **world-model-augmented VLA** 在"空中闭环预测-拦截重捕获"上兑现,语言在该时刻不可替代。**这里的"世界模型"不是完整生成式世界模型,而是任务相关因子的预测器**(EAR 目标状态 + SEP 路网先验)。
+
+### 5.2 分层(按确定性 × 优先级 × 论文范围)
+
+| 层 | 内容 | 确定性 | 依赖 | 论文范围 |
+|---|---|---|---|---|
+| **L0 已验证脊柱** | nolang 证伪 + 位置捷径量化(~3-5%)→ 长丢失升级 | ✅ 已实证 | — | paper1 动机 |
+| **L1 核心方法(进行中)** | EAR + **目标状态记忆(WAM 最小实现)** + 长丢失数据 + mask 反转 | 设计就绪、待数据 | data-fix-spec b/c/d | **paper1 主贡献** |
+| **L2 路线B / SEP** | 从斜视航拍在线推**时不变路网**,作 identity-agnostic where 先验;时不变/时变 2×2 | 方法学有背书(PERSIST/WorldMem 显式3D派)+ H0-leak guard(§2.0c)、待消融 | L1 + 长丢失数据 + 路网 GT | paper1 增强 **或** paper2 核心 |
+| **L3 语言 which-way** | 语言从 which(身份)扩到 which-way(意图种子) | 最低:先例成熟(原理不新)+ 冗余陷阱 + 与 SEP 张力 | 富意图语言 + 分叉歧义场景 | **paper2 / future work** |
+
+### 5.3 三条新线各自归位到主线(不是三个平行方向)
+- **world-model 方法学综述 = 工具箱,不是新研究点**:给 L1/L2 提供"怎么抗 EAR drift(因果 AR 的 KV-cache 自 rollout / error-recycling / BAgger,均训练侧、不需像素生成)""SEP 属显式 3D 状态记忆派""drift 上限不可根治(R11)"。→ 服务 L1/L2,**不单列为方向**。(详 `world-model-survey.md`)
+- **SEP(L2)= §4.2"需要补的世界建模能力"的具体落地**:不是新方向,是把"WAM 需要的世界模型"**收窄成任务相关因子(路网)**。→ **SEP 就是 WAM 的世界模型实例**。(详 related-work §4D)
+- **语言 which-way(L3)= L0"语言=消歧"的推广**:语言从"外观分不清→定 which"扩到"几何+运动定不了→定 which-way",同一原理两个实例。→ 是**语言必要性主张的延伸,不是新任务**。(详 related-work §4E)
+
+> **一句话去发散**:三条新线分别是主线的 **工具箱(综述)/ 世界模型落地(SEP)/ 语言必要性延伸(which-way)**,不是三个平行新课题。
+
+### 5.4 必须调和的内部张力:SEP("语言只定 which") vs which-way("语言也塑造 where")
+表面矛盾:SEP 的 2×2 说语言只定身份(which)、SEP 定 where;which-way 又说语言塑造预测(意图→路网/轨迹)。**调和如下(写正文前必须统一,否则 §4D 与 §4E 自相矛盾)**:
+- **SEP 定义 where 的"可行集"(环境约束:路能通到哪),语言(which-way)在可行集内做目标特定的"选支路"**。语言**仍不生成环境结构**,只在结构给定的分叉处选择。
+- 落到 2×2:**SEP 仍独占"时不变·身份无关"格;语言那一列从"which(身份)"多出一个"which-way(目标意图,在可行集内选支路)"的行为**——2×2 不破。
+- 且 which-way 严格受 **§2.0d 意图冗余 guard** 约束:只在"SEP 路网+当前运动都定不了"的分叉才算数(否则退化为位置捷径的同构变体)。
+
+### 5.5 论文范围决策(收敛建议)
+- **paper1 = L0(动机)+ L1(核心 WAM 最小实现)+ L2 最小版**(SEP 仅作长丢失先验,只验 H7/g2 不放大 H0)。这已是"新任务 + 新 benchmark + WAM 最小实现 + SEP"的完整贡献。
+- **L3(which-way)明确 defer 到 paper2 / future work**:若并入 paper1,H0 归因会从"2 条捷径(位置+连续性)"膨胀到"4 条轴",评审归因风险剧增,得不偿失。
+- **判据**:只有当 L1 的长丢失数据 + 闭环 harness 就绪、且 L2 的 SEP 消融站住,才考虑把 L3 提前。
+
+---
+
+## 六、当前状态与下一步
+
+**已完成**:训练管线打通(Stage-1/2)、EAR 定位修复、A/C 消融(C 稳健、A 修正为~20%非2×)、**语言必要性证伪 + 位置捷径量化**(核心发现)、mmap+workers 基建(8 卡可快速重训)、设计文档/实验设计/数据规格三方对齐更新;**两轮深研落盘 + 挂锚**:`world-model-survey.md`(L1/L2 工具箱)、`language-seeded-prediction-survey.md`(L3 背书),related-work §4D/§4E、experiment-design §2.0c/§2.0d、H7/H8、M11/M12、R9–R12。
+
+**下一步(按分层 × 依赖,对齐 §5.2/§5.5)**:
+1. **L1 数据侧(关键路径,paper1 命脉)**:按 `data-fix-spec.md` 做 (b) 位置去相关 + (c) 长丢失断裂事件(专家演示拦截、目标重现、重捕获时刻 look-alike)+ (d) 聚焦共视;`benchmark_leak_probe` 作验收门。
+2. **L1 训练/架构侧(paper1 主贡献)**:mask 反转已就位(`supervise_intercept` 门控,待长丢失数据即生效);VLA→WAM 的**目标状态记忆最小实现**(最后可见位置+速度传播)。
+3. **L1 闭环侧**:建学生策略 rollout harness(兑现"具身闭环"+ 评"重捕获成功率 vs 丢失时长")。
+4. **L2 增强(SEP,paper1 增强 或 paper2)**:SEP 头 + CARLA 路网 GT;只验 H7/g2(§2.0c guard,不放大 H0);对照纯隐式长上下文(R10)。
+5. **L3(which-way,defer)**:MVP 不做;仅在 §2.0d 立三臂消融 + 分叉歧义场景 + 冗余 guard 的设计,paper2 再兑现。
+
+> **优先级铁律**:L1 未站稳前不投 L2/L3 的实现资源(§5.5)。L2 是"锦上添花可提前、也可留 paper2";L3 一律 defer。
+
+---
+
+## 七、实证证明语言必要性:指标净化 → 多版本去相关 → 分辨率墙 → 干净成立(2026-08-11 → 08-17)
+
+> §二.2 只证伪了"老数据上语言不必要"。这一章是**把任务改造到语言真正必要、并干净证明它**的完整实证历程。一句话:**逐层拆掉每一个让模型"不用语言也能蒙对"的捷径,最后发现最深的墙是图像分辨率。**
+
+### 7.1 先净化指标(否则一切结论都假)
+- **发现指标漏洞**:`mis_follow` 被 `argmax` 平局 × "target 恒在候选 idx0"做假——cross-attn 头分数一塌平,平局默认选 idx0=目标 → 假的"突破"(曾误读为语言起作用)。**头本身是排列等变的**(实测),漏洞在指标。
+- **修复**:`dataset_stage2` 打乱候选顺序 → target_idx 均匀。头等变 ⇒ 训练不变、指标变诚实。详见 memory `acot-uav-tid-metric-artifact`。
+
+### 7.2 多版本数据去相关(逐个关闭几何捷径)
+`benchmark_leak_probe` 作验收门(几何 floor 越接近 chance 越好):
+
+| 版本 | 关掉的捷径 | 几何 floor | E1(有语言 vs 无语言) | 真相 |
+|---|---|---|---|---|
+| mvp_full | 位置(横向) | 5%→41.6% | — | 位置捷径主导 |
+| **v3** | + 深度/跟踪距离 | nearest 31%→**80%** | 有 56% / 无 71%,gap 15pp | **假象**:56%≈几何 floor 54%,gap 是几何被语言条件化带出来的 |
+| **v4** | + 居中(相机瞄准偏移) | most-central→chance | 有 **72%≈chance** / 无 76%,gap ~3pp | 语言**想用但用不上**——非数据问题 |
+| **v5** | (几何全清)+ **分辨率 336→512** | chance 76% | 有 **58%** / 无 72%,**gap ~13pp** ✅ | **语言真起作用** |
+
+### 7.3 v4 卡住 → 定位"不是数据、不是头,是特征分辨率"
+v4 几何全清、E1 却回到 chance。系统排查:
+1. **任务可解**:目标完整描述在每帧 **100% 唯一**,语言 oracle 天花板 = **0%**(不是任务无解);
+2. **身份不在特征**:`cand_feats→属性` 线性探针 by-episode 只有 make 12%/color 23%;
+3. **re-crop 也救不了**、full-frame pool 也救不了 → 一度误判"再大也没用";
+4. **决定性一测——同分布 vs by-episode**:make **by-episode 6% 但同分布 55%**、color 62%。**同分布高 ⇒ 27px 特征其实富含身份**(看不清就无法分类);by-episode 低只是"线性映射跨集不迁移"。而**端到端 VLM-grounded tid 头能迁移**(靠 Qwen 预训练车辆知识),线性探针不能。
+5. **根因锁定 = 图像分辨率**:336px+90°FOV+远 standoff → 车仅 **12px** → 身份被 tokenize 抹平。**这是"空中小目标该高分辨率、别抄机器人 VLA 的 224/336"的教训**(调研:VisDrone 用 2K-4K;OpenVLA 224 因目标又近又大)。
+
+### 7.4 v5:512px 一改,E1 从失败翻成成功
+- 数据侧:512×512 + FOV/standoff 调整 → 车 **12→27px**;
+- **唯一变量是分辨率** → E1 有语言从 72%(chance)→ **58%(破 chance 13pp)**,稳定收敛;
+- **坐实**:瓶颈就是特征分辨率,不是数据场景、不是 head、不是训练。
+
+### 7.5 训练侧配套(让薄语言信号能稳定学到)
+- **稳定化四件套**(v3 起):tid 头 dropout + 独立 weight_decay + 余弦 LR + **best.pt 按 mis_follow 选**(原按 act_mse → 存错 epoch)。否则 val 早峰晚衰、gap 塌回(naive 收敛期 gap 3pp → 稳定后 ~13-15pp)。
+- **省磁盘 E1 配方**(共享盘仅 267GB 时):mis_follow 只依赖 tid 头 = 只需**最后一层** → 缓存 `--layers 24` + **fp16**(~43GB/缓存 vs 5层fp32 426GB)+ 跳 EAR/Stage-1 → mis_follow 与完整模型**完全一致**。
+
+### 7.6 一个 gotcha(踩过)
+v5 本意 FOV 70,但**渲染实际等效 fov90**(投影中心+尺寸零误差、bbox GT=27px 双证)。**config 的 fov 必须匹配渲染(90)**,否则候选框偏 ~60px、全错。不影响结论——27px 已够。
+
+### 7.7 现在的定论
+**在"几何全除净 + 指标诚实 + 稳定训练 + 分辨率够(27px)"四条件下,语言首次干净 load-bearing:有语言 ~58% vs 无语言 ~72%(≈chance),稳定 gap ~13pp。** H0 的核心生死线成立。有语言仍非 0%(共视 look-alike + VLM 细粒度上限),但**方向已证**。下一步瓶颈从"数据/分辨率"转向"把 grounding 做得更强 + 闭环兑现"。详见 memory `acot-uav-language-necessity`。
+
+---
+
+## 八、建 WM 前先测原模型的预测上限:公平 no-WM 基线 → WM 有据(2026-08-18)
+
+> **战略前提**:在给架构加 WM 这样的复杂模块前,先回答"原模型是否已到上限?若未到,先优化原模型别过早加复杂度"(用户的方法论)。E1 的 EAR 是**欠训的**(E1 为省磁盘跳过 Stage-1 预热、只用 1 层缓存、focus 在 mis_follow),不能作为"原模型上限"。故先做一次**公平重训**再测量。
+
+### 8.1 公平重训(`train/train_v5_fair.sh` → `runs/stage2_v5_fair`)
+把 E1 省掉的都补回,给原模型最好的机会:**Stage-1a EAR 预热**(err_6s 从 129m→~33m 收敛)+ **完整 5 层 IAR 缓存**(层 4/8/12/16/24,fp16)+ **`supervise_intercept` 开**(intercept-BC)。产物 `stage2_best.pt`(ep25,mis_follow 0.582)。
+
+### 8.2 判据工具:`train/intercept_eval.py`(离线代理,须容器内跑)
+闭环真值要 harness(P3);离线先给两个代理:
+- **EAR 预测 FDE**(米):采样 EAR 自预测航点 vs GT,按**可见/丢失 × 视界(1/2/4/6s)**拆;加**速度无关 persist 参照**(预测未来=1s 位置);
+- **拦截朝向 cos**:用 EAR 自预测航点驱动 DiT 得**模型动作**,对比**专家动作**净位移方向的 cos(专家自身≈1.0)。
+
+### 8.3 结果:公平训练也救不回出画预测
+
+| 指标 | E1(欠训/1层) | **公平(预热/5层)** | 判读 |
+|---|---|---|---|
+| 可见 EAR FDE 1s/6s | 15.2 / 23.3m | **14.2 / 21.2m** | 仅好 1-2m,**仍不如 persist**(6s: 13.7m) |
+| 丢失 EAR FDE 1s/6s | 58.5 / 77.2m | **58.3 / 77.7m** | **几乎不变**——训练救不回 |
+| persist 参照(丢失 6s) | 17.6m | 17.6m | EAR 比"假设目标不动"还差 4× |
+| 拦截 cos 丢失(中位/>0.5) | 0.92 / 71% | 0.87 / **66%** | 略降;34% 飞错 |
+| mis_follow(best) | 0.579 | **0.582** | ≈,不受 EAR/IAR 层数影响 |
+
+### 8.4 四条定论
+1. **公平版 EAR ≈ 欠训版 EAR**(丢失帧 FDE 58→58m 几乎不变,可见仅好 1-2m)→ **EAR 预测的烂是架构性的(单帧限制),不是欠训**。给了最好的训练也无济于事。
+2. **EAR 连可见帧都不如速度无关的 persist**(21m vs 13.7m@6s)→ 单帧预测目标未来位置 genuinely poor,1s 都偏 14m。
+3. **丢失帧灾难(58-78m)且训练不变**→ **反应式单帧模型从根本上无法预测出画目标位置**(比"目标不动"还差 4 倍)。
+4. **拦截动作**:cos 丢失 66% 朝目标(靠 `supervise_intercept` 的 BC 惯性,**非准确预测**),34% 飞错 → **拦截行为在但不鲁棒**;WM 给准确预测后应大升。
+
+### 8.5 对战略问题的回答 → WM 有据
+- **原模型在"预测"轴已到上限**(公平训练救不回 → 是单帧的根本限制,非调参空间)→ **继续 tune 原模型无用,WM 才是下一步**。
+- **语言(mis_follow 0.582)在 grounding 天花板**,不随 EAR/IAR 层数变 → 语言轴的优化走 grounding(§七),不走加层。
+- **`stage2_v5_fair` = 干净的 no-WM 离线基线**(EAR-only/M0),即 WM(P2)与 SEP(H7)必须超越的对照;闭环 no-WM 基线待 harness(P3)。
+- 详见 memory `acot-uav-wm-roadgraph`(内含 gotcha:`docker run --rm` 会删日志→输出重定向到文件;5 层缓存训练 CPU-bound fp16→fp32 astype,GPU~0% util,~3-5min/epoch)。
+
+### 8.6 便宜基线阶梯 + 深度/横向分解(2026-08-19,`baseline_deadreckon.py` + `intercept_eval` 分解)
+
+判 WM 前再补一层严格性:反应式是否连**最便宜的记忆/匀速**都没做到?两件工具:
+- `intercept_eval` 加 **深度(光轴,dim0)/横向(像平面,dim1:2)分解**;
+- `baseline_deadreckon.py`:**逐 episode 因果**跑 **②最后可见记忆·零速** + **③匀速外推**(世界系,用 GT 速度 = CV 上界)+ persist,**按 丢失时长 × 转向 分层**,可选 EAR 对照。全在**世界系推算→当前相机系**,自运动完全补偿(③ 用的是目标**绝对世界速度**)。
+
+**发现1 —— 证伪"14m 是深度"**:可见帧 EAR 误差**横向主导**(横向 11.7→17.8m vs 深度 7.8→10.7m,1s→6s)。**不是**单目深度歧义,而是**空间定位/grounding-conditioning 弱**(横向原则可学)→ 可见轴**仍有杠杆**(把 grounding/空间信息喂进 EAR),且与 WM 正交。测了才知道,先前"深度"猜测作废。
+
+**发现2 —— EAR 被便宜基线全面碾压**(FDE@6s,丢失帧):
+
+| 分层 | n | EAR | ②零速 | ③CV | persist参照 |
+|---|---|---|---|---|---|
+| short_straight | 266 | 68.1 | 26.1 | **10.9** | 16.7 |
+| long_straight | 182 | 90.0 | 47.5 | **23.2** | 17.1 |
+| short_turn | 20 | 53.1 | 34.3 | 35.8 | 27.1 |
+| **long_turn** | 27 | 58.1 | 49.9 | **47.5** | 28.2 |
+
+EAR 每一格都被 CV 碾压 **2-6×** → **反应式网络连"匀速外推"都没学到**,退化成烂先验(它没有把"最后看见的运动"前带的机制)。
+
+**发现3 —— WM 价值精确锁定在转向/路口**:CV 在 **short_straight 10.9m、long_straight 23.2m**(直路即使长丢失也够重捕获!)→ 但 **short_turn 35.8、long_turn 47.5m 崩塌**(CV 直冲出弯,优势归零≈零速)。**杀手是转向/路口,不是时长本身**。→ **WM 的差异化价值 = 转向/路口**(路网知道目标顺车道走、路口分叉),直路那块便宜 CV 就解决;并给 WM 立了**必须超越的基线**(转向分层 CV ~36-48m)。
+
+**发现4 —— 数据前置坐实**:转向丢失帧**严重欠采样**(short_turn n=20、long_turn n=27,合计 47 帧)→ **P1(长丢失+路口重现)数据从 nice-to-have 升为 WM 硬前置**(否则转向格连评测都不稳,更训不动 WM)。
+
+### 8.7 修正后的"是否到顶"结论 + 阶梯路线(取代"EAR 到顶→直接上 WM")
+
+- **反应式并没到实用天花板**:CV 碾压 EAR ⇒ 有**免费优化(记忆+CV)**没做;可见横向定位还有 **grounding-conditioning 杠杆**没试。"EAR 到顶"**不成立**——它连 CV 都没学到。
+- **WM 只对一个残差有据**:**转向/路口**(CV 也解不了的 36-48m),这是路网结构不可替代处,且有基线可比。
+- **阶梯路线**:① **记忆+CV 作策略先验接入闭环**(训练无关,直路出画预测 90→23m)→ ② **修 EAR 可见横向**(喂 grounding/空间 conditioning)→ ③ **WM 只打转向/路口** + **P1 补转向丢失数据**。这套比"EAR 到顶→上 WM"诚实且有力:证明了反应式没到顶、把 WM 精确限定在转向、给了它基线、点出了数据前置。
+
+### 8.8 闭环三臂:记忆+CV 先验接入 → WHERE 被补上、WHICH 成墙(2026-08-19,`rollout/eval_ex_source.sh`)
+
+把 ②③ 从离线代理**接进闭环**:同一 ckpt(`stage2_v5/best.pt`)、同一 held-out(Town05 seed 91000+),**唯一变量是丢失帧谁填 DiT 的 `z_ex` 槽**(`rollout/target_state.py` 估计器 + `policy.py` 门控,**训练无关**)。三臂 = `ear`(原基线)/ `cv_gated`(记忆+匀速)/ `zerovel_gated`(记忆冻结)。架构对照图 `acot_note/three_arm_zex_injection.html`。
+
+| 指标 | ear(基线) | cv_gated | zerovel | 判读 |
+|---|---|---|---|---|
+| SR | 0.000 | 0.000 | 0.000 | 需 WHERE+WHICH 同时过 |
+| track_seconds | 22.4 | **63.4** | 54.5 | 待在目标附近久 2.5-2.8× |
+| reacquire_attempts | 42 | **294** | 247 | **7×**:从"丢了就走"→"反复重接" |
+| reacquire_success | 0.381 | **0.483** | 0.405 | 真目标重捕获 +10pp;cv>zerovel |
+| reacquire_convergence_s | 4.91 | 3.88 | 2.31 | 重捕更快 |
+| reacquire_lock_wrong | 0.476 | **0.793** | 0.781 | **变差**:锁 look-alike 更多 |
+| mis_follow | 0.723 | 0.805 | 0.732 | 略升(tid 轴) |
+
+**定论(闭环首次把两失败轴分离)**:
+1. **WHERE(预测-拦截)被便宜先验治好**:drone 不再丢了就飞走 → track_s 22→63s、重捕获尝试 7×、真目标重捕获 0.38→0.48、收敛更快。**cv>zerovel(速度项有用)**,与离线一致。
+2. **但这把 WHICH(语言认领)顶成瓶颈**:待在目标附近=反复扎进 look-alike 群,grounding(mis_follow 0.72→0.80、lock_wrong 0.48→**0.79**)认不准→锁错暴增。基线 lock_wrong"低"只因它**大多超时**(没接近到能锁),非认得准。
+3. **SR 仍 0 根因**:先验打通"丢失-重接"循环(WHERE),但每次**认错车**(WHICH)→ 跟不到底。
+4. **路线修正**:① **WM 边际价值被压缩**——CV 先验已大面积补 WHERE,WM 只剩**转向/路口残差**,单靠 WM 抬不动 SR;② **WHICH(grounding)升为并列关键**——要动 SR 必须同时强化 grounding(更强 tid / 重捕获时刻语言仲裁);③ **记忆+CV 先验值得保留进闭环**(velocity 有用)。详见 memory `acot-uav-wm-roadgraph`。
 
 ---
 
@@ -108,9 +276,24 @@ H0 成立 ⟺ (a) 语言-only 指定(无 bbox 锚)∧ (b) 身份⊥位置 ∧ (c
 | 项 | 位置 |
 |---|---|
 | 语言必要性 3-seed 消融(6.16 vs 6.23%) | `runs/seed_exp/{ac,nolang}_s{0,1,2}` |
+| **★ v5 E1 干净证明(有58% vs 无72%,gap~13pp)** | `runs/train_v5{,_nolang}.log` · `train/config_v5{,_nolang}.yaml` · `train/train_v5_e1.sh` |
+| **身份可读性探针(by-episode 6% vs 同分布 55%)** | `train/fullframe_probe.py`(`--random`/`--recrop`) |
+| **省磁盘配方(layer24-only + fp16 缓存)** | `train/backbone_kv.py`(fp16)+ `train/train_v5_e1.sh` |
+| 迭代总记忆(v3/v4/v5 arc + 分辨率墙) | memory `acot-uav-language-necessity` |
 | 位置捷径探针(~3-5%) | `train/benchmark_leak_probe.py` |
+| **★ 公平 no-WM 基线(EAR 出画预测失败→WM 有据)** | `train/train_v5_fair.sh` · `runs/stage2_v5_fair/stage2_best.pt`(mis_follow 0.582) |
+| **★ 出画预测判据工具(EAR FDE + 拦截 cos + 深度/横向分解)** | `train/intercept_eval.py`(可见/丢失×视界 + persist + depth/lateral) |
+| **★ 便宜基线阶梯(②零速/③CV,丢失时长×转向分层)** | `train/baseline_deadreckon.py` · 结论 `runs/baseline_eval.log`(CV 碾压 EAR、WM 锁定转向) |
+| WM 路网图预测器设计(方案A/文献落点/接口) | `related-survey/wm-roadgraph-design.md` · `acot_note/wm_scheme_compare.html` · memory `acot-uav-wm-roadgraph` |
+| **★ 闭环记忆+CV 先验(z_ex 门控注入,训练无关)** | `rollout/target_state.py` · `rollout/policy.py`(--ex-source)· `rollout/eval_ex_source.sh` |
+| **★ 闭环三臂结果(WHERE补上/WHICH成墙)** | `rollout/eval_out/ex_{ear,cv_gated,zerovel_gated}.json` · 架构图 `acot_note/three_arm_zex_injection.html` |
 | EAR 定位地板修复对比 | `acot_note/stage1_camera_frame_fix.html` |
 | 数据流水线 / VLM 融合图 | `acot_note/data_pipeline.html` / `vlm_fusion.html` |
 | 完整实验设计(H0-H6、四条件、指标族) | `acot_note/experiment-design.md` |
 | 数据修复规格(b/c/d) | `acot_note/data-fix-spec.md` |
 | 设计文档(§2.3 场景 / §6.1 招牌 / §6.3 核心贡献) | `acot_note/acot-uav-design.md` |
+| **L1/L2 工具箱**:world-model 方法学综述(因果AR抗drift/记忆三派/SEP归派/drift上限) | `acot_note/world-model-survey.md` |
+| **L3 背书**:语言 which-way 综述(语言条件轨迹预测/SWM/统一 framing) | `acot_note/language-seeded-prediction-survey.md` |
+| **L2 定位/切割**:SEP 时不变路网先验(2×2、逐件切割) | `related-work-and-positioning.md` §4D |
+| **L3 定位/切割**:语言双功能 which+which-way | `related-work-and-positioning.md` §4E |
+| **L2/L3 实验**:SEP guard(§2.0c)、which-way 三臂+冗余 guard(§2.0d)、H7/H8、M11/M12、R9–R12 | `acot_note/experiment-design.md` |

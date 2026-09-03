@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ACoT-UAV-Track · 现有架构 + WAM 插入点 对照</title>
+<style>
+  :root{
+    --surface:#fcfcfb; --plane:#f9f9f7; --card:#ffffff;
+    --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+    --grid:#e1e0d9; --rule:#c3c2b7; --ring:rgba(11,11,11,.10);
+    --vision:#2a78d6;   /* 视觉/图像流 */
+    --wam:#4a3aa7;      /* ★ WAM 目标状态记忆(新增) */
+    --geo:#1baf7a;      /* 几何/航点流 EAR */
+    --act:#eb6834;      /* 动作流 DiT */
+    --state:#eda100;    /* 状态流 IAR */
+    --loss:#e34948;     /* 损失/监督/断点 */
+    --froze:#898781;
+    --good:#0ca30c;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --surface:#1a1a19; --plane:#0d0d0d; --card:#212120;
+      --ink:#ffffff; --ink2:#c3c2b7; --muted:#898781;
+      --grid:#2c2c2a; --rule:#383835; --ring:rgba(255,255,255,.12);
+      --vision:#3987e5; --wam:#9085e9; --geo:#199e70; --act:#d95926;
+      --state:#c98500; --loss:#e66767; --froze:#898781; --good:#0ca30c;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--plane);color:var(--ink);
+    font:14px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+  .wrap{max-width:1220px;margin:0 auto;padding:30px 22px 90px}
+  h1{font-size:25px;margin:0 0 4px;letter-spacing:-.01em}
+  .sub{color:var(--ink2);font-size:14px;margin:0 0 20px}
+  .sub b{color:var(--ink)}
+  code{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+
+  .legend{display:flex;flex-wrap:wrap;gap:8px 15px;padding:11px 14px;margin:0 0 24px;
+    background:var(--card);border:1px solid var(--ring);border-radius:12px}
+  .lg{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink2)}
+  .sw{width:13px;height:13px;border-radius:4px;flex:none;box-shadow:0 0 0 1px var(--ring)}
+  .sw.dash{background:repeating-linear-gradient(45deg,var(--wam),var(--wam) 3px,transparent 3px,transparent 6px)}
+
+  .sec{background:var(--surface);border:1px solid var(--ring);border-radius:16px;
+    padding:16px 18px 20px;margin:0 0 14px;position:relative}
+  .sec-h{display:flex;align-items:baseline;gap:10px;margin:0 0 4px}
+  .sec-n{font:600 12px/1 ui-monospace,monospace;color:#fff;background:var(--ink);padding:5px 9px;border-radius:7px}
+  .sec-t{font-size:17px;font-weight:650;margin:0}
+  .sec-d{color:var(--muted);font-size:12.5px;margin:2px 0 14px}
+  .sec-d b{color:var(--ink2)}
+
+  .flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:9px}
+  .node{background:var(--card);border:1px solid var(--ring);border-left:4px solid var(--rule);
+    border-radius:10px;padding:9px 11px;min-width:120px;flex:1 1 0}
+  .node.vision{border-left-color:var(--vision)} .node.wam{border-left-color:var(--wam)}
+  .node.geo{border-left-color:var(--geo)} .node.act{border-left-color:var(--act)}
+  .node.state{border-left-color:var(--state)} .node.loss{border-left-color:var(--loss)}
+  .node.froze{border-left-color:var(--froze)}
+  .node.new{border:2px dashed var(--wam);background:color-mix(in srgb,var(--wam) 8%,var(--card))}
+  .nt{font-weight:650;font-size:13px;margin:0 0 2px;display:flex;align-items:center;gap:6px}
+  .nt .badge{font:700 9px/1 ui-monospace,monospace;color:#fff;background:var(--wam);padding:3px 5px;border-radius:5px;margin-left:auto}
+  .nd{color:var(--ink2);font-size:12px;margin:1px 0 0}
+  .nd .k{color:var(--ink);font-weight:600}
+  .shp{display:inline-block;font:600 10.5px/1 ui-monospace,monospace;color:var(--ink);background:var(--plane);
+    border:1px solid var(--ring);border-radius:5px;padding:3px 5px;margin:5px 4px 0 0}
+  .arrow{display:flex;align-items:center;justify-content:center;color:var(--rule);font-size:19px;padding:0 2px}
+  .down{text-align:center;color:var(--rule);font-size:19px;line-height:1;margin:3px 0}
+
+  .brk{border:1.5px dashed var(--loss);border-radius:9px;padding:9px 11px;margin:11px 0 0;
+    background:color-mix(in srgb,var(--loss) 7%,var(--card));font-size:12.5px;color:var(--ink2)}
+  .brk b{color:var(--loss)}
+  .fix{border:1.5px dashed var(--good);border-radius:9px;padding:9px 11px;margin:11px 0 0;
+    background:color-mix(in srgb,var(--good) 8%,var(--card));font-size:12.5px;color:var(--ink2)}
+  .fix b{color:var(--good)}
+  .note{border:1px dashed var(--ring);border-radius:9px;padding:8px 10px;margin:10px 0 0;font-size:12px;color:var(--ink2)}
+  .note .pin{color:var(--wam);font-weight:700}
+
+  /* timeline */
+  .tl{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:6px}
+  @media(max-width:820px){.tl{grid-template-columns:1fr}}
+  .phase{border:1px solid var(--ring);border-radius:11px;padding:11px 12px;background:var(--card)}
+  .phase.p1{border-top:4px solid var(--vision)} .phase.p2{border-top:4px solid var(--wam)} .phase.p3{border-top:4px solid var(--geo)}
+  .ph-t{font-weight:650;font-size:13.5px;margin:0 0 5px}
+  .ph-t .tag{font:600 10px/1 ui-monospace,monospace;color:var(--ink2);border:1px solid var(--ring);border-radius:5px;padding:2px 5px;margin-left:6px}
+  .step{font-size:12px;color:var(--ink2);margin:6px 0 0;padding-left:14px;position:relative}
+  .step::before{content:"▸";position:absolute;left:0;color:var(--wam)}
+  .step .k{color:var(--ink);font-weight:600}
+  .loss-eq{font:600 12.5px/1.7 ui-monospace,monospace;color:var(--ink);text-align:center;
+    padding:9px;background:var(--plane);border-radius:9px;border:1px solid var(--ring)}
+  .loss-eq .g{color:var(--geo)} .loss-eq .a{color:var(--act)} .loss-eq .w{color:var(--wam)} .loss-eq .l{color:var(--loss)}
+  .foot{color:var(--muted);font-size:12px;margin-top:22px;border-top:1px solid var(--grid);padding-top:12px}
+  .hl{color:var(--wam);font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>现有架构 + WAM 插入点 · 对照</h1>
+  <p class="sub"><b>核心一句话</b>:现有 EAR <b>已在预测未来目标位置,但只在能看见时</b>(输入=当前帧)。<span class="hl">WAM 在"观测→EAR"之间插一个跨帧的<b>目标状态记忆 s_t</b></span>——可见时校正、丢失时动力学外推——让 EAR 在<b>看不见目标时仍有可预测的输入</b>。反应式跟踪 → 有世界模型的预测-拦截跟踪。</p>
+
+  <div class="legend">
+    <span class="lg"><span class="sw" style="background:var(--vision)"></span>视觉/图像</span>
+    <span class="lg"><span class="sw dash"></span><b style="color:var(--wam)">WAM 目标状态记忆(新增)</b></span>
+    <span class="lg"><span class="sw" style="background:var(--geo)"></span>几何/航点(EAR)</span>
+    <span class="lg"><span class="sw" style="background:var(--state)"></span>状态(IAR)</span>
+    <span class="lg"><span class="sw" style="background:var(--act)"></span>动作(DiT)</span>
+    <span class="lg"><span class="sw" style="background:var(--loss)"></span>损失/断点</span>
+    <span class="lg"><span class="sw" style="background:var(--froze)"></span>❄冻结VLM</span>
+  </div>
+
+  <!-- §1 现有架构 -->
+  <div class="sec">
+    <div class="sec-h"><span class="sec-n">1</span><h2 class="sec-t">现有架构(反应式 VLA)</h2></div>
+    <p class="sec-d">每帧从 <b>当前画面</b>重新看;<b>无跨帧目标记忆</b>。目标可见时 EAR 能外推,出画即断。</p>
+    <div class="flow">
+      <div class="node vision"><p class="nt">当前帧 RGB</p><span class="shp">(512,512,3)</span></div>
+      <div class="arrow">→</div>
+      <div class="node froze"><p class="nt">❄ Qwen3-VL</p><p class="nd">冻结,预计算</p><span class="shp">vlm_ctx (256,2560)</span></div>
+      <div class="arrow">→</div>
+      <div class="node geo"><p class="nt">EAR</p><p class="nd">cond=<span class="k">vlm_ctx</span>+proprio → 未来目标航点</p><span class="shp">waypoint (4,3)=z_ex</span></div>
+      <div class="arrow">→</div>
+      <div class="node act"><p class="nt">DiT 动作头</p><p class="nd">三重cross-attn: z_ex/z_im/vlm_ctx</p><span class="shp">动作块 (16,5)</span></div>
+    </div>
+    <div class="flow" style="margin-top:9px">
+      <div class="node state" style="flex:0 0 auto"><p class="nt">IAR</p><p class="nd">逐层查询 → z_im + 可见/机动头</p></div>
+      <div class="node vision" style="flex:0 0 auto"><p class="nt">tid 语言头</p><p class="nd">cand_feats × vlm_ctx → 认目标(已证)</p></div>
+    </div>
+    <div class="brk"><b>✗ 断点(反应式的死穴)</b>:目标<b>出画</b> → 当前帧 vlm_ctx <b>不含目标</b> → EAR 的输入是空的 → 未来位置<b>预测崩塌</b> → 只能盲跟/丢失。<b>监督(预测未来目标GT)一直在,但输入端喂不出目标 → 学不动。</b></div>
+  </div>
+  <div class="down">▼ 在这里插入 WAM ▼</div>
+
+  <!-- §2 +WAM -->
+  <div class="sec">
+    <div class="sec-h"><span class="sec-n">2</span><h2 class="sec-t">+ WAM 插入点(目标状态记忆 + 动力学)</h2></div>
+    <p class="sec-d">在 <b>vlm_ctx → EAR</b> 之间插入 <span class="hl">WAM</span>;EAR 的 cond 从 <code>vlm_ctx</code> 变为 <code>vlm_ctx + s_t</code>。</p>
+    <div class="flow">
+      <div class="node vision"><p class="nt">当前帧 RGB</p></div>
+      <div class="arrow">→</div>
+      <div class="node froze"><p class="nt">❄ Qwen3-VL</p><span class="shp">vlm_ctx</span></div>
+      <div class="arrow">→</div>
+      <div class="node new"><p class="nt">WAM: 目标状态记忆 s_t<span class="badge">NEW</span></p>
+        <p class="nd"><span class="k">可见</span>:tid选中目标(框+深度→3D)更新 s_t(位置/速度/朝向)<br>
+        <span class="k">丢失</span>:动力学外推 s_t(vlm_ctx无目标也不怕)</p>
+        <span class="shp">s_t (pos,vel,…)</span></div>
+      <div class="arrow">→</div>
+      <div class="node geo"><p class="nt">EAR</p><p class="nd">cond=<span class="k">vlm_ctx + s_t</span> → 未来目标航点</p><span class="shp">waypoint=z_ex</span></div>
+      <div class="arrow">→</div>
+      <div class="node act"><p class="nt">DiT</p><p class="nd">(可选也接 s_t)→ 飞向预测位置</p><span class="shp">拦截动作</span></div>
+    </div>
+    <div class="fix"><b>✓ 修好断点</b>:丢失期 vlm_ctx 无目标,但 <span class="hl">WAM 的 s_t 靠动力学外推持续给出"目标现在/将来在哪"</span> → EAR 从 s_t 预测 → DiT <b>直飞拦截</b>。这就是"对未来世界的预测"——学会目标运动规律,看不见也能推断。</div>
+    <div class="note"><span class="pin">★ 三级实现</span>&nbsp; <b>L1 最小</b>(先做):显式 最后可见位置+速度 恒速外推,s_t 投影成 token 拼进 EAR &nbsp;·&nbsp; <b>L2</b>:GRU/Transformer 学非线性动力学 &nbsp;·&nbsp; <b>L3</b>:路网 SEP 先验约束长丢失预测。</div>
+  </div>
+
+  <!-- §3 推理数据流:双模式时间轴 -->
+  <div class="sec">
+    <div class="sec-h"><span class="sec-n">3</span><h2 class="sec-t">推理数据流:可见 → 丢失 → 重捕获(双模式)</h2></div>
+    <p class="sec-d">S2(慢,1Hz)维护 s_t;S1(快,20Hz)读 s_t+当前帧出动作。丢失期 S2 持续外推,S1 高频直飞。</p>
+    <div class="tl">
+      <div class="phase p1"><p class="ph-t">① 可见<span class="tag">校正</span></p>
+        <p class="step">相机观测目标</p>
+        <p class="step">tid 选中目标 → 框+深度→3D</p>
+        <p class="step"><span class="k">更新 s_t</span>(用观测校正记忆)</p>
+        <p class="step">EAR 反应式预测 → 正常跟随</p></div>
+      <div class="phase p2"><p class="ph-t">② 丢失 5-15s<span class="tag">纯预测</span></p>
+        <p class="step">vlm_ctx <span class="k">无目标</span></p>
+        <p class="step"><span class="k">WAM 动力学外推 s_t</span>(无观测)</p>
+        <p class="step">EAR 从 s_t 预测未来位置</p>
+        <p class="step">DiT <span class="k">直飞拦截点</span>(抄近路)</p></div>
+      <div class="phase p3"><p class="ph-t">③ 重捕获<span class="tag">认领</span></p>
+        <p class="step">目标重现 + <span class="k">≥2 look-alike 共视</span></p>
+        <p class="step">tid+<span class="k">语言</span>认对目标(创新点①)</p>
+        <p class="step">校正 s_t → 回到"可见"</p>
+        <p class="step">评:重捕获锁对率 / 收敛时间</p></div>
+    </div>
+    <div class="note"><span class="pin">★ 关键</span>:丢失期(②)是差异化能力——<b>空中无路网约束,可直飞预测拦截点</b>,地面跟踪做不到。语言(①)在③认领,WAM(②)负责到达。</div>
+  </div>
+
+  <!-- §4 训练数据流 -->
+  <div class="sec">
+    <div class="sec-h"><span class="sec-n">4</span><h2 class="sec-t">训练数据流 + 监督(标签已备:v5 长丢失+拦截)</h2></div>
+    <div class="flow">
+      <div class="node geo"><p class="nt">EAR waypoint loss</p><p class="nd">预测未来目标 <span class="k">3D GT(出画期间仍有效)</span> → WAM 让丢失帧有可预测输入,监督才生效</p></div>
+      <div class="node wam"><p class="nt">s_t 一致性 loss(可选)</p><p class="nd">丢失期外推 s_t vs 目标GT轨迹(teacher-forcing)</p></div>
+      <div class="node act"><p class="nt">拦截动作 loss</p><p class="nd"><span class="k">supervise_intercept</span>(mask反转):丢失帧监督专家直飞拦截动作</p></div>
+      <div class="node loss"><p class="nt">tid loss</p><p class="nd">重捕获认对目标(语言)</p></div>
+    </div>
+    <div class="down">▼ 聚合 ▼</div>
+    <div class="loss-eq">L = <span class="a">L_act</span> + 0.3·<span class="g">L_ear(waypoint)</span> + λ·<span class="w">L_wam(s_t一致性)</span> + 0.5·<span class="l">L_tid</span> + …</div>
+    <div class="note"><span class="pin">★ 为什么 WAM + mask反转 必须配套</span>:以前丢失帧 EAR 输入空、`supervise_intercept` 想监督也<b>没有可预测的输入</b>;加了 WAM 记忆,丢失帧才有 s_t 可预测 → 拦截监督真正生效。<b>数据(v5长丢失+专家拦截)、mask反转(已实现)、WAM记忆(待建)三者互补,缺一不可。</b></div>
+  </div>
+
+  <p class="foot">冻结 VLM=Qwen3-VL-4B(cond_dim 2560)。现有可训模块:EAR/IAR/DiT/tid。<span class="hl">WAM=新增的第 5 个模块</span>,插在 vlm_ctx→EAR 之间。形状:K=4 航点,H=16 动作步,s_t=目标状态。源:<code>train/{ear,dit,iar,stage2}.py</code> + 待建 <code>TargetStateMemory</code>。设计:training-plan Phase P2、memory acot-uav-predict-intercept。</p>
+</div>
+</body>
+</html>

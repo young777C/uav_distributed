@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>最终模型架构 · track+reid-DINOv2-K2 + 门控 (SR 0.105)</title>
+<style>
+  :root{
+    --surface:#fcfcfb; --page:#f9f9f7;
+    --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+    --hair:#e1e0d9; --ring:rgba(11,11,11,.14);
+    --accent:#2a78d6; --accent-wash:#eaf2fd; --accent-ink:#184f95;
+    --good:#006300; --good-wash:#e7f2e7;
+    --frozen:#eeede9; --frozen-ink:#52514e;
+    --bypass:#f0efec; --bypass-ink:#a7a6a0;
+    --box:#ffffff; --edge:#8f8d86;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --surface:#1a1a19; --page:#0d0d0d;
+      --ink:#fff; --ink2:#c3c2b7; --muted:#898781;
+      --hair:#2c2c2a; --ring:rgba(255,255,255,.16);
+      --accent:#3987e5; --accent-wash:#14243a; --accent-ink:#9ec5f4;
+      --good:#0ca30c; --good-wash:#13260f;
+      --frozen:#242423; --frozen-ink:#c3c2b7;
+      --bypass:#1e1e1d; --bypass-ink:#6b6a64;
+      --box:#232322; --edge:#6f6e68;
+    }
+  }
+  body{margin:0;background:var(--page);color:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.5}
+  .wrap{max-width:1040px;margin:0 auto;padding:30px 20px 48px}
+  h1{font-size:20px;margin:0 0 4px;letter-spacing:-.01em}
+  .sub{color:var(--ink2);font-size:13px;margin:0 0 18px}.sub b{color:var(--ink)}
+  .board{background:var(--surface);border:1px solid var(--hair);border-radius:14px;padding:10px 8px}
+  svg{width:100%;height:auto;display:block}
+  .nm{font:600 12.5px system-ui,-apple-system,"Segoe UI",sans-serif;fill:var(--ink)}
+  .no{font:11px system-ui,-apple-system,"Segoe UI",sans-serif;fill:var(--ink2)}
+  .nm.a{fill:var(--accent-ink)} .nm.g{fill:var(--good)} .nm.b{fill:var(--bypass-ink)} .no.b{fill:var(--bypass-ink)}
+  .el{font:600 10.5px system-ui;fill:var(--muted)}
+  .tag{font:700 9px system-ui;fill:#fff}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin:14px 6px 0;font-size:11.5px;color:var(--ink2)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .sw{width:12px;height:12px;border-radius:4px;border:1px solid var(--ring);display:inline-block}
+  .cards{margin-top:18px;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:720px){.cards{grid-template-columns:1fr}}
+  .card{border:1px solid var(--hair);border-radius:12px;padding:14px 16px;background:var(--box);font-size:12.5px;color:var(--ink2)}
+  .card b{color:var(--ink)} .card h3{margin:0 0 8px;font-size:13px;color:var(--ink)}
+  .card.acc{border-color:var(--accent);background:var(--accent-wash)} .card.acc h3{color:var(--accent-ink)}
+  .card p{margin:6px 0}
+  code{background:var(--frozen);padding:1px 5px;border-radius:4px;color:var(--frozen-ink);font-size:11px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>最终模型架构 — track + reid-DINOv2-K2 + 置信门控（闭环 SR 0.105）</h1>
+  <p class="sub">= 原 4 模块 ACoT-VLA（<b>VLM / IAR / DiT 原封不动</b>）；认车换成 <b>crop-DINOv2 + K2 图库</b>，
+    z_ex 换成 <b>CV(reid 认定车)</b>，加<b>承诺+置信门控</b>。<b>EAR 被旁路</b>（推理时冗余）。</p>
+
+  <div class="board">
+  <svg viewBox="0 0 980 470" role="img" aria-label="final architecture dataflow">
+    <defs>
+      <marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+        <path d="M0,0 L7,3 L0,6 z" fill="var(--edge)"/>
+      </marker>
+      <marker id="ahb" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+        <path d="M0,0 L7,3 L0,6 z" fill="var(--accent)"/>
+      </marker>
+      <marker id="ahg" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+        <path d="M0,0 L7,3 L0,6 z" fill="var(--good)"/>
+      </marker>
+    </defs>
+
+    <!-- ================= EDGES (drawn first, under nodes) ================= -->
+    <g fill="none" stroke="var(--edge)" stroke-width="1.6">
+      <path d="M120,103 H150" marker-end="url(#ah)"/>
+      <path d="M120,149 H150" marker-end="url(#ah)"/>
+      <path d="M262,116 H330" marker-end="url(#ah)"/>
+      <path d="M262,167 H330" marker-end="url(#ah)"/>
+      <!-- vlm_ctx: Qwen top → around top → DiT -->
+      <path d="M240,84 V60 H784 V182 H800" marker-end="url(#ah)"/>
+      <!-- z_im: IAR → DiT -->
+      <path d="M476,116 H784 V206 H800" marker-end="url(#ah)"/>
+      <!-- proprio → DiT (routed low, clear of z_ex box) -->
+      <path d="M120,407 V446 H806 V262 H800" marker-end="url(#ah)"/>
+    </g>
+    <!-- Qwen → 候选 (down) -->
+    <path d="M204,176 V300" fill="none" stroke="var(--edge)" stroke-width="1.6" marker-end="url(#ah)"/>
+
+    <!-- reid identity chain (accent) -->
+    <g fill="none" stroke="var(--accent)" stroke-width="1.8">
+      <path d="M250,320 H272" marker-end="url(#ahb)"/>
+      <path d="M352,320 H368" marker-end="url(#ahb)"/>
+      <path d="M454,320 H470" marker-end="url(#ahb)"/>
+      <path d="M594,321 H610" marker-end="url(#ahb)"/>
+    </g>
+    <!-- commit/gate → z_ex → DiT (good) -->
+    <g fill="none" stroke="var(--good)" stroke-width="1.8">
+      <path d="M685,342 V372" marker-end="url(#ahg)"/>
+      <path d="M760,392 H784 V236 H800" marker-end="url(#ahg)"/>
+    </g>
+    <!-- EAR bypass stub (dashed, crossed) -->
+    <path d="M476,167 H524" fill="none" stroke="var(--bypass-ink)" stroke-width="1.5" stroke-dasharray="4 3"/>
+    <g stroke="var(--bypass-ink)" stroke-width="1.6"><path d="M528,162 l8,10 M536,162 l-8,10"/></g>
+
+    <!-- edge labels -->
+    <text class="el" x="470" y="54">vlm_ctx</text>
+    <text class="el" x="612" y="110">z_im</text>
+    <text class="el" x="770" y="392">z_ex</text>
+    <text class="el" x="470" y="440">proprio</text>
+    <text class="no b" x="540" y="170">被 CV 覆盖</text>
+
+    <!-- ================= NODES ================= -->
+    <!-- inputs -->
+    <g><rect x="16" y="84" width="104" height="38" rx="9" fill="var(--box)" stroke="var(--ring)" stroke-dasharray="4 3"/>
+       <text class="nm" x="34" y="107">RGB 512²</text></g>
+    <g><rect x="16" y="130" width="104" height="38" rx="9" fill="var(--box)" stroke="var(--ring)" stroke-dasharray="4 3"/>
+       <text class="nm" x="50" y="153">语言</text></g>
+    <g><rect x="16" y="388" width="104" height="38" rx="9" fill="var(--box)" stroke="var(--ring)" stroke-dasharray="4 3"/>
+       <text class="nm" x="30" y="411">Proprio 5D</text></g>
+
+    <!-- Qwen -->
+    <g><rect x="150" y="84" width="112" height="92" rx="10" fill="var(--frozen)" stroke="var(--ring)"/>
+       <rect x="196" y="76" width="52" height="15" rx="7" fill="var(--muted)"/><text class="tag" x="203" y="87">❄ 冻结</text>
+       <text class="nm" x="167" y="128">Qwen3-VL</text><text class="nm" x="167" y="146">4B</text>
+       <text class="no" x="167" y="165">vlm_ctx+网格</text></g>
+
+    <!-- IAR -->
+    <g><rect x="330" y="96" width="146" height="40" rx="10" fill="var(--box)" stroke="var(--ring)"/>
+       <text class="nm" x="346" y="115">IAR → z_im</text><text class="no" x="346" y="129">occ/maneuver · 喂 DiT</text></g>
+    <!-- EAR bypass -->
+    <g><rect x="330" y="150" width="146" height="34" rx="10" fill="var(--bypass)" stroke="var(--ring)" stroke-dasharray="4 3"/>
+       <rect x="422" y="143" width="46" height="14" rx="7" fill="var(--bypass-ink)"/><text class="tag" x="429" y="153">旁路</text>
+       <text class="nm b" x="344" y="172">EAR → z_ex（弃用）</text></g>
+
+    <!-- reid chain -->
+    <g><rect x="150" y="300" width="100" height="40" rx="10" fill="var(--box)" stroke="var(--ring)"/>
+       <text class="nm" x="166" y="319">候选框</text><text class="no" x="166" y="333">GT位投影</text></g>
+    <g><rect x="272" y="300" width="80" height="40" rx="10" fill="var(--accent-wash)" stroke="var(--accent)"/>
+       <rect x="300" y="293" width="34" height="14" rx="7" fill="var(--accent)"/><text class="tag" x="306" y="303">★新</text>
+       <text class="nm a" x="284" y="325">Crop</text></g>
+    <g><rect x="368" y="300" width="86" height="40" rx="10" fill="var(--accent-wash)" stroke="var(--accent)"/>
+       <rect x="420" y="293" width="20" height="14" rx="7" fill="var(--frozen)" stroke="var(--ring)"/><text class="tag" x="425" y="303" fill="var(--frozen-ink)">❄</text>
+       <text class="nm a" x="381" y="325">DINOv2</text></g>
+    <g><rect x="470" y="300" width="124" height="42" rx="10" fill="var(--accent-wash)" stroke="var(--accent)"/>
+       <rect x="558" y="293" width="34" height="14" rx="7" fill="var(--accent)"/><text class="tag" x="564" y="303">★新</text>
+       <text class="nm a" x="484" y="319">K=2 图库</text><text class="no" x="484" y="333">→ 认哪辆(WHICH)</text></g>
+    <!-- commit+gate -->
+    <g><rect x="610" y="300" width="150" height="42" rx="10" fill="var(--good-wash)" stroke="var(--good)"/>
+       <rect x="720" y="293" width="34" height="14" rx="7" fill="var(--good)"/><text class="tag" x="726" y="303">★新</text>
+       <text class="nm g" x="622" y="319">承诺(K滞回)</text><text class="no" x="622" y="333">+ 置信门控</text></g>
+    <!-- z_ex -->
+    <g><rect x="610" y="372" width="150" height="40" rx="10" fill="var(--good-wash)" stroke="var(--good)"/>
+       <text class="nm g" x="624" y="391">z_ex = CV(认定车)</text><text class="no" x="624" y="405">→ WHERE</text></g>
+
+    <!-- DiT + action -->
+    <g><rect x="800" y="150" width="150" height="120" rx="11" fill="var(--good-wash)" stroke="var(--good)" stroke-width="1.5"/>
+       <text class="nm g" x="816" y="200">DiT（flow）</text><text class="nm g" x="816" y="218">动作头</text>
+       <text class="no" x="816" y="240">← z_ex,z_im,</text><text class="no" x="816" y="254">  vlm_ctx,proprio</text></g>
+    <path d="M875,150 V120" fill="none" stroke="var(--good)" stroke-width="1.8" marker-end="url(#ahg)"/>
+    <g><rect x="800" y="76" width="150" height="40" rx="10" fill="var(--box)" stroke="var(--ring)" stroke-dasharray="4 3"/>
+       <text class="nm" x="816" y="100">动作 dx,dy,dz,dyaw</text></g>
+  </svg>
+  </div>
+
+  <div class="legend">
+    <span><i class="sw" style="background:var(--accent-wash);border-color:var(--accent)"></i>★新增 · 认车(WHICH)</span>
+    <span><i class="sw" style="background:var(--good-wash);border-color:var(--good)"></i>WHICH→WHERE 桥 · DiT</span>
+    <span><i class="sw" style="background:var(--bypass);border-style:dashed"></i>旁路(算但弃用)</span>
+    <span><i class="sw" style="background:var(--frozen)"></i>❄ 冻结</span>
+    <span><i class="sw" style="background:var(--box)"></i>既有(不变)</span>
+  </div>
+
+  <div class="cards">
+    <div class="card acc">
+      <h3>为什么 reid(WHICH)会连到 z_ex(WHERE)</h3>
+      <p>reid 输出的是 <b>WHICH（认哪辆）</b>——你的直觉对。</p>
+      <p>但在 <code>track</code> 接线下:认定的车 → 承诺+门控 → 取它的位置做 <b>CV → z_ex(WHERE)</b> → DiT 飞过去。</p>
+      <p>所以 <b>WHICH 顺带决定 WHERE</b>;认错→飞错→丢目标,故加<b>置信门控</b>兜底。</p>
+    </div>
+    <div class="card">
+      <h3>模块角色</h3>
+      <p><b>VLM / IAR(z_im) / DiT</b> — 原封不动,核心控制仍是 DiT。</p>
+      <p><b>EAR</b> — 仍前向但 z_ex 被覆盖 → <b>推理冗余</b>(可 <code>--ablate ear</code> 删)。</p>
+      <p><b>语言 tid</b> — 被 reid 覆盖(仅冷启动兜底)。</p>
+      <p><b>新增</b> — crop-DINOv2 + K2 图库 + 承诺/置信门控。全部训练无关。</p>
+    </div>
+  </div>
+</div>
+</body>
+</html>

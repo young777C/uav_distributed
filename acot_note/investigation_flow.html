@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ACoT-UAV 调查流程:WHERE / WHICH 两条线 + 两个"三元组"</title>
+<style>
+  :root{
+    --surface-1:#fcfcfb; --surface-2:#f0efec; --line:#d9d8d3;
+    --ink:#0b0b0b; --ink2:#52514e; --ink3:#8a8984;
+    --where:#2a78d6;   /* blue  — WHERE 线 */
+    --which:#1baf7a;   /* aqua  — WHICH 线 */
+    --t1:#2a78d6;      /* 三元组①(预测来源) */
+    --t2:#eb6834;      /* 三元组②(训练损失)— 故意与①强对比,防混淆 */
+    --next:#4a3aa7;    /* violet — 现在/下一步 */
+    --good:#0ca30c; --bad:#d03b3b;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --surface-1:#1a1a19; --surface-2:#232322; --line:#3a3a37;
+      --ink:#fff; --ink2:#c3c2b7; --ink3:#8f8e86;
+      --where:#3987e5; --which:#199e70; --t1:#3987e5; --t2:#d95926;
+      --next:#9085e9; --good:#2bb42b; --bad:#e06464;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--surface-1);color:var(--ink);
+    font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+    padding:30px 24px 60px}
+  .wrap{max-width:900px;margin:0 auto}
+  h1{font-size:22px;margin:0 0 3px}
+  .thread{color:var(--ink2);font-size:14px;margin:0 0 18px}
+  .thread b{color:var(--ink)}
+  /* triple contrast callout */
+  .triples{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:0 0 22px}
+  @media(max-width:640px){.triples{grid-template-columns:1fr}}
+  .tri{border-radius:10px;padding:11px 13px;border:1px solid var(--line);background:var(--surface-2)}
+  .tri.a{border-left:4px solid var(--t1)} .tri.b{border-left:4px solid var(--t2)}
+  .tri h4{margin:0 0 5px;font-size:13.5px}
+  .tri .chip{display:inline-block;padding:1px 7px;border-radius:999px;color:#fff;font-size:11.5px;font-weight:600;margin-right:4px}
+  .tri.a .chip{background:var(--t1)} .tri.b .chip{background:var(--t2)}
+  .tri small{color:var(--ink2);font-size:12.5px}
+  /* flow */
+  .stage{position:relative;border:1px solid var(--line);border-radius:11px;
+    background:var(--surface-2);padding:13px 15px 13px 17px;margin:0 0 6px}
+  .stage.where{border-left:4px solid var(--where)}
+  .stage.which{border-left:4px solid var(--which)}
+  .stage.next{border-left:4px solid var(--next);background:color-mix(in srgb,var(--next) 8%,var(--surface-2))}
+  .stage .n{display:inline-block;min-width:20px;height:20px;border-radius:6px;background:var(--ink);color:var(--surface-1);
+    font-size:12px;font-weight:700;text-align:center;line-height:20px;margin-right:7px}
+  .stage h3{display:inline;font-size:15px;margin:0}
+  .stage .lane{float:right;font-size:11.5px;font-weight:700;letter-spacing:.03em}
+  .lane.w{color:var(--where)} .lane.h{color:var(--which)}
+  .stage p{margin:7px 0 0;color:var(--ink2);font-size:13.5px;clear:both}
+  .arm{display:inline-block;padding:1px 8px;border-radius:6px;color:#fff;font-size:12px;font-weight:600;margin:2px 3px 0 0}
+  .arm.t1{background:var(--t1)} .arm.t2{background:var(--t2)}
+  .out{font-weight:700} .out.good{color:var(--good)} .out.bad{color:var(--bad)}
+  .conn{height:16px;display:flex;align-items:center;justify-content:center;color:var(--ink3)}
+  .conn::before{content:"▼";font-size:11px}
+  code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;
+    background:var(--surface-1);border:1px solid var(--line);border-radius:4px;padding:.5px 4px}
+  .foot{color:var(--ink3);font-size:12px;margin-top:22px;border-top:1px solid var(--line);padding-top:9px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>ACoT-UAV 调查流程</h1>
+  <p class="thread">主线:<b>测 WHERE(会不会预测)→ 能便宜补 → 补上后 SR 仍 0 → 卡在 WHICH(认不认得对)→ 拆 WHICH 发现头判别弱 → 试最便宜修法(换损失)失败 → 准备更贵修法。</b></p>
+
+  <!-- 两个三元组:防混淆 -->
+  <div class="triples">
+    <div class="tri a">
+      <h4>⟨三元组①⟩ 修 <span style="color:var(--where)">WHERE</span> · <b>预测来源</b>(丢失时 z_ex 谁填)</h4>
+      <span class="chip">ear</span><span class="chip">cv_gated</span><span class="chip">zerovel_gated</span>
+      <small>闭环里换"目标未来位置"的来源。训练无关,只换 DiT 的一个条件输入。<b>结果:有效</b>。</small>
+    </div>
+    <div class="tri b">
+      <h4>⟨三元组②⟩ 修 <span style="color:var(--which)">WHICH</span> · <b>训练损失</b>(tid 头怎么学)</h4>
+      <span class="chip">ce</span><span class="chip">margin</span><span class="chip">hardneg</span>
+      <small>重训认车头时用的损失函数。跟①完全无关,只是也恰好三个。<b>结果:无效</b>。</small>
+    </div>
+  </div>
+
+  <!-- FLOW -->
+  <div class="stage"><span class="n">0</span><h3>任务:两件事都要对</h3>
+    <p><b>WHERE</b> 目标出画→预测去向、飞去拦截 &nbsp;·&nbsp; <b>WHICH</b> 重现时在 look-alike 里认出真车。SR = 两者都对。</p></div>
+  <div class="conn"></div>
+
+  <div class="stage where"><span class="n">1</span><h3>WHERE·离线:反应式预测烂,傻基线却碾压它</h3><span class="lane w">WHERE</span>
+    <p>EAR 自带预测出画误差 <b>58–90m</b>,好好训也救不回(单帧极限)。加两个零训练几何基线:<b>zerovel</b>(冻结最后位置)、<b>cv</b>(匀速外推)→ 直路 <b>10–23m</b>,<span class="out good">碾压 EAR</span> ⇒ 加个"记忆"就能便宜补 WHERE。</p></div>
+  <div class="conn"></div>
+
+  <div class="stage where"><span class="n">2</span><h3>WHERE·闭环三臂 ⟨三元组①⟩</h3><span class="lane w">WHERE</span>
+    <p>丢失时 DiT 的 z_ex 由谁填:
+      <span class="arm t1">ear</span>=EAR自带 &nbsp;<span class="arm t1">cv_gated</span>=记忆+匀速 &nbsp;<span class="arm t1">zerovel_gated</span>=记忆冻结。<br>
+      <span class="out good">WHERE 被补上</span>:track 22→63s、真目标重捕 0.38→0.48、cv&gt;zerovel。
+      <b>但 SR 仍 0,且 <span class="out bad">lock_wrong 0.48→0.79 变差</span></b> ⇒ 待在目标附近=反复扎进 look-alike 却认错车。</p></div>
+  <div class="conn"></div>
+
+  <div class="stage which"><span class="n">3</span><h3>转折:补好 WHERE 反而把 WHICH 顶成了卡 SR 的墙</h3><span class="lane h">WHICH</span>
+    <p>方案3 决定:保留 CV 先验 + <b>主攻 grounding(WHICH)</b> + P1 数据并行。用户选"先起 grounding"。</p></div>
+  <div class="conn"></div>
+
+  <div class="stage which"><span class="n">4</span><h3>WHICH·诊断:认车头(tid)基础判别就弱</h3><span class="lane h">WHICH</span>
+    <p>mis_follow 分层:tier-a(唯一目标)<b>0.34</b>、tier-c(look-alike)<b>0.70</b>、N=2(仅1干扰)<b>0.31</b>、随候选数逼近瞎猜、小目标更差。⇒ 不只是难 look-alike,<b>头排序本身弱</b>。</p></div>
+  <div class="conn"></div>
+
+  <div class="stage which"><span class="n">5</span><h3>WHICH·最便宜杠杆:换损失 ⟨三元组②⟩</h3><span class="lane h">WHICH</span>
+    <p>重训 tid 头,换"什么算对"的规则:
+      <span class="arm t2">ce</span>=标准分类 &nbsp;<span class="arm t2">margin</span>=真目标须比最强干扰高一间隔 &nbsp;<span class="arm t2">hardneg</span>=难例加权。<br>
+      结果:三者最好都 <b>~0.50</b>;margin 更差;hardneg 仅 −0.007(噪声内)、tier-c 与 ce 相同。<span class="out bad">换损失救不了 → 损失杠杆死</span>。
+      <small style="color:var(--ink3)">(中途 lr 设错致一轮白跑 → 借此加了 4 个防错护栏。)</small></p></div>
+  <div class="conn"></div>
+
+  <div class="stage next"><span class="n">6</span><h3>现在 / 下一步:便宜先行,gate 掉贵的</h3><span class="lane h">WHICH</span>
+    <p><b>① 头容量门(便宜,不重算缓存)</b>:<code>tid_d 256→512→768</code> —— 加大不降 ⇒ 头不是瓶颈。<br>
+      <b>② 提分辨率(贵,要重算)</b>:候选特征在 512 下 VLM 原生仅 16×16、车&lt;1格 → 需把<b>图像分辨率抬到 512 以上</b>(768/1024)才有更细候选特征。<b>仅当①证明"不是头"才花这钱</b>。<br>
+      并行:CV 先验保留在环;P1 转向数据为将来 WM 铺路。</p></div>
+
+  <p class="foot">配套:<code>rollout/target_state.py</code>·<code>policy.py --ex-source</code>(三元组①)· <code>train/grounding_train.py --loss</code>(三元组②)· <code>grounding_probe.py</code>(诊断)。
+  记录:<code>transition-diary-801.md §8.6/8.8</code> · memory <code>acot-uav-wm-roadgraph</code> / <code>acot-uav-language-necessity</code> / <code>acot-uav-experiment-rigor</code>。
+  配色:dataviz 校验分类色板(蓝WHERE/青WHICH/橙损失/紫下一步;红绿=失败/成功 status)。</p>
+</div>
+</body>
+</html>

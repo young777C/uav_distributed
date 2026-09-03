@@ -1,0 +1,527 @@
+{
+  "aggregate": {
+    "episodes": 10,
+    "scored": 10,
+    "SR": 0.0,
+    "mis_follow_sustained": 0.687489047723187,
+    "mis_follow_inst": 0.6831207186522261,
+    "id_switches_mean": 7.7,
+    "track_seconds_mean": 47.35,
+    "centering_rate": 0.09082212557537986,
+    "reacquire_attempts_total": 102,
+    "reacquire_success_rate": 0.3235294117647059,
+    "reacquire_timeout_rate": 0.6764705882352942,
+    "reacquire_lock_wrong_rate": 0.7941176470588235,
+    "reacquire_convergence_s_mean": 4.185763888888889,
+    "shortcut_nearest_rate": 0.2675235111056046,
+    "shortcut_target_central_rate": 0.09082212557537986
+  },
+  "episodes": [
+    {
+      "success": false,
+      "mis_follow_inst": 0.5653153153153153,
+      "mis_follow_sustained": 0.5720720720720721,
+      "id_switches": 12,
+      "track_frames": 444,
+      "track_seconds": 44.4,
+      "centering_rate": 0.04279279279279279,
+      "max_wrong_run_s": 12.3,
+      "mean_uav_target_dist": 5019.2566189772,
+      "reacquire_attempts": 7,
+      "reacquire_success_rate": 0.2857142857142857,
+      "reacquire_timeout_rate": 0.7142857142857143,
+      "reacquire_lock_wrong_rate": 0.5714285714285714,
+      "reacquire_convergence_s_mean": 0.4,
+      "shortcut_nearest_rate": 0.5372168284789643,
+      "shortcut_target_central_rate": 0.04279279279279279,
+      "mis_by_N": {
+        "2": 0.5714285714285714,
+        "3": 0.7619047619047619,
+        "1": 0.0,
+        "4": 0.75,
+        "5": 1.0,
+        "6": 1.0
+      },
+      "n_dist": {
+        "2": 42,
+        "3": 126,
+        "1": 132,
+        "4": 40,
+        "5": 27,
+        "6": 55
+      },
+      "mis_by_central": {
+        "central": 0.3684210526315789,
+        "off": 0.5583126550868487
+      },
+      "c_dist": {
+        "central": 19,
+        "off": 403
+      },
+      "mis_by_depth": {
+        "d30-60": 0.4,
+        "d>=60": 0.609271523178808
+      },
+      "d_dist": {
+        "d30-60": 120,
+        "d>=60": 302
+      },
+      "steps": 803,
+      "episode_seed": 92000,
+      "duration_seconds": 280.78839230537415,
+      "language": "Pursue the green Audi e-tron SUV directly ahead, heading east, maintaining a tracking distance of about 35 m."
+    },
+    {
+      "success": false,
+      "mis_follow_inst": 0.8731988472622478,
+      "mis_follow_sustained": 0.8731988472622478,
+      "id_switches": 8,
+      "track_frames": 694,
+      "track_seconds": 69.4,
+      "centering_rate": 0.03025936599423631,
+      "max_wrong_run_s": 39.6,
+      "mean_uav_target_dist": 731.9023933268528,
+      "reacquire_attempts": 11,
+      "reacquire_success_rate": 0.36363636363636365,
+      "reacquire_timeout_rate": 0.6363636363636364,
+      "reacquire_lock_wrong_rate": 0.8181818181818182,
+      "reacquire_convergence_s_mean": 7.125,
+      "shortcut_nearest_rate": 0.21406727828746178,
+      "shortcut_target_central_rate": 0.03025936599423631,
+      "mis_by_N": {
+        "6": 0.9466192170818505,
+        "5": 0.7391304347826086,
+        "4": 1.0,
+        "3": 0.6666666666666666,
+        "1": 0.0,
+        "2": 0.0
+      },
+      "n_dist": {
+        "6": 562,
+        "5": 23,
+        "4": 12,
+        "3": 36,
+        "1": 29,
+        "2": 5
+      },
+      "mis_by_central": {
+        "central": 0.7142857142857143,
+        "off": 0.8823529411764706
+      },
+      "c_dist": {
+        "central": 21,
+        "off": 646
+      },
+      "mis_by_depth": {
+        "d30-60": 0.8983050847457628,
+        "d<30": 1.0,
+        "d>=60": 0.8698630136986302
+      },
+      "d_dist": {
+        "d30-60": 59,
+        "d<30": 24,
+        "d>=60": 584
+      },
+      "steps": 899,
+      "episode_seed": 92001,
+      "duration_seconds": 360.80644130706787,
+      "language": "Lock onto the orange Lincoln sedan directly ahead, heading west, maintaining a tracking distance of about 40 m."
+    },
+    {
+      "success": false,
+      "mis_follow_inst": 0.9624413145539906,
+      "mis_follow_sustained": 0.9624413145539906,
+      "id_switches": 4,
+      "track_frames": 639,
+      "track_seconds": 63.9,
+      "centering_rate": 0.018779342723004695,
+      "max_wrong_run_s": 37.1,
+      "mean_uav_target_dist": 132.62061039599902,
+      "reacquire_attempts": 8,
+      "reacquire_success_rate": 0.25,
+      "reacquire_timeout_rate": 0.75,
+      "reacquire_lock_wrong_rate": 0.875,
+      "reacquire_convergence_s_mean": 12.4,
+      "shortcut_nearest_rate": 0.2711598746081505,
+      "shortcut_target_central_rate": 0.018779342723004695,
+      "mis_by_N": {
+        "6": 0.9547169811320755,
+        "5": 1.0,
+        "4": 1.0,
+        "3": 1.0
+      },
+      "n_dist": {
+        "6": 530,
+        "5": 54,
+        "4": 24,
+        "3": 12
+      },
+      "mis_by_central": {
+        "central": 1.0,
+        "off": 0.9605263157894737
+      },
+      "c_dist": {
+        "central": 12,
+        "off": 608
+      },
+      "mis_by_depth": {
+        "d30-60": 0.9047619047619048,
+        "d<30": 1.0,
+        "d>=60": 0.975103734439834
+      },
+      "d_dist": {
+        "d30-60": 126,
+        "d<30": 12,
+        "d>=60": 482
+      },
+      "steps": 899,
+      "episode_seed": 92002,
+      "duration_seconds": 349.58798027038574,
+      "language": "Track the white BMW coupe directly ahead, heading west, maintaining a tracking distance of about 35 m."
+    },
+    {
+      "success": false,
+      "mis_follow_inst": 0.6814701378254211,
+      "mis_follow_sustained": 0.6967840735068913,
+      "id_switches": 17,
+      "track_frames": 653,
+      "track_seconds": 65.3,
+      "centering_rate": 0.0444104134762634,
+      "max_wrong_run_s": 7.0,
+      "mean_uav_target_dist": 115.97860844089026,
+      "reacquire_attempts": 21,
+      "reacquire_success_rate": 0.38095238095238093,
+      "reacquire_timeout_rate": 0.6190476190476191,
+      "reacquire_lock_wrong_rate": 0.9523809523809523,
+      "reacquire_convergence_s_mean": 1.5,
+      "shortcut_nearest_rate": 0.2713178294573643,
+      "shortcut_target_central_rate": 0.0444104134762634,
+      "mis_by_N": {
+        "5": 0.765625,
+        "4": 0.7831325301204819,
+        "2": 0.4318181818181818,
+        "6": 0.7317073170731707,
+        "3": 0.6637168141592921
+      },
+      "n_dist": {
+        "5": 128,
+        "4": 83,
+        "2": 176,
+        "6": 82,
+        "3": 113
+      },
+      "mis_by_central": {
+        "central": 0.2413793103448276,
+        "off": 0.6636528028933092
+      },
+      "c_dist": {
+        "central": 29,
+        "off": 553
+      },
+      "mis_by_depth": {
+        "d<30": 0.625,
+        "d30-60": 0.5333333333333333,
+        "d>=60": 0.6593886462882096
+      },
+      "d_dist": {
+        "d<30": 64,
+        "d30-60": 60,
+        "d>=60": 458
+      },
+      "steps": 899,
+      "episode_seed": 92003,
+      "duration_seconds": 333.43368005752563,
+      "language": "Follow the dark green Citroen C3 directly ahead, heading west, maintaining a tracking distance of about 35 m."
+    },
+    {
+      "success": false,
+      "mis_follow_inst": 0.9386503067484663,
+      "mis_follow_sustained": 0.9386503067484663,
+      "id_switches": 5,
+      "track_frames": 489,
+      "track_seconds": 48.9,
+      "centering_rate": 0.010224948875255624,
+      "max_wrong_run_s": 12.4,
+      "mean_uav_target_dist": 100.49179087030399,
+      "reacquire_attempts": 17,
+      "reacquire_success_rate": 0.11764705882352941,
+      "reacquire_timeout_rate": 0.8823529411764706,
+      "reacquire_lock_wrong_rate": 0.9411764705882353,
+      "reacquire_convergence_s_mean": 2.25,
+      "shortcut_nearest_rate": 0.3558282208588957,
+      "shortcut_target_central_rate": 0.010224948875255624,
+      "mis_by_N": {
+        "5": 1.0,
+        "6": 0.922077922077922,
+        "4": 1.0
+      },
+      "n_dist": {
+        "5": 54,
+        "6": 385,
+        "4": 1
+      },
+      "mis_by_central": {
+        "central": 0.4,
+        "off": 0.9379310344827586
+      },
+      "c_dist": {
+        "central": 5,
+        "off": 435
+      },
+      "mis_by_depth": {
+        "d30-60": 0.9252336448598131,
+        "d<30": 1.0,
+        "d>=60": 0.9469026548672567
+      },
+      "d_dist": {
+        "d30-60": 321,
+        "d<30": 6,
+        "d>=60": 113
+      },
+      "steps": 780,
+      "episode_seed": 92004,
+      "duration_seconds": 293.6787838935852,
+      "language": "Keep an eye on the dark blue Lincoln sedan directly ahead, heading east, maintaining a tracking distance of about 30 m."
+    },
+    {
+      "success": false,
+      "mis_follow_inst": 0.6363636363636364,
+      "mis_follow_sustained": 0.5151515151515151,
+      "id_switches": 1,
+      "track_frames": 33,
+      "track_seconds": 3.3,
+      "centering_rate": 0.42424242424242425,
+      "max_wrong_run_s": 1.7,
+      "mean_uav_target_dist": 30.09501090076278,
+      "reacquire_attempts": 1,
+      "reacquire_success_rate": 0.0,
+      "reacquire_timeout_rate": 1.0,
+      "reacquire_lock_wrong_rate": 0.0,
+      "reacquire_convergence_s_mean": null,
+      "shortcut_nearest_rate": 0.0,
+      "shortcut_target_central_rate": 0.42424242424242425,
+      "mis_by_N": {
+        "6": 0.5,
+        "5": 1.0
+      },
+      "n_dist": {
+        "6": 24,
+        "5": 9
+      },
+      "mis_by_central": {
+        "central": 0.14285714285714285,
+        "off": 1.0
+      },
+      "c_dist": {
+        "central": 14,
+        "off": 19
+      },
+      "mis_by_depth": {
+        "d<30": 0.6363636363636364
+      },
+      "d_dist": {
+        "d<30": 33
+      },
+      "steps": 212,
+      "episode_seed": 92005,
+      "duration_seconds": 76.1463270187378,
+      "language": "Follow the dark green Nissan Micra directly ahead, heading west, maintaining a tracking distance of about 25 m."
+    },
+    {
+      "success": false,
+      "mis_follow_inst": 0.8507462686567164,
+      "mis_follow_sustained": 0.8917910447761194,
+      "id_switches": 5,
+      "track_frames": 268,
+      "track_seconds": 26.8,
+      "centering_rate": 0.029850746268656716,
+      "max_wrong_run_s": 16.3,
+      "mean_uav_target_dist": 50.28358511619121,
+      "reacquire_attempts": 16,
+      "reacquire_success_rate": 0.125,
+      "reacquire_timeout_rate": 0.875,
+      "reacquire_lock_wrong_rate": 0.8125,
+      "reacquire_convergence_s_mean": 1.4,
+      "shortcut_nearest_rate": 0.20481927710843373,
+      "shortcut_target_central_rate": 0.029850746268656716,
+      "mis_by_N": {
+        "4": 0.85,
+        "3": 0.95,
+        "6": 0.9818181818181818,
+        "5": 1.0,
+        "1": 0.0
+      },
+      "n_dist": {
+        "4": 120,
+        "3": 40,
+        "6": 55,
+        "5": 2,
+        "1": 12
+      },
+      "mis_by_central": {
+        "central": 1.0,
+        "off": 0.8506787330316742
+      },
+      "c_dist": {
+        "central": 8,
+        "off": 221
+      },
+      "mis_by_depth": {
+        "d<30": 0.7758620689655172,
+        "d30-60": 0.9380530973451328
+      },
+      "d_dist": {
+        "d<30": 116,
+        "d30-60": 113
+      },
+      "steps": 774,
+      "episode_seed": 92006,
+      "duration_seconds": 277.05000162124634,
+      "language": "Lock onto the yellow Audi e-tron SUV directly ahead, heading north, maintaining a tracking distance of about 25 m."
+    },
+    {
+      "success": false,
+      "mis_follow_inst": 0.26732673267326734,
+      "mis_follow_sustained": 0.3465346534653465,
+      "id_switches": 3,
+      "track_frames": 101,
+      "track_seconds": 10.1,
+      "centering_rate": 0.25742574257425743,
+      "max_wrong_run_s": 2.2,
+      "mean_uav_target_dist": 29.52135314793191,
+      "reacquire_attempts": 2,
+      "reacquire_success_rate": 0.0,
+      "reacquire_timeout_rate": 1.0,
+      "reacquire_lock_wrong_rate": 0.5,
+      "reacquire_convergence_s_mean": null,
+      "shortcut_nearest_rate": 0.31683168316831684,
+      "shortcut_target_central_rate": 0.25742574257425743,
+      "mis_by_N": {
+        "5": 0.75,
+        "4": 0.09090909090909091,
+        "3": 0.0
+      },
+      "n_dist": {
+        "5": 24,
+        "4": 66,
+        "3": 8
+      },
+      "mis_by_central": {
+        "central": 0.23076923076923078,
+        "off": 0.25
+      },
+      "c_dist": {
+        "central": 26,
+        "off": 72
+      },
+      "mis_by_depth": {
+        "d30-60": 0.6,
+        "d<30": 0.08823529411764706
+      },
+      "d_dist": {
+        "d30-60": 30,
+        "d<30": 68
+      },
+      "steps": 411,
+      "episode_seed": 92007,
+      "duration_seconds": 147.41998624801636,
+      "language": "Stay locked on the dark red Dodge Charger directly ahead, heading west, maintaining a tracking distance of about 25 m."
+    },
+    {
+      "success": false,
+      "mis_follow_inst": 0.18053375196232338,
+      "mis_follow_sustained": 0.19152276295133439,
+      "id_switches": 6,
+      "track_frames": 637,
+      "track_seconds": 63.7,
+      "centering_rate": 0.05023547880690738,
+      "max_wrong_run_s": 5.8,
+      "mean_uav_target_dist": 41.39651050700948,
+      "reacquire_attempts": 11,
+      "reacquire_success_rate": 0.8181818181818182,
+      "reacquire_timeout_rate": 0.18181818181818182,
+      "reacquire_lock_wrong_rate": 0.36363636363636365,
+      "reacquire_convergence_s_mean": 2.911111111111111,
+      "shortcut_nearest_rate": 0.2169811320754717,
+      "shortcut_target_central_rate": 0.05023547880690738,
+      "mis_by_N": {
+        "4": 1.0,
+        "3": 0.7662337662337663,
+        "2": 0.24347826086956523,
+        "1": 0.0
+      },
+      "n_dist": {
+        "4": 18,
+        "3": 77,
+        "2": 115,
+        "1": 401
+      },
+      "mis_by_central": {
+        "central": 0.0,
+        "off": 0.18134715025906736
+      },
+      "c_dist": {
+        "central": 32,
+        "off": 579
+      },
+      "mis_by_depth": {
+        "d30-60": 0.14757281553398058,
+        "d<30": 0.3020833333333333
+      },
+      "d_dist": {
+        "d30-60": 515,
+        "d<30": 96
+      },
+      "steps": 899,
+      "episode_seed": 92008,
+      "duration_seconds": 332.57846450805664,
+      "language": "Track the silver Audi TT coupe directly ahead, heading east, maintaining a tracking distance of about 30 m."
+    },
+    {
+      "success": false,
+      "mis_follow_inst": 0.8751608751608752,
+      "mis_follow_sustained": 0.8867438867438867,
+      "id_switches": 16,
+      "track_frames": 777,
+      "track_seconds": 77.7,
+      "centering_rate": 0.0,
+      "max_wrong_run_s": 11.4,
+      "mean_uav_target_dist": 497.4298881526989,
+      "reacquire_attempts": 8,
+      "reacquire_success_rate": 0.5,
+      "reacquire_timeout_rate": 0.5,
+      "reacquire_lock_wrong_rate": 0.875,
+      "reacquire_convergence_s_mean": 5.5,
+      "shortcut_nearest_rate": 0.287012987012987,
+      "shortcut_target_central_rate": 0.0,
+      "mis_by_N": {
+        "6": 0.8770491803278688,
+        "4": 0.782608695652174
+      },
+      "n_dist": {
+        "6": 732,
+        "4": 23
+      },
+      "mis_by_central": {
+        "central": null,
+        "off": 0.8741721854304636
+      },
+      "c_dist": {
+        "central": 0,
+        "off": 755
+      },
+      "mis_by_depth": {
+        "d30-60": 0.95,
+        "d>=60": 0.8598425196850393
+      },
+      "d_dist": {
+        "d30-60": 120,
+        "d>=60": 635
+      },
+      "steps": 899,
+      "episode_seed": 92009,
+      "duration_seconds": 341.48983120918274,
+      "language": "Track the red Nissan Patrol SUV directly ahead, heading east, maintaining a tracking distance of about 25 m."
+    }
+  ]
+}

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WM 方案对照 · A 保留EAR vs B 并入WM</title>
+<style>
+  :root{
+    --surface:#fcfcfb; --plane:#f9f9f7; --card:#ffffff;
+    --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+    --grid:#e1e0d9; --rule:#c3c2b7; --ring:rgba(11,11,11,.10);
+    --vision:#2a78d6;   /* 视觉/VLM */
+    --ear:#1baf7a;      /* EAR 短时·视觉预测 */
+    --wm:#4a3aa7;       /* WM 长时·路网预测 */
+    --iar:#eda100;      /* IAR */
+    --dit:#eb6834;      /* DiT 动作 */
+    --lang:#e87ba4;     /* tid 语言 */
+    --zex:#008300;      /* z_ex 融合 */
+    --froze:#898781;
+    --good:#0ca30c; --warn:#e34948;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --surface:#1a1a19; --plane:#0d0d0d; --card:#212120;
+      --ink:#fff; --ink2:#c3c2b7; --muted:#898781;
+      --grid:#2c2c2a; --rule:#383835; --ring:rgba(255,255,255,.12);
+      --vision:#3987e5; --ear:#199e70; --wm:#9085e9; --iar:#c98500;
+      --dit:#d95926; --lang:#d55181; --zex:#008300; --froze:#898781;
+      --good:#0ca30c; --warn:#e66767;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--plane);color:var(--ink);font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+  .wrap{max-width:1200px;margin:0 auto;padding:30px 22px 80px}
+  h1{font-size:24px;margin:0 0 4px} .sub{color:var(--ink2);margin:0 0 18px}
+  .sub b{color:var(--ink)}
+  code{font-family:ui-monospace,Menlo,Consolas,monospace}
+  .legend{display:flex;flex-wrap:wrap;gap:8px 14px;padding:10px 13px;margin:0 0 22px;background:var(--card);border:1px solid var(--ring);border-radius:12px}
+  .lg{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink2)}
+  .sw{width:12px;height:12px;border-radius:4px;box-shadow:0 0 0 1px var(--ring)}
+
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:860px){.cols{grid-template-columns:1fr}}
+  .col{background:var(--surface);border:1px solid var(--ring);border-radius:16px;padding:16px 16px 20px}
+  .col.rec{border:2px solid var(--good)}
+  .col-h{display:flex;align-items:baseline;gap:8px;margin:0 0 3px}
+  .col-t{font-size:16px;font-weight:660;margin:0}
+  .pill{font:700 10px/1 ui-monospace,monospace;padding:4px 7px;border-radius:6px;color:#fff}
+  .pill.a{background:var(--good)} .pill.b{background:var(--muted)}
+  .col-d{color:var(--muted);font-size:12px;margin:0 0 13px}
+
+  .node{background:var(--card);border:1px solid var(--ring);border-left:4px solid var(--rule);border-radius:9px;padding:8px 10px;margin:0}
+  .node.vision{border-left-color:var(--vision)} .node.ear{border-left-color:var(--ear)}
+  .node.wm{border-left-color:var(--wm)} .node.iar{border-left-color:var(--iar)}
+  .node.dit{border-left-color:var(--dit)} .node.lang{border-left-color:var(--lang)}
+  .node.zex{border-left-color:var(--zex)} .node.froze{border-left-color:var(--froze)}
+  .node.wmbig{border:2px solid var(--wm);background:color-mix(in srgb,var(--wm) 8%,var(--card))}
+  .node.gone{border:1.5px dashed var(--rule);opacity:.5;background:transparent}
+  .nt{font-weight:640;font-size:12.5px;margin:0;display:flex;align-items:center;gap:5px}
+  .nt .tag{font:600 9.5px/1 ui-monospace,monospace;color:var(--ink2);border:1px solid var(--ring);border-radius:5px;padding:2px 4px;margin-left:auto}
+  .nd{color:var(--ink2);font-size:11.5px;margin:2px 0 0} .nd .k{color:var(--ink);font-weight:600}
+  .strike{text-decoration:line-through;color:var(--muted)}
+  .down{text-align:center;color:var(--rule);font-size:16px;line-height:1;margin:4px 0}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .merge{text-align:center;font:600 11px/1.4 ui-monospace,monospace;color:var(--zex);margin:4px 0 0}
+  .note{border:1px dashed var(--ring);border-radius:8px;padding:7px 9px;margin:11px 0 0;font-size:11.5px;color:var(--ink2)}
+  .note b{color:var(--ink)}
+  .note.g{border-color:var(--good)} .note.g b{color:var(--good)}
+  .note.w{border-color:var(--warn)} .note.w b{color:var(--warn)}
+
+  table{width:100%;border-collapse:collapse;margin:22px 0 0;font-size:12.5px}
+  th,td{border:1px solid var(--ring);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:var(--card);font-weight:650} td:first-child{color:var(--ink2);font-weight:600;width:22%}
+  .ok{color:var(--good);font-weight:700} .no{color:var(--warn);font-weight:700}
+  .foot{color:var(--muted);font-size:11.5px;margin-top:20px;border-top:1px solid var(--grid);padding-top:11px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>WM 方案对照 · A 保留 EAR vs B 并入 WM</h1>
+  <p class="sub">分歧点:<b>目标未来轨迹的"近端(视觉/可见)"这段由谁做</b>。远端(路网/遮挡)两案都归 WM。
+  A 保留 EAR 做近端视觉预测 + 融合表示;B 让 WM 一手包办、去掉 EAR。</p>
+
+  <div class="legend">
+    <span class="lg"><span class="sw" style="background:var(--vision)"></span>视觉/VLM</span>
+    <span class="lg"><span class="sw" style="background:var(--lang)"></span>tid 语言(WHICH)</span>
+    <span class="lg"><span class="sw" style="background:var(--ear)"></span>EAR 短时·视觉预测</span>
+    <span class="lg"><span class="sw" style="background:var(--wm)"></span>WM 长时·路网预测(WHERE)</span>
+    <span class="lg"><span class="sw" style="background:var(--zex)"></span>z_ex 粗航点</span>
+    <span class="lg"><span class="sw" style="background:var(--iar)"></span>IAR</span>
+    <span class="lg"><span class="sw" style="background:var(--dit)"></span>DiT 动作(HOW)</span>
+  </div>
+
+  <div class="cols">
+    <!-- 方案 A -->
+    <div class="col rec">
+      <div class="col-h"><span class="pill a">方案 A · 推荐</span><h2 class="col-t">保留 EAR + 重定范围</h2></div>
+      <p class="col-d">EAR=短时视觉预测 + 融合表示层;WM=长时路网。IAR 提供门控+分叉线索。</p>
+      <div class="node vision"><p class="nt">当前帧 → ❄ VLM → vlm_ctx</p></div>
+      <div class="down">↓ &nbsp;三路并行&nbsp; ↓</div>
+      <div class="two">
+        <div class="node lang"><p class="nt">tid 语言<span class="tag">WHICH</span></p><p class="nd">共视时认对目标(已证)</p></div>
+        <div class="node iar"><p class="nt">IAR<span class="tag">z_im</span></p><p class="nd"><span class="k">occ</span>头 遮挡? · <span class="k">man</span>头 要转弯? · z_im</p></div>
+      </div>
+      <div class="note" style="border-color:var(--iar)"><b style="color:var(--iar)">IAR 耦合 WM</b>:<span class="k" style="color:var(--wm)">occ→门控</span>(可见 EAR / 遮挡 WM)· <span class="k" style="color:var(--wm)">man→分叉 seed</span>(选哪条车道)· z_im→DiT</div>
+      <div class="down">↓ &nbsp;分两路预测目标轨迹(受 IAR 门控/分叉)&nbsp; ↓</div>
+      <div class="two">
+        <div class="node ear"><p class="nt">EAR</p><p class="nd"><span class="k">近端·视觉·可见</span><br>朝向/姿态/精确位置 → 短时航点</p></div>
+        <div class="node wm"><p class="nt">WM 路网</p><p class="nd"><span class="k">远端·路网·遮挡</span><br>车道图遍历(man 定分叉)→ 走廊</p></div>
+      </div>
+      <div class="merge">近端 ⊕ 远端 → 融合</div>
+      <div class="node zex"><p class="nt">z_ex 粗航点(完整目标轨迹)</p></div>
+      <div class="down">↓ &nbsp;z_ex + <span style="color:var(--iar)">z_im[IAR]</span> + vlm_ctx + proprio&nbsp; ↓</div>
+      <div class="node dit"><p class="nt">DiT 动作头<span class="tag">HOW</span></p><p class="nd">规划 UAV 动作 → 直飞拦截</p></div>
+      <div class="note g"><b style="color:var(--good)">✓</b> 复用已训 EAR;视觉近端与路网远端互补。<b style="color:var(--warn)">✗</b> 多一模块+融合;EAR 近端受单帧限制。</div>
+    </div>
+
+    <!-- 方案 B -->
+    <div class="col">
+      <div class="col-h"><span class="pill b">方案 B</span><h2 class="col-t">EAR 并入 WM</h2></div>
+      <p class="col-d">WM 一手包办近+远;去掉 EAR。IAR 门控/分叉耦合同 A。</p>
+      <div class="node vision"><p class="nt">当前帧 → ❄ VLM → vlm_ctx</p></div>
+      <div class="down">↓ &nbsp;三路并行&nbsp; ↓</div>
+      <div class="two">
+        <div class="node lang"><p class="nt">tid 语言<span class="tag">WHICH</span></p><p class="nd">共视时认对目标(已证)</p></div>
+        <div class="node iar"><p class="nt">IAR<span class="tag">z_im</span></p><p class="nd"><span class="k">occ</span>头 遮挡? · <span class="k">man</span>头 要转弯? · z_im</p></div>
+      </div>
+      <div class="note" style="border-color:var(--iar)"><b style="color:var(--iar)">IAR 耦合 WM</b>:<span class="k" style="color:var(--wm)">occ→门控</span> · <span class="k" style="color:var(--wm)">man→分叉 seed</span> · z_im→DiT(与 A 相同)</div>
+      <div class="node ear gone" style="margin-top:11px"><p class="nt"><span class="strike">EAR(删除)</span></p><p class="nd">无独立视觉短时预测器</p></div>
+      <div class="down">↓</div>
+      <div class="node wm wmbig"><p class="nt">WM 路网(一手包办)<span class="tag">WHERE</span></p><p class="nd"><span class="k">近+远 全部目标预测</span>(occ 门控/man 分叉)<br>车道图遍历 → 直接产出 z_ex</p></div>
+      <div class="down">↓</div>
+      <div class="node zex"><p class="nt">z_ex 粗航点</p><p class="nd">直接来自 WM</p></div>
+      <div class="down">↓ &nbsp;z_ex + <span style="color:var(--iar)">z_im[IAR]</span> + vlm_ctx + proprio&nbsp; ↓</div>
+      <div class="node dit"><p class="nt">DiT 动作头<span class="tag">HOW</span></p><p class="nd">规划 UAV 动作</p></div>
+      <div class="note w"><b style="color:var(--good)">✓</b> 更简、单预测器。<b style="color:var(--warn)">✗</b> <b>丢视觉近端修正</b>;丢独立显式推理;EAR 权重弃用需重训。</div>
+    </div>
+  </div>
+
+  <table>
+    <tr><th>维度</th><th>A 保留 EAR(推荐)</th><th>B 并入 WM</th></tr>
+    <tr><td>目标轨迹预测器</td><td>2 个:EAR(近·视觉) + WM(远·路网)</td><td>1 个:WM(近+远)</td></tr>
+    <tr><td>视觉近端修正<br>(朝向/精确位置)</td><td class="ok">✓ 有(EAR 用当前帧外观)</td><td class="no">✗ 无(WM 只用位置+路网)</td></tr>
+    <tr><td>可见时精度</td><td class="ok">✓ 视觉直接观测最准</td><td><span style="color:var(--iar)">◐</span> 靠路网+snap,近端偏粗</td></tr>
+    <tr><td>保留已训 EAR/warmstart</td><td class="ok">✓ 复用</td><td class="no">✗ 弃用重训</td></tr>
+    <tr><td>模块复杂度</td><td><span style="color:var(--iar)">◐</span> 多一模块 + 融合逻辑</td><td class="ok">✓ 更简</td></tr>
+    <tr><td>与双系统契合</td><td class="ok">✓ EAR≈S1近端 / WM≈S2远端</td><td><span style="color:var(--iar)">◐</span> 单预测器</td></tr>
+    <tr><td>风险</td><td>EAR 近端受单帧限制,边际待验</td><td>近端全丢视觉线索,可能欠预测</td></tr>
+    <tr><td>建议</td><td class="ok">先做 A;若 EAR 近端边际很小,再 collapse 成 B</td><td>作为 A 的退化备选</td></tr>
+  </table>
+
+  <p class="foot">共识(两案相同):<b>远端(路网/遮挡)= WM · WHICH(身份)= 语言/tid · HOW(动作)= DiT · IAR 用 occ 头当 WM 门控、man 头当 WM 分叉 seed、z_im 喂 DiT</b>。分歧仅在"近端视觉预测归 EAR 还是并入 WM"。❄=冻结 VLM。源:`train/{ear,dit,iar}.py` + 待建 WM(RoadGraphPredictor)。详见 `wm-roadgraph-design.md`。</p>
+</div>
+</body>
+</html>

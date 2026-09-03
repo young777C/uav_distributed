@@ -1,0 +1,115 @@
+{
+  "verdict": "APPROVED",
+  "round": 3,
+  "dir": "/nvidia/hque/data/carla_data/mvp_review_r3",
+  "n_episodes": 10,
+  "integrity": {
+    "ok": true,
+    "problems": []
+  },
+  "checks": {
+    "leak_floor": {
+      "value": 0.4495,
+      "status": "waived",
+      "why": "position-only MLP mis_follow; low => geometry solves target selection => language not load-bearing"
+    },
+    "covis": {
+      "value": 0.9721,
+      "status": "pass",
+      "why": "co-visible look-alikes force the model to disambiguate"
+    },
+    "offscreen": {
+      "value": 0.0782,
+      "status": "pass",
+      "why": "some loss needed for recovery skill; too much = untrackable"
+    },
+    "recovery": {
+      "value": 0.7,
+      "status": "pass",
+      "why": "fraction of episodes with a >=3s loss that is re-acquired"
+    },
+    "jitter": {
+      "value": 0.5039,
+      "status": "pass",
+      "why": "camera yaw JERK (|d2yaw|, deg/frame^2) during occlusion/off-screen; jerk (not rate) so a smooth fast pan is not flagged, only oscillating shake is"
+    }
+  },
+  "leak_meta": {
+    "hard_train": 1296,
+    "hard_val": 525,
+    "avg_candidates": 3.4
+  },
+  "changes_requested": [],
+  "per_episode": [
+    {
+      "ep": "episode_000002.h5",
+      "T": 1500,
+      "covis_frac": 0.876,
+      "off_frac": 0.113,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000003.h5",
+      "T": 1500,
+      "covis_frac": 0.884,
+      "off_frac": 0.116,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000004.h5",
+      "T": 1500,
+      "covis_frac": 0.899,
+      "off_frac": 0.098,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000005.h5",
+      "T": 1500,
+      "covis_frac": 0.975,
+      "off_frac": 0.025,
+      "recovered": false
+    },
+    {
+      "ep": "episode_000006.h5",
+      "T": 1500,
+      "covis_frac": 0.921,
+      "off_frac": 0.071,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000007.h5",
+      "T": 1500,
+      "covis_frac": 0.735,
+      "off_frac": 0.039,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000008.h5",
+      "T": 1500,
+      "covis_frac": 0.979,
+      "off_frac": 0.019,
+      "recovered": false
+    },
+    {
+      "ep": "episode_000009.h5",
+      "T": 1500,
+      "covis_frac": 0.864,
+      "off_frac": 0.131,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000010.h5",
+      "T": 1500,
+      "covis_frac": 0.89,
+      "off_frac": 0.11,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000011.h5",
+      "T": 1500,
+      "covis_frac": 0.939,
+      "off_frac": 0.059,
+      "recovered": false
+    }
+  ]
+}

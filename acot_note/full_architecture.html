@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ACoT-UAV-Track · 完整架构 · 数据/模型/训练/推理</title>
+<style>
+  :root{
+    --page:#f9f9f7;--surface-1:#fcfcfb;--surface-2:#f2f1ec;--text-primary:#0b0b0b;--text-secondary:#52514e;--text-muted:#898781;
+    --grid:#e1e0d9;--border:rgba(11,11,11,.12);--chip:#eeede7;--spine:#d8d7cf;
+    --data:#2a78d6;--vlm:#4a3aa7;--act:#1baf7a;--key:#eda100;--key-ink:#8a5a00;--loss:#d03b3b;
+  }
+  @media (prefers-color-scheme:dark){html:not(.light){
+    --page:#0d0d0d;--surface-1:#1a1a19;--surface-2:#232320;--text-primary:#fff;--text-secondary:#c3c2b7;--text-muted:#898781;
+    --grid:#2c2c2a;--border:rgba(255,255,255,.12);--chip:#2a2a27;--spine:#38382f;
+    --data:#3987e5;--vlm:#9085e9;--act:#199e70;--key:#eda100;--key-ink:#eda100;--loss:#e66767;}}
+  html.dark{--page:#0d0d0d;--surface-1:#1a1a19;--surface-2:#232320;--text-primary:#fff;--text-secondary:#c3c2b7;--text-muted:#898781;
+    --grid:#2c2c2a;--border:rgba(255,255,255,.12);--chip:#2a2a27;--spine:#38382f;
+    --data:#3987e5;--vlm:#9085e9;--act:#199e70;--key:#eda100;--key-ink:#eda100;--loss:#e66767;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--page);color:var(--text-primary);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.5}
+  .wrap{max-width:1000px;margin:0 auto;padding:26px 20px 60px}
+  header{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+  h1{font-size:21px;font-weight:660;margin:0}.sub{color:var(--text-secondary);font-size:13px;margin:4px 0 0}
+  .toggle{border:1px solid var(--border);background:var(--surface-1);color:var(--text-secondary);border-radius:8px;padding:6px 12px;font-size:12.5px;cursor:pointer;font-family:inherit}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin:14px 0 2px;font-size:12.5px;color:var(--text-secondary)}
+  .lg{display:flex;align-items:center;gap:7px}.sw{width:13px;height:13px;border-radius:4px;flex:none}
+  .panel{background:var(--surface-1);border:1px solid var(--border);border-radius:14px;padding:16px 18px;margin-top:18px}
+  .pt{font-size:16px;font-weight:660;margin:0 0 3px;display:flex;align-items:center;gap:9px}
+  .pt .num{width:24px;height:24px;border-radius:7px;background:var(--text-primary);color:var(--page);font-size:13px;display:flex;align-items:center;justify-content:center;flex:none}
+  .pn{font-size:12.5px;color:var(--text-secondary);margin:0 0 12px}
+  .chip{display:inline-block;font-family:ui-monospace,Menlo,monospace;font-size:11px;background:var(--chip);border:1px solid var(--border);border-radius:5px;padding:0 6px;color:var(--text-primary);white-space:nowrap;font-variant-numeric:tabular-nums}
+  svg{display:block;width:100%;height:auto;overflow:visible}
+  table{border-collapse:collapse;width:100%;margin:8px 0;font-size:12px;font-variant-numeric:tabular-nums}
+  th,td{border:1px solid var(--grid);padding:5px 9px;text-align:left;vertical-align:top}
+  th{color:var(--text-secondary);font-weight:600;background:var(--surface-2)}
+  td b{color:var(--text-primary)}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:8px 0}
+  .cards{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:720px){.cards{grid-template-columns:1fr}}
+  .card{background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:11px 13px}
+  .card.b{border-left:4px solid var(--data)}.card.v{border-left:4px solid var(--vlm)}.card.a{border-left:4px solid var(--act)}.card.l{border-left:4px solid var(--loss)}
+  .card h4{font-size:13px;margin:0 0 6px;font-weight:640}
+  .card p,.card li{font-size:12px;color:var(--text-secondary);margin:3px 0}.card b{color:var(--text-primary)}
+  ul{margin:5px 0;padding-left:16px}
+  .callout{border-left:3px solid var(--key);background:color-mix(in srgb,var(--key) 9%,transparent);border-radius:0 8px 8px 0;padding:8px 12px;margin:10px 0;font-size:12px;color:var(--text-primary)}
+  .callout b{color:var(--key-ink)}
+  .formula{font-family:ui-monospace,Menlo,monospace;font-size:12px;background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;margin:8px 0;color:var(--text-primary);overflow-x:auto}
+  .note{font-size:11.5px;color:var(--text-muted);margin-top:6px}
+  .arrow{display:flex;justify-content:center;color:var(--text-muted);height:26px}
+</style>
+</head>
+<body data-palette="#2a78d6,#4a3aa7,#1baf7a" data-mode="light">
+<div class="wrap">
+  <header>
+    <div><h1>ACoT-UAV-Track · 完整架构</h1>
+    <p class="sub">数据处理 · 冻结VLM预计算 · 模型(EAR/IAR/DiT/target-id) · 训练 · 推理 —— 逐实现细节(取自 config_full/代码,2026-08-11)</p></div>
+    <button class="toggle" onclick="document.documentElement.classList.toggle('dark');document.documentElement.classList.remove('light')">◑ 明/暗</button>
+  </header>
+  <div class="legend">
+    <span class="lg"><span class="sw" style="background:var(--data)"></span>数据/输入</span>
+    <span class="lg"><span class="sw" style="background:var(--vlm)"></span>冻结 VLM / 预计算</span>
+    <span class="lg"><span class="sw" style="background:var(--act)"></span>可训练模型 / 输出</span>
+    <span class="lg"><span class="sw" style="background:var(--loss)"></span>损失</span>
+    <span class="lg"><span class="sw" style="background:var(--key)"></span>关键实现细节</span>
+  </div>
+
+  <!-- ===== 0 总览 ===== -->
+  <section class="panel">
+    <p class="pt"><span class="num">0</span>总览:五阶段流水线</p>
+    <svg viewBox="0 0 960 92" role="img" aria-label="总览流水线">
+      <defs><marker id="ah" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 Z" fill="var(--text-muted)"/></marker></defs>
+      <g font-size="12" font-family="system-ui">
+        <rect x="4" y="30" width="150" height="40" rx="8" fill="color-mix(in srgb,var(--data) 12%,transparent)" stroke="var(--data)"/><text x="79" y="47" text-anchor="middle" fill="var(--text-primary)">① CARLA 视频</text><text x="79" y="62" text-anchor="middle" font-size="10" fill="var(--text-muted)">61集/88K帧/5城</text>
+        <rect x="188" y="30" width="150" height="40" rx="8" fill="color-mix(in srgb,var(--data) 12%,transparent)" stroke="var(--data)"/><text x="263" y="47" text-anchor="middle" fill="var(--text-primary)">② 切样本</text><text x="263" y="62" text-anchor="middle" font-size="10" fill="var(--text-muted)">stride3·cap500</text>
+        <rect x="372" y="30" width="160" height="40" rx="8" fill="color-mix(in srgb,var(--vlm) 14%,transparent)" stroke="var(--vlm)"/><text x="452" y="47" text-anchor="middle" fill="var(--text-primary)">③ 冻结VLM预计算</text><text x="452" y="62" text-anchor="middle" font-size="10" fill="var(--text-muted)">(5,100,2560)缓存</text>
+        <rect x="566" y="30" width="180" height="40" rx="8" fill="color-mix(in srgb,var(--act) 14%,transparent)" stroke="var(--act)"/><text x="656" y="47" text-anchor="middle" fill="var(--text-primary)">④ 模型 EAR+IAR+DiT+tid</text><text x="656" y="62" text-anchor="middle" font-size="10" fill="var(--text-muted)">~150M 可训练</text>
+        <rect x="780" y="30" width="176" height="40" rx="8" fill="color-mix(in srgb,var(--act) 14%,transparent)" stroke="var(--act)"/><text x="868" y="47" text-anchor="middle" fill="var(--text-primary)">⑤ 训练/推理</text><text x="868" y="62" text-anchor="middle" font-size="10" fill="var(--text-muted)">离线训 · 双系统闭环</text>
+      </g>
+      <g fill="none" stroke="var(--text-muted)" stroke-width="1.4" marker-end="url(#ah)">
+        <path d="M154 50 H184"/><path d="M338 50 H368"/><path d="M532 50 H562"/><path d="M746 50 H776"/>
+      </g>
+    </svg>
+    <div class="callout"><b>核心设计:</b>冻结 VLM(Qwen3-VL-4B)对每帧只跑一次、缓存融合表征(③);可训练小模型(④,~150M)在缓存上迭代 → 多卡预计算、单卡训练。语言在③被融进图像 token(见 D2:有/无语言 token cosine 0.47)。</div>
+  </section>
+
+  <!-- ===== 1 数据处理 ===== -->
+  <section class="panel">
+    <p class="pt"><span class="num">1</span>数据处理:一帧视频 → 一个训练样本</p>
+    <p class="pn">每个样本 = 以第 <span class="chip">i</span> 帧为锚点。<code>dataset_stage2.py</code>。fps=10。</p>
+    <table>
+      <tr><th>字段</th><th>形状</th><th>来源 / 计算</th><th>用途</th></tr>
+      <tr><td><b>vlm_ctx_layers</b></td><td>(5, 100, 2560)</td><td>预计算缓存第 4/8/12/16/24 层(mmap 读)</td><td>IAR 逐层查询</td></tr>
+      <tr><td>vlm_ctx</td><td>(100, 2560)</td><td>= layers[-1](第24层)</td><td>EAR / DiT / target-id 条件</td></tr>
+      <tr><td><b>proprio</b></td><td>(5,)</td><td><span class="chip">[cam_z/30, pitch/90, vx/15, vy/15, vz/15]</span></td><td>EAR/DiT 自我状态(含UAV速度)</td></tr>
+      <tr><td><b>waypoint</b></td><td>(4, 3)</td><td>目标未来 1/2/4/6s 的 3D 位置,<b>相机系</b>(inverse_pose_matrix)/50</td><td>EAR 监督(GT 全程有效,含出画)</td></tr>
+      <tr><td><b>action</b></td><td>(16, 5)</td><td>未来16步 <span class="chip">[dx,dy,dz,dyaw]/5</span> + search_mode</td><td>DiT 监督</td></tr>
+      <tr><td><b>cand_feats</b></td><td>(N, 2560)</td><td>目标+在框干扰车:3D投影→框→在末层grid上 pool_box</td><td>target-id 打分</td></tr>
+      <tr><td>target_idx</td><td>标量</td><td>候选里 is_target 的下标(缺席=0占位)</td><td>target-id 交叉熵目标</td></tr>
+      <tr><td><b>tid_valid</b></td><td>标量</td><td>1=目标在画面内;0=目标缺席(出画)</td><td>mask target-id 损失/mis_follow</td></tr>
+      <tr><td><b>act_supervise</b></td><td>标量</td><td>visible ∪ (暂时丢失且6s内重现)</td><td>mask 动作损失(拦截帧解mask)</td></tr>
+      <tr><td>visible/occ_structural/maneuver/tier</td><td>标量</td><td>vis=(occ&lt;0.8)∧(¬off_screen);遮挡/机动/难度a/b/c</td><td>visibility/maneuver头 · 课程</td></tr>
+    </table>
+    <div class="cards">
+      <div class="card b"><h4>切分规则(_build_index)</h4>
+        <ul><li>砍尾 <b>60 帧</b>(horizon=max_horizon6s×10)→ valid=n−60</li>
+        <li>起点 <span class="chip">i=0,3,6,…</span>(stride 3),每集封顶 <b>cap=500</b>(覆盖全1500帧)</li>
+        <li>相机系 waypoint:<span class="chip">M=inverse_pose_matrix(cam); wp=(homog@M.T)/50</span> → 消 UAV 偏航歧义</li></ul></div>
+      <div class="card b" style="border-left-color:var(--key)"><h4>★ 长丢失 / 预测-拦截处理</h4>
+        <ul><li><b>vis 判据</b>=遮挡∧¬出画(否则长出画被误判可见→漏)</li>
+        <li><b>目标缺席帧进样本</b>:出画帧(无target候选)若6s内重现 → 保留,tid_valid=0、act_supervise=1(监督拦截动作)</li>
+        <li>EAR waypoint 用目标 GT(出画期间仍有效)→ 学"预测出画目标位置"</li>
+        <li>门控 <span class="chip">supervise_intercept=true</span>;窗口 intercept_hz=6s</li></ul></div>
+    </div>
+  </section>
+
+  <!-- ===== 2 预计算 ===== -->
+  <section class="panel">
+    <p class="pt"><span class="num">2</span>冻结 VLM 预计算(Qwen3-VL-4B,`backbone_kv.py`)</p>
+    <p class="pn">每个 (RGB 336×336 + 语言指令) → 冻结 Qwen3-VL 前向一次 → 抽多层图像 token 存盘。</p>
+    <svg viewBox="0 0 960 118" role="img" aria-label="VLM 内部">
+      <defs><marker id="ah2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 Z" fill="var(--text-muted)"/></marker></defs>
+      <g font-size="11.5" font-family="system-ui">
+        <rect x="4" y="40" width="120" height="42" rx="8" fill="color-mix(in srgb,var(--data) 12%,transparent)" stroke="var(--data)"/><text x="64" y="58" text-anchor="middle" fill="var(--text-primary)">RGB 336×336×3</text><text x="64" y="73" text-anchor="middle" font-size="10" fill="var(--text-muted)">+ 语言 prompt</text>
+        <rect x="150" y="40" width="130" height="42" rx="8" fill="color-mix(in srgb,var(--vlm) 12%,transparent)" stroke="var(--vlm)"/><text x="215" y="57" text-anchor="middle" fill="var(--text-primary)">ViT 24层</text><text x="215" y="72" text-anchor="middle" font-size="10" fill="var(--text-muted)">patch16·1024维·merge2</text>
+        <rect x="306" y="40" width="120" height="42" rx="8" fill="color-mix(in srgb,var(--vlm) 12%,transparent)" stroke="var(--vlm)"/><text x="366" y="57" text-anchor="middle" fill="var(--text-primary)">Connector</text><text x="366" y="72" text-anchor="middle" font-size="10" fill="var(--text-muted)">MLP 1024→2560</text>
+        <rect x="452" y="40" width="180" height="42" rx="8" fill="color-mix(in srgb,var(--vlm) 16%,transparent)" stroke="var(--vlm)"/><text x="542" y="57" text-anchor="middle" fill="var(--text-primary)">LLM decoder 自注意力</text><text x="542" y="72" text-anchor="middle" font-size="10" fill="var(--vlm)">文本在前→语言融进图像token</text>
+        <rect x="658" y="40" width="140" height="42" rx="8" fill="color-mix(in srgb,var(--key) 14%,transparent)" stroke="var(--key)"/><text x="728" y="57" text-anchor="middle" fill="var(--text-primary)">抽层 4/8/12/16/24</text><text x="728" y="72" text-anchor="middle" font-size="10" fill="var(--key-ink)">图像token位置</text>
+        <rect x="824" y="40" width="132" height="42" rx="8" fill="color-mix(in srgb,var(--act) 12%,transparent)" stroke="var(--act)"/><text x="890" y="57" text-anchor="middle" fill="var(--text-primary)">缓存 .ctx.npy</text><text x="890" y="72" text-anchor="middle" font-size="10" fill="var(--text-muted)">(5,100,2560) mmap</text>
+      </g>
+      <g fill="none" stroke="var(--text-muted)" stroke-width="1.3" marker-end="url(#ah2)">
+        <path d="M124 61 H146"/><path d="M280 61 H302"/><path d="M426 61 H448"/><path d="M632 61 H654"/><path d="M798 61 H820"/>
+      </g>
+      <text x="215" y="22" text-anchor="middle" font-size="10.5" fill="var(--text-muted)">336÷16=21patch → merge2 → 10×10=100 token</text>
+    </svg>
+    <div class="callout"><b>关键:</b>缓存的 (5,100,2560) 是<b>LLM 层</b>的隐状态(2560维),不是 ViT 裸特征(1024维)——即"图像经 ViT→connector→与语言在 LLM 融合"后的联合表征。<b>100</b>=空间 token 数,<b>2560</b>=每 token 维度,<b>5</b>=抽取层数。cap=500 → 每集缓存 500 帧。</div>
+  </section>
+
+  <!-- ===== 3 模型架构 ===== -->
+  <section class="panel">
+    <p class="pt"><span class="num">3</span>模型架构:四个可训练模块(冻结VLM下游)</p>
+    <p class="pn">输入=缓存 token + proprio + 候选;输出=动作块 + 目标选择。三重 cross-attention 融合。</p>
+    <svg viewBox="0 0 960 300" role="img" aria-label="模型数据流">
+      <defs><marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 Z" fill="var(--text-muted)"/></marker></defs>
+      <!-- inputs left -->
+      <g font-size="11" font-family="ui-monospace,Menlo,monospace">
+        <rect x="6" y="16" width="150" height="26" rx="6" fill="none" stroke="var(--vlm)"/><text x="81" y="33" text-anchor="middle" fill="var(--text-primary)">vlm_ctx_layers(5,100,2560)</text>
+        <rect x="6" y="70" width="150" height="26" rx="6" fill="none" stroke="var(--vlm)"/><text x="81" y="87" text-anchor="middle" fill="var(--text-primary)">vlm_ctx(100,2560)</text>
+        <rect x="6" y="124" width="150" height="26" rx="6" fill="none" stroke="var(--data)"/><text x="81" y="141" text-anchor="middle" fill="var(--text-primary)">proprio(5)</text>
+        <rect x="6" y="230" width="150" height="26" rx="6" fill="none" stroke="var(--vlm)"/><text x="81" y="247" text-anchor="middle" fill="var(--text-primary)">cand_feats(N,2560)</text>
+      </g>
+      <!-- modules -->
+      <g font-size="12" font-family="system-ui">
+        <rect x="300" y="12" width="150" height="52" rx="9" fill="color-mix(in srgb,var(--vlm) 12%,transparent)" stroke="var(--vlm)"/><text x="375" y="34" text-anchor="middle" fill="var(--text-primary)" font-weight="600">IAR</text><text x="375" y="50" text-anchor="middle" font-size="10" fill="var(--text-muted)">逐层KV查询·d256·n_im8</text>
+        <rect x="300" y="86" width="150" height="52" rx="9" fill="color-mix(in srgb,var(--act) 12%,transparent)" stroke="var(--act)"/><text x="375" y="108" text-anchor="middle" fill="var(--text-primary)" font-weight="600">EAR</text><text x="375" y="124" text-anchor="middle" font-size="10" fill="var(--text-muted)">flow-matching·d256·4层</text>
+        <rect x="560" y="150" width="170" height="56" rx="9" fill="color-mix(in srgb,var(--act) 16%,transparent)" stroke="var(--act)"/><text x="645" y="173" text-anchor="middle" fill="var(--text-primary)" font-weight="600">DiT 动作头</text><text x="645" y="189" text-anchor="middle" font-size="10" fill="var(--text-muted)">flow-matching·d512·32层·三重cross-attn</text>
+        <rect x="300" y="226" width="150" height="52" rx="9" fill="color-mix(in srgb,var(--key) 14%,transparent)" stroke="var(--key)"/><text x="375" y="248" text-anchor="middle" fill="var(--text-primary)" font-weight="600">target-id 头</text><text x="375" y="264" text-anchor="middle" font-size="10" fill="var(--key-ink)">cand ⊙ mean(ctx) → 打分</text>
+      </g>
+      <!-- outputs right -->
+      <g font-size="11" font-family="system-ui">
+        <text x="954" y="34" text-anchor="end" fill="var(--text-secondary)">z_im(隐式动作先验)</text>
+        <text x="954" y="108" text-anchor="end" fill="var(--text-secondary)">waypoint (4,3) 粗轨迹=z_ex</text>
+        <text x="954" y="180" text-anchor="end" fill="var(--act)">→ 动作块 (16,5)</text>
+        <text x="954" y="252" text-anchor="end" fill="var(--key-ink)">→ 选中目标车</text>
+      </g>
+      <g fill="none" stroke="var(--text-muted)" stroke-width="1.3" marker-end="url(#a3)">
+        <path d="M156 29 H296"/>                       <!-- layers->IAR -->
+        <path d="M156 83 C240 83 250 108 296 108"/>     <!-- ctx->EAR -->
+        <path d="M156 137 C230 137 240 118 296 116"/>   <!-- proprio->EAR -->
+        <path d="M156 243 H296"/>                        <!-- cand->tid -->
+        <path d="M450 38 H620 C645 38 645 60 645 148"/>  <!-- IAR z_im -> DiT -->
+        <path d="M450 112 C520 112 540 150 558 152"/>    <!-- EAR z_ex -> DiT -->
+        <path d="M156 83 C200 83 250 175 558 178"/>      <!-- ctx -> DiT -->
+        <path d="M156 137 C200 200 400 200 558 185"/>    <!-- proprio -> DiT -->
+        <path d="M450 38 H820"/> <path d="M450 112 H820"/> <path d="M730 178 H820"/> <path d="M450 252 H820"/>
+      </g>
+    </svg>
+    <table>
+      <tr><th>模块</th><th>做什么</th><th>关键维度(config_full)</th></tr>
+      <tr><td><b>EAR</b> 显式动作推理</td><td>flow-matching 生成 <b>K=4 个相机系 3D waypoint</b>(1/2/4/6s)=预测目标未来位置/拦截点;条件=vlm_ctx+proprio</td><td>d_model 256, 4层, 4头, proprio 5</td></tr>
+      <tr><td><b>IAR</b> 隐式动作推理</td><td>对 5 层缓存逐层 KV 查询,提取"即将遮挡/机动/混淆"等说不出的先验 → z_im</td><td>d 256, n_im 8, 4头</td></tr>
+      <tr><td><b>DiT</b> 动作头</td><td>flow-matching 生成 <b>16 步动作块</b>;<b>三重 cross-attn</b>:Q_action↔z_ex(EAR waypoint)/z_im(IAR)/vlm_ctx,并入 proprio</td><td>d 512, <b>32层</b>, 8头, d_ex 3, d_im 256</td></tr>
+      <tr><td><b>target-id</b> 消歧头</td><td><span class="chip">Linear(cand)⊙Linear(mean(ctx)) → GELU → 打分</span>,候选间 softmax 选目标</td><td>d 256 · <span style="color:var(--loss)">⚠️ mean 池化稀释语言(待改 cross-attn)</span></td></tr>
+    </table>
+  </section>
+
+  <!-- ===== 4 训练 ===== -->
+  <section class="panel">
+    <p class="pt"><span class="num">4</span>训练流程:Stage-1 EAR 预热 → Stage-2 联合</p>
+    <div class="cards">
+      <div class="card a"><h4>Stage-1:EAR 预热</h4>
+        <ul><li>仅训 EAR,冻结其余;监督=相机系 waypoint GT</li>
+        <li>flow-matching:学"噪声→waypoint"的向量场</li>
+        <li>产物 <span class="chip">stage1_ear_best.pt</span> → Stage-2 warmstart</li></ul></div>
+      <div class="card a"><h4>Stage-2:端到端联合</h4>
+        <ul><li>EAR(warmstart)+IAR+DiT+target-id 一起训</li>
+        <li>课程 a→c:<span class="chip">WeightedRandomSampler</span> 每 epoch 重加权(a_floor 0.25, ramp 0.9)</li>
+        <li><b>staleness 增强</b>(p 0.3):随机复用过期 z_ex,匹配 S1/S2 异步</li>
+        <li><b>grad_clip 1.0</b>;50 epoch;单卡</li></ul></div>
+    </div>
+    <div class="formula">L = L_action + 0.3·L_ear + 0.1·L_visibility + 0.1·L_maneuver + 0.2·L_target-id</div>
+    <table>
+      <tr><th>损失</th><th>定义</th><th>mask</th></tr>
+      <tr><td>L_action(主)</td><td>DiT 动作块 flow-matching MSE(向量场)</td><td><b>× act_supervise</b>(可见∪拦截帧才监督)</td></tr>
+      <tr><td>L_ear (0.3)</td><td>EAR waypoint flow-matching MSE</td><td>全帧(waypoint GT 恒有效)</td></tr>
+      <tr><td>L_visibility (0.1)</td><td>IAR occ_structural 头 MSE</td><td>—</td></tr>
+      <tr><td>L_maneuver (0.1)</td><td>IAR 机动头 BCE</td><td>—</td></tr>
+      <tr><td>L_target-id (0.2)</td><td>候选 cross-entropy(选对目标车)</td><td><b>× tid_valid</b>(目标缺席帧不算)</td></tr>
+    </table>
+    <div class="callout" style="border-color:var(--loss);background:color-mix(in srgb,var(--loss) 8%,transparent)"><b style="color:var(--loss)">当前诊断(全量):</b> mis_follow 卡在位置 floor 41.6%(ep49=42.4%),act_mse 收敛但消歧没解决 → <b>target-id 头把语言均值稀释了</b>(D2 证明语言在缓存里)。修复:target-id 头改 <b>候选→上下文 cross-attn</b> + 提 loss 权重 + 数据侧去深度捷径(见 language-grounding-plan.md)。</div>
+  </section>
+
+  <!-- ===== 5 推理 ===== -->
+  <section class="panel">
+    <p class="pt"><span class="num">5</span>推理流程:双系统闭环 + 预测-拦截</p>
+    <svg viewBox="0 0 960 150" role="img" aria-label="双系统推理">
+      <defs><marker id="a5" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 Z" fill="var(--text-muted)"/></marker></defs>
+      <g font-size="11.5" font-family="system-ui">
+        <rect x="6" y="54" width="120" height="42" rx="8" fill="color-mix(in srgb,var(--data) 12%,transparent)" stroke="var(--data)"/><text x="66" y="71" text-anchor="middle" fill="var(--text-primary)">实时相机帧</text><text x="66" y="86" text-anchor="middle" font-size="10" fill="var(--text-muted)">20Hz + 指令</text>
+        <rect x="170" y="20" width="200" height="44" rx="9" fill="color-mix(in srgb,var(--vlm) 13%,transparent)" stroke="var(--vlm)"/><text x="270" y="38" text-anchor="middle" fill="var(--text-primary)" font-weight="600">S2 慢系统 ~1Hz</text><text x="270" y="54" text-anchor="middle" font-size="10" fill="var(--text-muted)">VLM + EAR + IAR → z_ex, z_im</text>
+        <rect x="170" y="86" width="200" height="44" rx="9" fill="color-mix(in srgb,var(--act) 14%,transparent)" stroke="var(--act)"/><text x="270" y="104" text-anchor="middle" fill="var(--text-primary)" font-weight="600">S1 快系统 ~20Hz</text><text x="270" y="120" text-anchor="middle" font-size="10" fill="var(--text-muted)">DiT 采样 16步动作块</text>
+        <rect x="420" y="53" width="160" height="44" rx="9" fill="color-mix(in srgb,var(--act) 10%,transparent)" stroke="var(--act)"/><text x="500" y="71" text-anchor="middle" fill="var(--text-primary)">执行动作第1步</text><text x="500" y="87" text-anchor="middle" font-size="10" fill="var(--text-muted)">→ 重新观测(闭环)</text>
+        <rect x="632" y="53" width="150" height="44" rx="9" fill="color-mix(in srgb,var(--key) 14%,transparent)" stroke="var(--key)"/><text x="707" y="71" text-anchor="middle" fill="var(--text-primary)">target-id 选车</text><text x="707" y="87" text-anchor="middle" font-size="10" fill="var(--key-ink)">语言消歧</text>
+        <rect x="810" y="53" width="146" height="44" rx="9" fill="color-mix(in srgb,var(--key) 10%,transparent)" stroke="var(--key)"/><text x="883" y="68" text-anchor="middle" fill="var(--text-primary)">丢失→预测拦截</text><text x="883" y="83" text-anchor="middle" font-size="9.5" fill="var(--key-ink)">stale z_ex 飞预测点</text>
+      </g>
+      <g fill="none" stroke="var(--text-muted)" stroke-width="1.3" marker-end="url(#a5)">
+        <path d="M126 68 C150 68 150 42 168 42"/><path d="M126 82 C150 82 150 108 168 108"/>
+        <path d="M370 42 C400 42 400 70 418 70"/><path d="M370 108 C400 108 400 78 418 76"/>
+        <path d="M580 75 H630"/><path d="M782 75 H808"/>
+        <path d="M500 97 C500 140 210 140 210 132" stroke-dasharray="4 3"/>
+      </g>
+      <text x="330" y="148" font-size="10" fill="var(--text-muted)">虚线=闭环:每步用新帧,S2 低频、S1 高频复用(staleness 训练对齐)</text>
+    </svg>
+    <div class="cards">
+      <div class="card"><h4>flow-matching:训练 vs 推理</h4>
+        <ul><li><b>训练</b>:学向量场 v(a_t,t)=a1−z(算 loss)</li>
+        <li><b>推理</b>:从噪声出发,<span class="chip">8 步 Euler 积分 ODE</span> 采样出动作/waypoint</li></ul></div>
+      <div class="card" style="border-left:4px solid var(--key)"><h4>★ 出画预测-拦截重捕获</h4>
+        <ul><li>短丢失(&lt;6s):S2 最后可见帧的 EAR waypoint 经 staleness 复用为拦截点 → 直飞</li>
+        <li>长丢失(&gt;6s):超 EAR horizon → 需目标状态记忆(<b>VLA→WAM</b> 架构方向)/ search+语言重捕获</li>
+        <li>重现时若有 look-alike → 只语言能定"哪辆" ← 核心贡献</li></ul></div>
+    </div>
+  </section>
+
+  <p class="note" style="margin-top:20px">数值取自 <span class="chip">config_full.yaml</span> + 模型代码(2026-08-11)。配色经 CVD 验证(蓝/紫/青 ΔE 61+);黄=关键细节、红=损失/问题(均配文字标签)。明暗双模式。</p>
+</div>
+</body>
+</html>

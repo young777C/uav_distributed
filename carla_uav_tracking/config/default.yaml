@@ -5,10 +5,16 @@ environment:
   fps: 10
   max_duration_seconds: 180
   seed: null                       # set per-episode by generate_batch (seed + episode_id)
-  max_lost_seconds: 15             # OFF-screen tolerated this long — the UAV flies to re-acquire
+  max_lost_seconds: 18             # OFF-screen tolerated this long — the UAV flies to re-acquire
                                    # (aerial tracking: no road constraint → cut to re-appearance);
                                    # truncate only if recovery genuinely fails. Was 5 (too eager).
   max_occluded_seconds: 12         # in-frame but structurally occluded → tolerated this long (A1c③)
+  loss_events:                     # (c) deliberate SUSTAINED target-loss for predict-intercept.
+    enabled: false                 #     scenarios enable it (mvp). Blind-predict window + forced
+    per_episode: 2                 #     target evade → target leaves frame >=3s → expert intercepts.
+    dur_range: [5, 12]          #     window length (s); < max_lost_seconds so it re-acquires.
+    min_start_s: 12.0              #     let lock-on settle before the first loss.
+    end_margin_s: 12.0             #     leave room after the last loss to re-acquire + settle.
   towns: ["Town01", "Town02", "Town04", "Town05", "Town10HD"]  # Town06 not in this image
   carla:
     host: "127.0.0.1"  # server runs in the same container (docker: cyh-carla)
@@ -23,6 +29,13 @@ scene:
   distractor_ahead_bias: 0.75       # (legacy layout only; ignored when decorrelate_position on)
   decorrelate_position:             # break the target's geometric-position shortcut (data-fix-spec.md)
     enabled: true                   # L1: target + similar drawn from one symmetric slot band (target random slot)
+    standoff_range: [8, 32]         # §8 (redo): per-episode HORIZONTAL trail distance (UAV behind target).
+                                    #     §10: capped 40→32 so viewing distance stays ~30-40 m (target close).
+                                    #     Randomises the target's forward/depth position in frame → nearer
+                                    #     distractors between UAV & target → decorrelates depth RANK (`nearest`).
+    aim_offset_frac: 0.25           # §9: smooth camera-aim offset as a fraction of viewing distance →
+                                    #     target's IMAGE position spreads like a distractor's (not locked
+                                    #     centre) → decorrelates 'most-central'. 0 = aim exactly at target.
     cluster_band_m: 10.0            # L1: target + look-alikes share this ± slot band (position-decorrelated,
                                     #     ~44% geometry floor — accepted; language-ablation E1 is the real test).
                                     #     10 keeps co-visibility ~64% (6 collided too much → 40%).
@@ -57,10 +70,10 @@ scene:
 
 # Tracking-distance tiers: the UAV maintains ~this altitude (≈ slant distance), which
 # drives the numeric distance in the language ("about 15/30/45 m").
-distance_tiers:                    # UAV altitude above ground = 20-60 m
-  close:    {weight: 0.34, altitude: [20, 30]}
-  suitable: {weight: 0.33, altitude: [35, 45]}
-  long:     {weight: 0.33, altitude: [50, 60]}
+distance_tiers:                    # §10: LOWERED (was 20-60) so viewing distance =
+  close:    {weight: 0.34, altitude: [16, 22]}   # sqrt(standoff²+alt²) lands ~26-42 m →
+  suitable: {weight: 0.33, altitude: [22, 28]}   # a 4 m car projects to ~36-49 px at 512/FOV70
+  long:     {weight: 0.33, altitude: [28, 34]}   # (was ~12 px @ 336/FOV90/54 m → make unreadable)
 
 # Camera depression angle (A1c③). Default steep top-down; a fraction of episodes may
 # use a shallower, lower-altitude oblique view to surface urban side-wall occlusion.
@@ -162,7 +175,8 @@ occlusion:
   max_cover_span_m: 26.0          # covered span must be short (bridge, not tunnel/elevated hwy)
 
 output:
-  rgb_resolution: [336, 336]
+  rgb_resolution: [512, 512]      # §10: 336→512 so small aerial targets get enough pixels
+  fov: 70.0                       # §10: 90→70 (moderate zoom) → make/body readable (~40px @ 30-40m)
   save_depth: false
   save_segmentation: false
   compression: "jpeg85"           # PIL JPEG quality

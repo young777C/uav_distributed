@@ -1,0 +1,30 @@
+    track_seconds_mean: 64.7
+    centering_rate: 0.043467699467269416
+    reacquire_attempts_total: 247
+    reacquire_success_rate: 0.5465587044534413
+    reacquire_timeout_rate: 0.45344129554655865
+    reacquire_lock_wrong_rate: 0.7368421052631579
+    reacquire_convergence_s_mean: 3.447763541927629
+    shortcut_nearest_rate: 0.3009461904569265
+    shortcut_target_central_rate: 0.043467699467269416
+[rollout] wrote /workspace/rollout/eval_out/road_cv_gated.json
+=== [road] 20 ep × 900 on Town05 (ckpt=runs/stage2_v5/stage2_best.pt) --predict-road ===
+[rollout] map=Carla/Maps/Town05 policy=acot-policy-server:5555 episodes=20
+  [car/same_color_diff_shape] target=yellow Nissan Patrol SUV | distractors=4 (similar=2)
+[env] road_pred used on 212 loss ticks
+[rollout] ep0 seed=91000 [FAIL] mis_follow_sus=0.7124463519313304 track_s=23.3
+  [car/same_shape_diff_color] target=brown Mini Cooper | distractors=6 (similar=3)
+[env] road_pred used on 112 loss ticks
+[rollout] ep1 seed=91001 [FAIL] mis_follow_sus=0.8210659898477157 track_s=78.8
+  [car/distinct] target=gray Lincoln sedan | distractors=7 (similar=0)
+[env] road_pred used on 317 loss ticks
+[rollout] ep2 seed=91002 [FAIL] mis_follow_sus=0.6638078902229846 track_s=58.3
+  [car/same_shape_diff_color] target=red Chevrolet Impala | distractors=7 (similar=3)
+[env] road_pred used on 219 loss ticks
+[rollout] ep3 seed=91003 [FAIL] mis_follow_sus=0.93 track_s=30.0
+  [car/same_color_diff_shape] target=gold Mini Cooper | distractors=6 (similar=2)
+[rollout] ep4 seed=91004 [SKIP] mis_follow_sus=None track_s=None
+  [car/same_shape_diff_color] target=dark red Lincoln sedan | distractors=5 (similar=2)
+[env] road_pred used on 271 loss ticks
+[rollout] ep5 seed=91005 [FAIL] mis_follow_sus=0.685214626391097 track_s=62.9
+  [car/same_shape_diff_color] target=red Seat Leon | distractors=7 (similar=2)

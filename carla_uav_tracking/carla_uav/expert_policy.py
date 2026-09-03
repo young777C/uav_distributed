@@ -98,6 +98,7 @@ class ExpertPolicy:
         uav_yaw: float,
         target_visible: bool,
         timestamp: float,
+        look_pos: np.ndarray | None = None,
     ) -> tuple[float, float, float, float]:
         """Compute expert action = PID output + Gaussian noise.
 
@@ -114,7 +115,7 @@ class ExpertPolicy:
             )
         else:
             dx, dy, dz, dyaw = self._pid.compute(
-                target_pos, uav_pos, uav_yaw, target_visible, timestamp
+                target_pos, uav_pos, uav_yaw, target_visible, timestamp, look_pos=look_pos
             )
 
         # Add Gaussian noise for diversity

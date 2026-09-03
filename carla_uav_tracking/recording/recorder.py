@@ -37,6 +37,9 @@ class EpisodeRecorder:
         self._episode_id = episode_id
         self._fps = fps
         self._resolution = resolution
+        # §10: horizontal FOV (deg) — narrowed 90→70 so small aerial targets project to
+        # more pixels (make/body readable). Drives the sensor AND the projection maths below.
+        self._fov = float(scene._config.get("output", {}).get("fov", 90.0))
         self._dt = 1.0 / fps
 
         # Buffers (flushed every N frames)
@@ -154,7 +157,21 @@ class EpisodeRecorder:
                 # Get current states (reflect any recycling)
                 tpos, tvel, tyaw, tspeed = self._scene.get_target_state()
                 dstates = self._scene.get_distractor_states()  # (D, 6)
-                target_visible = True
+
+                # §11 deliberate loss event: at onset kick a strong evade; DURING the window
+                # keep the target sprinting/swerving so it stays off-frame while the expert
+                # flies to INTERCEPT the true (privileged) target (recovery mode) — a genuine
+                # fly-to-intercept demonstration, NOT hover. At window end, force >=2 look-alikes
+                # co-visible so the re-acquisition must use language.
+                win_dur = self._scene.loss_window_onset(elapsed)
+                if win_dur is not None:
+                    self._scene.force_target_evade(elapsed, win_dur)
+                if self._scene.in_loss_window(elapsed):
+                    self._scene.sustain_target_evade(elapsed)
+                elif self._scene.loss_window_offset(elapsed):
+                    self._scene.restore_target_speed()
+                    self._scene.force_covisible_lookalikes(min_n=2)
+                target_visible = True   # §11: expert always servos the true target → intercepts when lost
 
                 # Expert action with perturbation injection
                 action, pert_event = self._scene.expert_action(
@@ -166,6 +183,11 @@ class EpisodeRecorder:
                 action, obs_event = self._scene.check_obstacles(
                     action, drone_state.position, drone_state.yaw, elapsed,
                 )
+
+                # §11: NO hover override — during a loss window the expert flies to intercept
+                # the true target (above, via recovery mode). The target's sustained sprint/
+                # swerve keeps it off-frame; the recorded (off-screen, fly-toward-target) pairs
+                # are the intercept demonstration BC needs (supervise_intercept, spec §3.2/§11).
 
                 # Apply action and move camera BEFORE the tick
                 self._scene.step_drone(action)
@@ -277,7 +299,7 @@ class EpisodeRecorder:
         bp = self._world.get_blueprint_library().find("sensor.camera.rgb")
         bp.set_attribute("image_size_x", str(self._resolution[0]))
         bp.set_attribute("image_size_y", str(self._resolution[1]))
-        bp.set_attribute("fov", "90.0")
+        bp.set_attribute("fov", str(self._fov))
 
         cam_transform = self._scene.drone.get_camera_transform()
         sensor = self._world.spawn_actor(bp, cam_transform)
@@ -311,7 +333,7 @@ class EpisodeRecorder:
         if q[0] <= 0.1:
             return False
         W, H = self._resolution
-        f = W / (2.0 * np.tan(np.radians(90.0) / 2.0))
+        f = W / (2.0 * np.tan(np.radians(self._fov) / 2.0))
         u = f * (q[1] / q[0]) + W / 2.0
         v = f * (-q[2] / q[0]) + H / 2.0
         return 0 <= u < W and 0 <= v < H
@@ -457,6 +479,14 @@ class EpisodeRecorder:
                         chunks=(min(64, n_new), D, 6),
                         compression="gzip", compression_opts=4,
                     )
+                    # (D,) look-alike flags aligned with the D axis (§4.1). Static per
+                    # episode → written once with positions.
+                    try:
+                        sim = self._scene.get_distractor_similar()
+                        if sim is not None and len(sim) == D:
+                            dgrp.create_dataset("similar", data=np.asarray(sim, dtype=np.uint8))
+                    except (AttributeError, RuntimeError):
+                        pass
                 else:
                     ds = dgrp["positions"]
                     ds.resize(total, axis=0)

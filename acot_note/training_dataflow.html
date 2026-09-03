@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ACoT-UAV-Track · 训练数据流详图</title>
+<style>
+  :root{
+    --surface:#fcfcfb; --plane:#f9f9f7; --card:#ffffff;
+    --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+    --grid:#e1e0d9; --rule:#c3c2b7; --ring:rgba(11,11,11,.10);
+    --vision:#2a78d6;   /* 视觉/图像流 */
+    --lang:#4a3aa7;     /* 语言/消歧流 */
+    --geo:#1baf7a;      /* 几何/航点流 */
+    --act:#eb6834;      /* 动作流 */
+    --state:#eda100;    /* 状态流(可见性/机动) */
+    --loss:#e34948;     /* 损失/监督 */
+    --froze:#898781;    /* 冻结基础设施 */
+    --good:#0ca30c;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --surface:#1a1a19; --plane:#0d0d0d; --card:#212120;
+      --ink:#ffffff; --ink2:#c3c2b7; --muted:#898781;
+      --grid:#2c2c2a; --rule:#383835; --ring:rgba(255,255,255,.12);
+      --vision:#3987e5; --lang:#9085e9; --geo:#199e70; --act:#d95926;
+      --state:#c98500; --loss:#e66767; --froze:#898781; --good:#0ca30c;
+    }
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--plane);color:var(--ink);
+    font:14px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+  .wrap{max-width:1180px;margin:0 auto;padding:32px 22px 80px}
+  h1{font-size:26px;margin:0 0 4px;letter-spacing:-.01em}
+  .sub{color:var(--ink2);font-size:14px;margin:0 0 22px}
+  .sub b{color:var(--ink)}
+  code,.mono{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+
+  /* legend */
+  .legend{display:flex;flex-wrap:wrap;gap:8px 16px;padding:12px 14px;margin:0 0 26px;
+    background:var(--card);border:1px solid var(--ring);border-radius:12px}
+  .lg{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--ink2)}
+  .sw{width:13px;height:13px;border-radius:4px;flex:none;box-shadow:0 0 0 1px var(--ring)}
+
+  /* band */
+  .band{background:var(--surface);border:1px solid var(--ring);border-radius:16px;
+    padding:16px 18px 18px;margin:0 0 8px;position:relative}
+  .band-h{display:flex;align-items:baseline;gap:10px;margin:0 0 14px}
+  .band-n{font:600 12px/1 ui-monospace,monospace;color:#fff;background:var(--ink);
+    padding:5px 8px;border-radius:7px;letter-spacing:.02em}
+  .band-t{font-size:16px;font-weight:650;margin:0}
+  .band-d{color:var(--muted);font-size:12.5px;margin-left:auto;text-align:right}
+  .arrow{text-align:center;color:var(--rule);font-size:20px;line-height:1;margin:2px 0}
+
+  .row{display:grid;gap:12px}
+  .row.c2{grid-template-columns:1fr 1fr}
+  .row.c3{grid-template-columns:1fr 1fr 1fr}
+  .row.c4{grid-template-columns:repeat(4,1fr)}
+  @media(max-width:780px){.row.c2,.row.c3,.row.c4{grid-template-columns:1fr}}
+
+  /* card */
+  .card{background:var(--card);border:1px solid var(--ring);border-left:4px solid var(--rule);
+    border-radius:11px;padding:12px 13px}
+  .card.vision{border-left-color:var(--vision)} .card.lang{border-left-color:var(--lang)}
+  .card.geo{border-left-color:var(--geo)} .card.act{border-left-color:var(--act)}
+  .card.state{border-left-color:var(--state)} .card.loss{border-left-color:var(--loss)}
+  .card.froze{border-left-color:var(--froze);background:linear-gradient(0deg,var(--card),var(--card))}
+  .ct{font-weight:650;font-size:13.5px;margin:0 0 3px;display:flex;align-items:center;gap:6px}
+  .ct .tag{font:600 10px/1 ui-monospace,monospace;color:var(--ink2);border:1px solid var(--ring);
+    border-radius:5px;padding:3px 5px;margin-left:auto;font-weight:600}
+  .cd{color:var(--ink2);font-size:12.5px;margin:2px 0 0}
+  .cd .k{color:var(--ink);font-weight:600}
+
+  /* tensor badges */
+  .shapes{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0 0}
+  .shp{font:600 11px/1 ui-monospace,monospace;color:var(--ink);background:var(--plane);
+    border:1px solid var(--ring);border-radius:6px;padding:4px 6px;white-space:nowrap}
+  .shp .d{color:var(--muted);font-weight:500}
+  .shp.v{color:var(--vision)} .shp.l{color:var(--lang)} .shp.g{color:var(--geo)}
+  .shp.a{color:var(--act)} .shp.s{color:var(--state)}
+
+  /* callout */
+  .note{border:1px dashed var(--ring);border-radius:9px;padding:8px 10px;margin:10px 0 0;
+    font-size:12px;color:var(--ink2);background:color-mix(in srgb,var(--card) 88%,transparent)}
+  .note b{color:var(--ink)} .note .pin{color:var(--lang);font-weight:700}
+  .flow-in{font:600 11px/1.4 ui-monospace,monospace;color:var(--muted);margin:6px 0 0}
+  .flow-in .a{color:var(--act)} .flow-in .v{color:var(--vision)} .flow-in .g{color:var(--geo)}
+  .flow-in .l{color:var(--lang)} .flow-in .s{color:var(--state)}
+  .loss-eq{font:600 13px/1.7 ui-monospace,monospace;color:var(--ink);text-align:center;
+    padding:8px;background:var(--plane);border-radius:9px;border:1px solid var(--ring)}
+  .loss-eq .w{color:var(--loss)} .loss-eq .a{color:var(--act)} .loss-eq .g{color:var(--geo)}
+  .loss-eq .s{color:var(--state)} .loss-eq .l{color:var(--lang)}
+  .chip{display:inline-block;font:600 11px/1 ui-monospace,monospace;padding:4px 7px;border-radius:6px;
+    border:1px solid var(--ring);color:var(--ink2);margin:0 4px 4px 0}
+  .foot{color:var(--muted);font-size:12px;margin-top:22px;border-top:1px solid var(--grid);padding-top:12px}
+  .star{color:var(--lang);font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>ACoT-UAV-Track · 训练数据流详图</h1>
+  <p class="sub">从 <b>CARLA 原始视频</b> → <b>冻结 VLM 预计算</b> → <b>样本组装</b> → <b>4 模块前向</b> → <b>多任务损失</b> → <b>优化</b>。
+  张量形状用 <code>mono</code> 徽标标注;<span class="star">紫色 ★ 注释</span>是关键设计细节。Stage-2 联合训练(<code>train/stage2.py</code>)。</p>
+
+  <div class="legend">
+    <span class="lg"><span class="sw" style="background:var(--vision)"></span>视觉 / 图像流</span>
+    <span class="lg"><span class="sw" style="background:var(--lang)"></span>语言 / 消歧流</span>
+    <span class="lg"><span class="sw" style="background:var(--geo)"></span>几何 / 航点流</span>
+    <span class="lg"><span class="sw" style="background:var(--act)"></span>动作流</span>
+    <span class="lg"><span class="sw" style="background:var(--state)"></span>状态流(可见/机动)</span>
+    <span class="lg"><span class="sw" style="background:var(--loss)"></span>损失 / 监督</span>
+    <span class="lg"><span class="sw" style="background:var(--froze)"></span>❄ 冻结基础设施</span>
+  </div>
+
+  <!-- BAND 0 -->
+  <div class="band">
+    <div class="band-h"><span class="band-n">0</span><h2 class="band-t">原始 Episode(CARLA h5)</h2>
+      <span class="band-d">mvp_full_v3 · 67 集 · 每集 1500 帧<br>ep066 缺字段→自动跳过</span></div>
+    <div class="row c4">
+      <div class="card vision"><p class="ct">RGB 视频</p><p class="cd">机载相机(始终瞄准目标)</p>
+        <div class="shapes"><span class="shp v">rgb <span class="d">(1500,336,336,3)</span></span></div></div>
+      <div class="card geo"><p class="ct">目标 & 干扰车 3D</p><p class="cd">世界坐标(含出画期间)</p>
+        <div class="shapes"><span class="shp g">target/t* <span class="d">(1500,3)</span></span><span class="shp g">distractors <span class="d">(1500,D,6)</span></span></div></div>
+      <div class="card act"><p class="ct">专家动作</p><p class="cd">PID(有目标 GT 特权)</p>
+        <div class="shapes"><span class="shp a">action/d* <span class="d">(1500,4)</span></span></div></div>
+      <div class="card state"><p class="ct">相机 & 标注</p><p class="cd">位姿 / 遮挡 / 出画 / 搜索</p>
+        <div class="shapes"><span class="shp s">cam_* · off_screen · occlusion · search_mode</span></div></div>
+    </div>
+  </div>
+  <div class="arrow">↓</div>
+
+  <!-- BAND 1 -->
+  <div class="band">
+    <div class="band-h"><span class="band-n">1</span><h2 class="band-t">冻结 VLM 预计算(逐帧,一次性)</h2>
+      <span class="band-d">7 卡分片 · 跳 GPU1(数据生成)<br>缓存 ~156GB / mode</span></div>
+    <div class="row c3">
+      <div class="card vision"><p class="ct">图像 token 化</p><p class="cd">336×336×3 → ViT patch → <span class="k">10×10=100</span> 网格 token</p></div>
+      <div class="card lang"><p class="ct">语言 prompt(2 种模式)</p>
+        <p class="cd"><span class="k">身份</span> neutralize:"the yellow Jeep Wrangler"(剥方位泄漏)<br>
+        <span class="k">无语言</span> no_language:"Track the target vehicle."</p></div>
+      <div class="card froze"><p class="ct">❄ Qwen3-VL-4B<span class="tag">FROZEN</span></p>
+        <p class="cd">图像+语言在 VLM 内部融合;<span class="k">不训练</span> → 预计算一次、反复复用</p></div>
+    </div>
+    <div class="shapes" style="margin-top:12px">
+      <span class="shp v">vlm_ctx <span class="d">(100, 2560)</span></span>
+      <span class="shp v">vlm_ctx_layers <span class="d">(L=5, 100, 2560)</span></span>
+      <span class="shp"><span class="d">层 = 4,8,12,16,24</span></span>
+    </div>
+    <div class="note"><span class="pin">★ 为什么冻结+缓存</span>:大模型语义直接借用;自有数据仅 66 集,训 VLM 必过拟合。冻结后同一帧特征算一次存盘,训练只读缓存 → 单卡可训、极快。<b>语言已在 VLM 内部融进图像 token</b>(D2 实测 with/without 缓存 cosine 0.47)。</div>
+  </div>
+  <div class="arrow">↓</div>
+
+  <!-- BAND 2 -->
+  <div class="band">
+    <div class="band-h"><span class="band-n">2</span><h2 class="band-t">样本组装 <code>__getitem__</code>(逐样本,stride 3)</h2>
+      <span class="band-d">train 26093 · val 4800<br>1 样本 = 1 帧 + 未来窗口</span></div>
+    <div class="row c3">
+      <div class="card vision"><p class="ct">候选特征 cand_feats</p>
+        <p class="cd">在 VLM 网格上,每辆车的<span class="k">投影框处 pool</span>(目标 + 干扰车)</p>
+        <div class="shapes"><span class="shp v">cand_feats <span class="d">(N, 2560)</span></span><span class="shp l">target_idx <span class="d">(1,)</span></span></div>
+        <div class="note"><span class="pin">★ 候选顺序打乱</span>:原本 target 恒在 idx0 + argmax 平局选最小索引 = 假 mis_follow。打乱使 target_idx 均匀。头<b>排列等变</b> → 训练不变、指标变诚实。</div></div>
+      <div class="card geo"><p class="ct">未来航点 waypoint</p>
+        <p class="cd">目标未来 3D @ <span class="k">1/2/4/6s</span>(相机系)</p>
+        <div class="shapes"><span class="shp g">waypoint <span class="d">(K=4, 3)</span></span><span class="shp s">proprio <span class="d">(5,)</span></span></div></div>
+      <div class="card act"><p class="ct">专家动作块 action</p>
+        <p class="cd">[dx,dy,dz,dyaw]/scale + search_mode,共 <span class="k">H=16</span> 步</p>
+        <div class="shapes"><span class="shp a">action <span class="d">(H=16, 5)</span></span></div></div>
+    </div>
+    <div class="row c3" style="margin-top:12px">
+      <div class="card state"><p class="ct">辅助标签</p>
+        <div class="shapes"><span class="shp s">occ_structural</span><span class="shp s">maneuver</span></div></div>
+      <div class="card loss"><p class="ct">监督掩码</p>
+        <p class="cd"><span class="k">visible / act_supervise</span> · <span class="k">tid_valid</span></p>
+        <div class="note"><span class="pin">★ mask 反转(§3.2)</span>:遮挡帧默认不监督动作(不盲跟);但目标即将重现时反转 → 监督"直飞拦截"动作。</div></div>
+      <div class="card"><p class="ct">课程 tier 标签</p><p class="cd">a(易/少候选)→ c(难/多相似车)</p></div>
+    </div>
+  </div>
+  <div class="arrow">↓ <span style="font-size:12px;color:var(--muted)">collate → batch(B=64):pad ctx→Mmax、cand→Nmax;建 <code>ctx_mask</code>/<code>cand_mask</code></span> ↓</div>
+
+  <!-- BAND 3 -->
+  <div class="band">
+    <div class="band-h"><span class="band-n">3</span><h2 class="band-t">4 个可训练模块 · 前向</h2>
+      <span class="band-d">在冻结 VLM 特征之上<br>共享一个优化器</span></div>
+    <div class="row c2">
+      <div class="card geo"><p class="ct">EAR · 显式动作推理<span class="tag">d256·4L·4H</span></p>
+        <p class="cd">预测<span class="k">目标未来在哪</span>(K=4 航点)。flow-matching 学向量场。</p>
+        <p class="flow-in">in ← <span class="v">vlm_ctx</span> + <span class="s">proprio</span> &nbsp;·&nbsp; out → z_ex(航点引导)</p>
+        <div class="shapes"><span class="shp g">→ waypoints → <b>l_ear</b></span></div></div>
+      <div class="card state"><p class="ct">IAR · 隐式动作推理<span class="tag">d256·n_im8·4H</span></p>
+        <p class="cd">逐 VLM 层 query → <span class="k">8 个隐式 token</span> z_im;附带 2 个辅助头。</p>
+        <p class="flow-in">in ← <span class="v">vlm_ctx_layers(5层)</span> &nbsp;·&nbsp; out → z_im + aux</p>
+        <div class="shapes"><span class="shp s">occ_head → <b>l_vis</b></span><span class="shp s">maneuver_head → <b>l_man</b></span></div></div>
+    </div>
+    <div class="row c2" style="margin-top:12px">
+      <div class="card act"><p class="ct">DiT · 动作头(真正的输出)<span class="tag">d512·32L·8H</span></p>
+        <p class="cd">flow-matching 去噪 16 步动作块;<span class="k">三重 cross-attention</span>(EAR几何 / IAR语义 / VLM上下文,不同频率)。</p>
+        <p class="flow-in">in ← 噪声动作 a_t + t + <span class="g">z_ex</span> + z_im + <span class="v">vlm_ctx</span> + <span class="s">proprio</span></p>
+        <div class="shapes"><span class="shp a">→ v_hat → <b>l_act</b>(visible 掩码)</span></div>
+        <div class="note"><span class="pin">★ staleness 增强</span>:推理时慢系统 S2 引导是"过期"的 → 训练时故意给 z_ex 加降质噪声,让模型对异步鲁棒。</div></div>
+      <div class="card lang"><p class="ct">TargetIDHead(tid)· 语言消歧<span class="tag">d256·4H·drop0.1</span></p>
+        <p class="cd">每辆<span class="k">候选作为 query,cross-attend 100 个 VLM 上下文 token</span> → "语言在说我吗?" → 打分。</p>
+        <p class="flow-in">in ← <span class="v">cand_feats(query)</span> × <span class="l">vlm_ctx(含语言)</span></p>
+        <div class="shapes"><span class="shp l">→ logits (N) → <b>l_tid</b>(CE,tid_valid掩码)</span></div>
+        <div class="note"><span class="pin">★ 唯一 load-bearing 语言信号</span>。用 cross-attn 而非均值池化 → 每车独立"查"语言,不被稀释。<code>mis_follow</code> 测的就是这个头。</div></div>
+    </div>
+  </div>
+  <div class="arrow">↓</div>
+
+  <!-- BAND 4 -->
+  <div class="band">
+    <div class="band-h"><span class="band-n">4</span><h2 class="band-t">多任务损失聚合</h2>
+      <span class="band-d">5 个任务头 → 1 个标量</span></div>
+    <div class="loss-eq">L = <span class="a">L_act</span> + 0.3·<span class="g">L_ear</span> + 0.1·<span class="s">L_vis</span> + 0.1·<span class="s">L_man</span> + 0.5·<span class="l">L_tid</span></div>
+    <div class="note"><span class="pin">★ 为什么这么多头</span>:密集分解监督 = 强迫共享表征编码"目标去哪/是否遮挡/哪辆是目标"等<b>可验证子技能</b>,而非蒙一个捷径;每个中间量都能单独评测(正是这样才查出了位置捷径、指标漏洞)。</div>
+  </div>
+  <div class="arrow">↓</div>
+
+  <!-- BAND 5 -->
+  <div class="band">
+    <div class="band-h"><span class="band-n">5</span><h2 class="band-t">优化 & 训练控制</h2>
+      <span class="band-d">50 epoch · 稳定化四件套</span></div>
+    <div class="row c2">
+      <div class="card lang"><p class="ct">AdamW · 双参数组</p>
+        <p class="cd">tid 头 <span class="k">wd=1e-2</span>(强正则),其余 <span class="k">wd=1e-4</span>。<br>+ 余弦 LR 衰减 + grad_clip 1.0。</p>
+        <div class="note"><span class="pin">★ 稳住薄语言信号</span>:tid 头在 66 集上过拟合快(val 早峰晚衰)→ dropout + 独立高 wd + 余弦 LR 把有语言臂从"漂回 chance"钉成稳定收敛(gap 3pp→15pp)。</div></div>
+      <div class="card loss"><p class="ct">课程 & 评测 & 存档</p>
+        <p class="cd">课程 <span class="k">a→c</span> 逐 epoch 重采样(易→难)。<br>评测:<span class="k">mis_follow</span>(tid argmax vs target_idx)+ act_mse。</p>
+        <div class="note"><span class="pin">★ best.pt 按 mis_follow 选</span>(原按 act_mse → 存下语言最差 epoch)。选点必须对齐你关心的指标。</div></div>
+    </div>
+    <div style="margin-top:12px">
+      <span class="chip" style="border-left:3px solid var(--good);color:var(--good)">✓ 深度捷径已闭合(nearest 31→80%)</span>
+      <span class="chip" style="border-left:3px solid var(--good);color:var(--good)">✓ 指标诚实(候选打乱)</span>
+      <span class="chip" style="border-left:3px solid var(--good);color:var(--good)">✓ 语言 load-bearing(gap ~15pp)</span>
+      <span class="chip" style="border-left:3px solid var(--state);color:var(--state)">⚠ 残留居中捷径(floor 54%)</span>
+    </div>
+  </div>
+
+  <p class="foot">冻结 VLM(❄)= Qwen3-VL-4B-Instruct,cond_dim 2560。可训练模块 4 个(EAR/IAR/DiT/tid)→ 监督输出头 5 个 → 损失 5 项。
+  形状:N=候选数,K=4 航点,H=16 动作步,L=5 缓存层,B=64。源:<code>train/{stage2,dit,ear,iar,dataset_stage2,backbone_kv}.py</code>。</p>
+</div>
+</body>
+</html>

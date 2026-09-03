@@ -88,6 +88,21 @@ class ManeuverInjector:
                                random.uniform(1.0, 2.0))
         return None
 
+    def force_evade(self, vehicle, timestamp: float, duration: float) -> ManeuverEvent | None:
+        """Deliberately induce a strong deviation (speed up + lane change) for `duration`s.
+        Used by the LossEventScheduler to push the target out of frame during a blind
+        window. Speed is auto-restored by maybe_inject once the duration elapses."""
+        if self._tm is None or vehicle is None:
+            return None
+        self._safe(lambda: self._tm.vehicle_percentage_speed_difference(vehicle, -60.0))
+        self._safe(lambda: self._tm.force_lane_change(vehicle, random.choice([True, False])))
+        ev = ManeuverEvent(type=ManeuverType.ACCELERATION, timestamp=timestamp,
+                           duration=duration, metadata={"forced": True})
+        self._active = ev
+        self._last = timestamp
+        self._history.append(ev)
+        return ev
+
     # ------------------------------------------------------------------
     def _start(self, vehicle, t, mtype, action, duration) -> ManeuverEvent | None:
         if not self._safe(action):

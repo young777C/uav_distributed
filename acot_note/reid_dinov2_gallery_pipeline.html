@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ACoT-VLA 闭环流水线 · crop-DINOv2 + K2 图库 + 置信门控</title>
+<style>
+  :root{
+    --surface:#fcfcfb; --page:#f9f9f7;
+    --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+    --hair:#e1e0d9; --ring:rgba(11,11,11,.14);
+    --accent:#2a78d6; --accent-wash:#eaf2fd; --accent-ink:#184f95;
+    --good:#006300; --good-wash:#e7f2e7;
+    --frozen:#eeede9; --frozen-ink:#52514e;
+    --bypass:#f0efec; --bypass-ink:#a7a6a0;
+    --box:#ffffff; --edge:#8f8d86;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --surface:#1a1a19; --page:#0d0d0d;
+      --ink:#fff; --ink2:#c3c2b7; --muted:#898781;
+      --hair:#2c2c2a; --ring:rgba(255,255,255,.16);
+      --accent:#3987e5; --accent-wash:#14243a; --accent-ink:#9ec5f4;
+      --good:#0ca30c; --good-wash:#13260f;
+      --frozen:#242423; --frozen-ink:#c3c2b7;
+      --bypass:#1e1e1d; --bypass-ink:#6b6a64;
+      --box:#232322; --edge:#6f6e68;
+    }
+  }
+  body{margin:0;background:var(--page);color:var(--ink);
+    font-family:system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.5}
+  .wrap{max-width:1040px;margin:0 auto;padding:30px 20px 48px}
+  h1{font-size:20px;margin:0 0 4px;letter-spacing:-.01em}
+  .sub{color:var(--ink2);font-size:13px;margin:0 0 18px}.sub b{color:var(--ink)}
+  .board{background:var(--surface);border:1px solid var(--hair);border-radius:14px;padding:10px 8px}
+  svg{width:100%;height:auto;display:block}
+  .nm{font:600 12.5px system-ui;fill:var(--ink)}
+  .no{font:11px system-ui;fill:var(--ink2)}
+  .nm.a{fill:var(--accent-ink)} .nm.g{fill:var(--good)} .nm.b{fill:var(--bypass-ink)}
+  .el{font:600 10.5px system-ui;fill:var(--muted)}
+  .laneL{font:700 10.5px system-ui;fill:var(--muted)} .laneL.a{fill:var(--accent-ink)}
+  .tag{font:700 9px system-ui;fill:#fff}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;margin:14px 6px 0;font-size:11.5px;color:var(--ink2)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .sw{width:12px;height:12px;border-radius:4px;border:1px solid var(--ring);display:inline-block}
+  .cards{margin-top:18px;display:grid;grid-template-columns:1.3fr 1fr;gap:14px}
+  @media(max-width:740px){.cards{grid-template-columns:1fr}}
+  .card{border:1px solid var(--hair);border-radius:12px;padding:15px 17px;background:var(--box);font-size:12.5px;color:var(--ink2)}
+  .card b{color:var(--ink)} .card h3{margin:0 0 10px;font-size:13.5px;color:var(--ink)}
+  .card.acc{border-color:var(--accent);background:var(--accent-wash)} .card.acc h3{color:var(--accent-ink)}
+  .step{display:flex;gap:9px;margin:8px 0}
+  .step .k{flex:0 0 20px;height:20px;border-radius:6px;background:var(--accent);color:#fff;font-size:11px;font-weight:700;
+    display:flex;align-items:center;justify-content:center}
+  .metric{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
+  .metric .big{font-size:28px;font-weight:700;letter-spacing:-.02em;color:var(--good)}
+  .metric .old{color:var(--muted);text-decoration:line-through;font-size:18px} .metric .to{color:var(--muted)}
+  .delta{display:inline-block;background:var(--good-wash);color:var(--good);font-size:11.5px;font-weight:700;
+    padding:2px 9px;border-radius:999px;margin-top:8px}
+  .mrow{font-size:12px;margin-top:12px;border-top:1px solid var(--hair);padding-top:9px}
+  .mrow div{display:flex;justify-content:space-between;padding:3px 0;font-variant-numeric:tabular-nums}
+  .mrow .win{color:var(--ink);font-weight:600}
+  code{background:var(--frozen);padding:1px 5px;border-radius:4px;color:var(--frozen-ink);font-size:11px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>ACoT-VLA 闭环流水线 — crop-DINOv2 + K2 图库 + 置信门控</h1>
+  <p class="sub">控制路径（<b>WHERE+HOW</b>）不变；<b>身份路径（WHICH）</b>从「单帧语言」换成「<b>crop-DINOv2 → K2 图库 → 门控</b>」。
+    闭环 <b>SR 0 → 0.105</b>、mis_follow <b>0.70 → 0.40</b>（不提分辨率、不重训）。</p>
+
+  <div class="board">
+  <svg viewBox="0 0 980 330" role="img" aria-label="closed-loop pipeline">
+    <defs>
+      <marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 z" fill="var(--edge)"/></marker>
+      <marker id="ahb" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 z" fill="var(--accent)"/></marker>
+      <marker id="ahg" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 z" fill="var(--good)"/></marker>
+    </defs>
+
+    <!-- lane labels -->
+    <text class="laneL" x="286" y="52">控制路径 · 不变</text>
+    <text class="laneL a" x="286" y="150">身份路径（WHICH）· ★新</text>
+
+    <!-- ===== EDGES ===== -->
+    <g fill="none" stroke="var(--edge)" stroke-width="1.6">
+      <path d="M118,86 H150" marker-end="url(#ah)"/>
+      <path d="M118,120 H150" marker-end="url(#ah)"/>
+      <path d="M256,86 H636" marker-end="url(#ah)"/>            <!-- VLM → 控制/动作 -->
+    </g>
+    <path d="M201,150 V172 H286 V172" fill="none" stroke="var(--edge)" stroke-width="1.6"/>
+    <path d="M201,150 V186 H286" fill="none" stroke="var(--edge)" stroke-width="1.6" marker-end="url(#ah)"/> <!-- VLM → 候选 -->
+
+    <!-- WHICH chain (accent) -->
+    <g fill="none" stroke="var(--accent)" stroke-width="1.8">
+      <path d="M376,207 H400" marker-end="url(#ahb)"/>
+      <path d="M478,207 H502" marker-end="url(#ahb)"/>
+      <path d="M590,207 H614" marker-end="url(#ahb)"/>
+      <path d="M726,207 H750" marker-end="url(#ahb)"/>
+    </g>
+    <!-- WHICH → control (dashed: 认定车 → z_ex 驱动控制) -->
+    <path d="M806,186 V118 H636" fill="none" stroke="var(--good)" stroke-width="1.7" stroke-dasharray="5 3" marker-end="url(#ahg)"/>
+    <text class="el" x="640" y="112">认定车 → z_ex 驱动控制</text>
+    <!-- control → 动作 -->
+    <path d="M844,66 V44" fill="none" stroke="var(--good)" stroke-width="1.8" marker-end="url(#ahg)"/>
+
+    <!-- ===== NODES ===== -->
+    <!-- inputs -->
+    <g><rect x="16" y="70" width="102" height="32" rx="9" fill="var(--box)" stroke="var(--ring)" stroke-dasharray="4 3"/><text class="nm" x="30" y="90">RGB 512²</text></g>
+    <g><rect x="16" y="104" width="102" height="32" rx="9" fill="var(--box)" stroke="var(--ring)" stroke-dasharray="4 3"/><text class="nm" x="48" y="124">语言</text></g>
+
+    <!-- VLM -->
+    <g><rect x="150" y="60" width="106" height="92" rx="10" fill="var(--frozen)" stroke="var(--ring)"/>
+       <rect x="194" y="52" width="52" height="15" rx="7" fill="var(--muted)"/><text class="tag" x="201" y="63">❄ 冻结</text>
+       <text class="nm" x="167" y="102">Qwen3-VL</text><text class="nm" x="167" y="120">4B</text><text class="no" x="167" y="139">ctx+网格</text></g>
+
+    <!-- control lane (compressed, unchanged) -->
+    <g><rect x="636" y="58" width="330" height="52" rx="10" fill="var(--good-wash)" stroke="var(--good)"/>
+       <text class="nm g" x="652" y="82">控制（不变）: z_im + DiT → 动作</text>
+       <text class="no" x="652" y="99">vlm_ctx / IAR z_im / z_ex → DiT　（EAR 旁路）</text></g>
+    <g><rect x="770" y="12" width="150" height="32" rx="9" fill="var(--box)" stroke="var(--ring)" stroke-dasharray="4 3"/><text class="nm" x="786" y="32">动作 dx,dy,dz,dyaw</text></g>
+
+    <!-- WHICH chain -->
+    <g><rect x="286" y="186" width="90" height="42" rx="10" fill="var(--box)" stroke="var(--ring)"/><text class="nm" x="302" y="205">候选框</text><text class="no" x="302" y="219">GT位·打乱</text></g>
+    <g><rect x="400" y="186" width="78" height="42" rx="10" fill="var(--accent-wash)" stroke="var(--accent)"/>
+       <rect x="430" y="179" width="34" height="14" rx="7" fill="var(--accent)"/><text class="tag" x="436" y="189">★新</text>
+       <text class="nm a" x="414" y="211">Crop</text></g>
+    <g><rect x="502" y="186" width="88" height="42" rx="10" fill="var(--accent-wash)" stroke="var(--accent)"/>
+       <rect x="556" y="179" width="20" height="14" rx="7" fill="var(--frozen)" stroke="var(--ring)"/><text class="tag" x="561" y="189" fill="var(--frozen-ink)">❄</text>
+       <text class="nm a" x="515" y="211">DINOv2</text></g>
+    <g><rect x="614" y="186" width="112" height="42" rx="10" fill="var(--accent-wash)" stroke="var(--accent)"/>
+       <rect x="690" y="179" width="34" height="14" rx="7" fill="var(--accent)"/><text class="tag" x="696" y="189">★新</text>
+       <text class="nm a" x="626" y="205">K=2 图库</text><text class="no" x="626" y="219">认哪辆</text></g>
+    <g><rect x="750" y="186" width="120" height="42" rx="10" fill="var(--good-wash)" stroke="var(--good)"/>
+       <rect x="834" y="179" width="30" height="14" rx="7" fill="var(--good)"/><text class="tag" x="840" y="189">③</text>
+       <text class="nm g" x="762" y="205">承诺+门控</text><text class="no" x="762" y="219">低margin→不飞</text></g>
+
+    <!-- outcome -->
+    <g><rect x="286" y="272" width="584" height="42" rx="10" fill="var(--good-wash)" stroke="var(--good)" stroke-width="1.4"/>
+       <text class="nm g" x="304" y="298">认对车 → lock_wrong 0.74→0.49 · mis_follow 0.70→0.40 · SR 0 → 0.105</text></g>
+    <path d="M578,228 V272" fill="none" stroke="var(--good)" stroke-width="1.8" marker-end="url(#ahg)"/> <!-- chain → outcome -->
+
+  </svg>
+  </div>
+
+  <div class="legend">
+    <span><i class="sw" style="background:var(--accent-wash);border-color:var(--accent)"></i>★新增 · 认车(WHICH)</span>
+    <span><i class="sw" style="background:var(--good-wash);border-color:var(--good)"></i>门控 / 控制 / 结果</span>
+    <span><i class="sw" style="background:var(--frozen)"></i>❄ 冻结</span>
+    <span><i class="sw" style="background:var(--box)"></i>既有(不变)</span>
+    <span><i class="sw" style="background:transparent;border-style:dashed"></i>WHICH→控制</span>
+  </div>
+
+  <div class="cards">
+    <div class="card acc">
+      <h3>为什么这样设计（修掉「0.58 墙」的三个正交子问题）</h3>
+      <div class="step"><span class="k">①</span><div><b>特征可分性</b> — 旧法把 24px 车池化成 VLM 网格 ~1 格（混背景/语义），look-alike 余弦 0.877。<b>Crop→DINOv2</b> 给同样像素 ~196 个实例判别 token → 0.61（分得开）。</div></div>
+      <div class="step"><span class="k">②</span><div><b>视角鲁棒性</b> — DINOv2 视角敏感，单模板对不上重现新角度。<b>K=2 图库</b>存多视角、匹配最像的 → 兑现可分性。</div></div>
+      <div class="step"><span class="k">③</span><div><b>控制耦合</b> — reid 认车驱动控制时认错→飞错车丢目标。<b>置信门控</b>：margin 低时不飞、沿高置信轨迹 dead-reckon。</div></div>
+    </div>
+
+    <div class="card">
+      <h3>闭环 SR 阶梯（19 集配对）</h3>
+      <div class="metric"><span style="color:var(--muted);font-size:12px">SR</span><span class="old">0.00</span><span class="to">→</span><span class="big">0.105</span></div>
+      <span class="delta">▲ 全线首个非零 · 可部署版追平 GT-WHERE ≈ 上界 0.11</span>
+      <div class="mrow">
+        <div style="color:var(--muted)"><span>配置（SR / mis / lockW）</span><span></span></div>
+        <div><span>WHERE/WM 全部(含 road_oracle)</span><span>0 / .72 / .74</span></div>
+        <div><span>cv + xattn(单帧语言)</span><span>0 / .70 / .74</span></div>
+        <div class="win"><span>cv + reid DINOv2·K2</span><span>.105 / .40 / .57</span></div>
+        <div><span>track + reid(可部署·无门控)</span><span>.053 / .36 / .49</span></div>
+        <div class="win"><span>track + reid + ③门控(全可部署)</span><span>.105 / .39 / .59</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -17,8 +17,12 @@ sys.exit(0 if s.connect_ex(('127.0.0.1',$PORT))==0 else 1)" 2>/dev/null
 ensure_server() {
     if port_up; then return 0; fi
     echo "  [server] port $PORT down — launching CARLA (gpu $GPU, Epic)..."
+    # -graphicsadapter selects the Vulkan render GPU. CARLA 0.9.15 renders via
+    # Vulkan, which IGNORES CUDA_VISIBLE_DEVICES — without -graphicsadapter it
+    # always renders on physical GPU0 (the training GPU). Pin it to $GPU.
     (cd "${CARLA_ROOT:-/home/carla}" && CUDA_VISIBLE_DEVICES="$GPU" nohup \
-        ./CarlaUE4.sh -RenderOffScreen -carla-rpc-port="$PORT" -quality-level=Epic -nosound \
+        ./CarlaUE4.sh -RenderOffScreen -carla-rpc-port="$PORT" -quality-level=Epic \
+        -nosound -graphicsadapter="$GPU" \
         >/tmp/carla_server_${PORT}.log 2>&1 &)
     for _ in $(seq 1 45); do
         if port_up; then echo "  [server] up on $PORT"; sleep 2; return 0; fi

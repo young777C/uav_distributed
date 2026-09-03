@@ -1,0 +1,479 @@
+{
+  "verdict": "APPROVED",
+  "round": 5,
+  "dir": "/nvidia/hque/data/carla_data/mvp_full",
+  "n_episodes": 62,
+  "integrity": {
+    "ok": true,
+    "problems": []
+  },
+  "checks": {
+    "leak_floor": {
+      "value": 0.6256,
+      "status": "pass",
+      "why": "position-only MLP mis_follow; low => geometry solves target selection => language not load-bearing"
+    },
+    "covis": {
+      "value": 0.9407,
+      "status": "pass",
+      "why": "co-visible look-alikes force the model to disambiguate"
+    },
+    "offscreen": {
+      "value": 0.0602,
+      "status": "pass",
+      "why": "some loss needed for recovery skill; too much = untrackable"
+    },
+    "recovery": {
+      "value": 0.7419,
+      "status": "pass",
+      "why": "fraction of episodes with a >=3s loss that is re-acquired"
+    },
+    "jitter": {
+      "value": 0.5028,
+      "status": "pass",
+      "why": "camera yaw JERK (|d2yaw|, deg/frame^2) during occlusion/off-screen; jerk (not rate) so a smooth fast pan is not flagged, only oscillating shake is"
+    }
+  },
+  "leak_meta": {
+    "hard_train": 7419,
+    "hard_val": 3742,
+    "avg_candidates": 4.43
+  },
+  "changes_requested": [],
+  "per_episode": [
+    {
+      "ep": "episode_000000.h5",
+      "T": 686,
+      "covis_frac": 0.987,
+      "off_frac": 0.013,
+      "recovered": false
+    },
+    {
+      "ep": "episode_000001.h5",
+      "T": 1500,
+      "covis_frac": 0.989,
+      "off_frac": 0.011,
+      "recovered": false
+    },
+    {
+      "ep": "episode_000002.h5",
+      "T": 1500,
+      "covis_frac": 0.975,
+      "off_frac": 0.023,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000003.h5",
+      "T": 1500,
+      "covis_frac": 0.866,
+      "off_frac": 0.036,
+      "recovered": false
+    },
+    {
+      "ep": "episode_000004.h5",
+      "T": 1500,
+      "covis_frac": 0.963,
+      "off_frac": 0.037,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000005.h5",
+      "T": 1500,
+      "covis_frac": 0.738,
+      "off_frac": 0.024,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000006.h5",
+      "T": 1500,
+      "covis_frac": 0.953,
+      "off_frac": 0.021,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000007.h5",
+      "T": 1500,
+      "covis_frac": 0.96,
+      "off_frac": 0.04,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000008.h5",
+      "T": 1500,
+      "covis_frac": 0.817,
+      "off_frac": 0.081,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000009.h5",
+      "T": 1500,
+      "covis_frac": 0.94,
+      "off_frac": 0.06,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000010.h5",
+      "T": 1500,
+      "covis_frac": 0.943,
+      "off_frac": 0.057,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000011.h5",
+      "T": 600,
+      "covis_frac": 0.903,
+      "off_frac": 0.097,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000012.h5",
+      "T": 1500,
+      "covis_frac": 0.445,
+      "off_frac": 0.062,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000013.h5",
+      "T": 1500,
+      "covis_frac": 0.939,
+      "off_frac": 0.061,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000014.h5",
+      "T": 1500,
+      "covis_frac": 0.977,
+      "off_frac": 0.021,
+      "recovered": false
+    },
+    {
+      "ep": "episode_000015.h5",
+      "T": 1500,
+      "covis_frac": 0.956,
+      "off_frac": 0.044,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000016.h5",
+      "T": 1500,
+      "covis_frac": 0.087,
+      "off_frac": 0.063,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000017.h5",
+      "T": 1500,
+      "covis_frac": 0.926,
+      "off_frac": 0.074,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000018.h5",
+      "T": 1500,
+      "covis_frac": 0.979,
+      "off_frac": 0.021,
+      "recovered": false
+    },
+    {
+      "ep": "episode_000019.h5",
+      "T": 1500,
+      "covis_frac": 0.916,
+      "off_frac": 0.083,
+      "recovered": false
+    },
+    {
+      "ep": "episode_000020.h5",
+      "T": 1500,
+      "covis_frac": 0.763,
+      "off_frac": 0.127,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000021.h5",
+      "T": 1500,
+      "covis_frac": 0.869,
+      "off_frac": 0.119,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000022.h5",
+      "T": 1500,
+      "covis_frac": 0.932,
+      "off_frac": 0.068,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000023.h5",
+      "T": 1500,
+      "covis_frac": 0.98,
+      "off_frac": 0.02,
+      "recovered": false
+    },
+    {
+      "ep": "episode_000024.h5",
+      "T": 1500,
+      "covis_frac": 0.975,
+      "off_frac": 0.023,
+      "recovered": false
+    },
+    {
+      "ep": "episode_000025.h5",
+      "T": 1500,
+      "covis_frac": 0.785,
+      "off_frac": 0.031,
+      "recovered": false
+    },
+    {
+      "ep": "episode_000026.h5",
+      "T": 1500,
+      "covis_frac": 0.633,
+      "off_frac": 0.034,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000027.h5",
+      "T": 1500,
+      "covis_frac": 0.786,
+      "off_frac": 0.076,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000028.h5",
+      "T": 1500,
+      "covis_frac": 0.976,
+      "off_frac": 0.019,
+      "recovered": false
+    },
+    {
+      "ep": "episode_000029.h5",
+      "T": 1500,
+      "covis_frac": 0.928,
+      "off_frac": 0.072,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000030.h5",
+      "T": 1500,
+      "covis_frac": 0.907,
+      "off_frac": 0.087,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000031.h5",
+      "T": 1500,
+      "covis_frac": 0.912,
+      "off_frac": 0.087,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000032.h5",
+      "T": 1499,
+      "covis_frac": 0.907,
+      "off_frac": 0.093,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000033.h5",
+      "T": 1041,
+      "covis_frac": 0.793,
+      "off_frac": 0.207,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000034.h5",
+      "T": 1500,
+      "covis_frac": 0.881,
+      "off_frac": 0.087,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000035.h5",
+      "T": 1500,
+      "covis_frac": 0.932,
+      "off_frac": 0.066,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000036.h5",
+      "T": 1500,
+      "covis_frac": 0.895,
+      "off_frac": 0.105,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000037.h5",
+      "T": 1500,
+      "covis_frac": 0.953,
+      "off_frac": 0.047,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000038.h5",
+      "T": 1500,
+      "covis_frac": 0.861,
+      "off_frac": 0.134,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000039.h5",
+      "T": 1500,
+      "covis_frac": 0.946,
+      "off_frac": 0.049,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000040.h5",
+      "T": 1500,
+      "covis_frac": 0.944,
+      "off_frac": 0.056,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000041.h5",
+      "T": 1500,
+      "covis_frac": 0.889,
+      "off_frac": 0.109,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000042.h5",
+      "T": 358,
+      "covis_frac": 0.983,
+      "off_frac": 0.014,
+      "recovered": false
+    },
+    {
+      "ep": "episode_000043.h5",
+      "T": 1500,
+      "covis_frac": 0.908,
+      "off_frac": 0.092,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000044.h5",
+      "T": 1500,
+      "covis_frac": 0.947,
+      "off_frac": 0.052,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000045.h5",
+      "T": 1500,
+      "covis_frac": 0.905,
+      "off_frac": 0.095,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000046.h5",
+      "T": 1500,
+      "covis_frac": 0.975,
+      "off_frac": 0.025,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000047.h5",
+      "T": 1500,
+      "covis_frac": 0.909,
+      "off_frac": 0.089,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000048.h5",
+      "T": 1500,
+      "covis_frac": 0.795,
+      "off_frac": 0.045,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000049.h5",
+      "T": 1500,
+      "covis_frac": 0.933,
+      "off_frac": 0.067,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000050.h5",
+      "T": 1500,
+      "covis_frac": 0.963,
+      "off_frac": 0.036,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000051.h5",
+      "T": 1500,
+      "covis_frac": 0.75,
+      "off_frac": 0.055,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000052.h5",
+      "T": 1500,
+      "covis_frac": 0.953,
+      "off_frac": 0.047,
+      "recovered": false
+    },
+    {
+      "ep": "episode_000053.h5",
+      "T": 1500,
+      "covis_frac": 0.908,
+      "off_frac": 0.091,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000054.h5",
+      "T": 1500,
+      "covis_frac": 0.923,
+      "off_frac": 0.065,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000055.h5",
+      "T": 1500,
+      "covis_frac": 0.893,
+      "off_frac": 0.031,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000056.h5",
+      "T": 1500,
+      "covis_frac": 0.939,
+      "off_frac": 0.061,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000057.h5",
+      "T": 1218,
+      "covis_frac": 0.718,
+      "off_frac": 0.006,
+      "recovered": false
+    },
+    {
+      "ep": "episode_000058.h5",
+      "T": 1500,
+      "covis_frac": 0.975,
+      "off_frac": 0.025,
+      "recovered": false
+    },
+    {
+      "ep": "episode_000059.h5",
+      "T": 1500,
+      "covis_frac": 0.887,
+      "off_frac": 0.113,
+      "recovered": true
+    },
+    {
+      "ep": "episode_000060.h5",
+      "T": 1500,
+      "covis_frac": 0.943,
+      "off_frac": 0.054,
+      "recovered": false
+    },
+    {
+      "ep": "episode_000061.h5",
+      "T": 1500,
+      "covis_frac": 0.979,
+      "off_frac": 0.021,
+      "recovered": false
+    }
+  ]
+}

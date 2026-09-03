@@ -83,18 +83,32 @@ class DiT(nn.Module):
 
 
 class TargetIDHead(nn.Module):
-    """Score each candidate box as 'the referred target' given a language/context
-    summary. Trained by cross-entropy over candidates (L_target_id)."""
+    """Score each candidate box as 'the referred target'. Each candidate (query)
+    CROSS-ATTENDS to the full VLM context tokens (which have language fused in per
+    D2) so it can look up whether the language describes it — replacing the old
+    mean-pooled ctx summary that diluted the localized language signal. Trained by
+    cross-entropy over candidates (L_target_id)."""
 
-    def __init__(self, cand_dim, ctx_dim, d=256):
+    def __init__(self, cand_dim, ctx_dim, d=256, n_heads=4, dropout=0.1):
         super().__init__()
-        self.cand = nn.Linear(cand_dim, d)
-        self.ctx = nn.Linear(ctx_dim, d)
-        self.score = nn.Sequential(nn.GELU(), nn.Linear(d, 1))
+        self.q = nn.Linear(cand_dim, d)
+        self.k = nn.Linear(ctx_dim, d)
+        self.v = nn.Linear(ctx_dim, d)
+        self.attn = nn.MultiheadAttention(d, n_heads, batch_first=True, dropout=dropout)
+        self.norm = nn.LayerNorm(d)
+        # dropout regularizes this small head: on ~66-episode data its val mis_follow
+        # peaked ~ep5 then drifted back toward chance (E1 on mvp_full_v3 overfit).
+        self.score = nn.Sequential(nn.GELU(), nn.Linear(d, d), nn.GELU(),
+                                   nn.Dropout(dropout), nn.Linear(d, 1))
 
-    def forward(self, cand_feats, ctx_vec, cand_mask=None):
-        """cand_feats (B,N,cand_dim), ctx_vec (B,ctx_dim). Returns logits (B,N)."""
-        s = self.score(self.cand(cand_feats) * self.ctx(ctx_vec)[:, None, :]).squeeze(-1)
+    def forward(self, cand_feats, vlm_ctx, ctx_mask=None, cand_mask=None):
+        """cand_feats (B,N,cand_dim); vlm_ctx (B,M,ctx_dim); ctx_mask (B,M) True=valid.
+        Returns logits (B,N)."""
+        q = self.q(cand_feats)                                  # (B,N,d)
+        k = self.k(vlm_ctx); v = self.v(vlm_ctx)                # (B,M,d)
+        kpm = (~ctx_mask) if ctx_mask is not None else None     # key_padding_mask: True=ignore
+        a, _ = self.attn(q, k, v, key_padding_mask=kpm)         # each cand attends to ctx tokens
+        s = self.score(self.norm(a)).squeeze(-1)                # (B,N)
         if cand_mask is not None:
             s = s.masked_fill(~cand_mask, float("-inf"))
         return s

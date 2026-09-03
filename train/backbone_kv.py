@@ -130,7 +130,7 @@ def precompute_multilayer(cfg, layers, shard=0, num_shards=1, device=None):
                     per_frame.append(np.stack([_pool_grid(feats[L][0], g) for L in used]))
             if not per_frame or used is None:
                 continue
-            ctx_arr = np.stack(per_frame).astype(np.float32)
+            ctx_arr = np.stack(per_frame).astype(np.float16)         # fp16: half disk, VLM feats tolerate it
             np.save(out.with_name(out.stem + ".ctx.npy"), ctx_arr)   # uncompressed -> mmap-ready
             np.savez(out, frames=np.array(frames, np.int64),         # slim meta (no ctx)
                      grid=np.array([g, g], np.int64),

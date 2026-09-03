@@ -8,6 +8,7 @@ multiple target classes (car / motorcycle / scooter / bicycle / pedestrian).
 
 from __future__ import annotations
 
+import os
 import random
 import time
 from typing import Any
@@ -15,10 +16,17 @@ from typing import Any
 import carla
 import numpy as np
 
+
+def _tm_port() -> int:
+    """TrafficManager port. Distinct per parallel worker (set via CARLA_TM_PORT) so
+    concurrent generators on the same host don't share/clobber one TM on port 8000."""
+    return int(os.environ.get("CARLA_TM_PORT", "8000"))
+
 from carla_uav.drone import KinematicDrone
 from carla_uav.expert_policy import ExpertPolicy
 from carla_uav.safety import SafetyMonitor
 from targets.maneuver_injector import ManeuverConfig, ManeuverInjector
+from targets.loss_event_scheduler import LossEventScheduler
 from targets.vehicle_target import PedestrianTarget, VehicleTarget
 from scene.language_generator import LanguageGenerator, VEHICLE_CLASSES, COLOR_RGB
 
@@ -72,7 +80,7 @@ class SceneManager:
             seed = int(seed)
             random.seed(seed)
             np.random.seed(seed % (2**32))
-        tm = self._client.get_trafficmanager(8000)
+        tm = self._client.get_trafficmanager(_tm_port())
         tm.set_synchronous_mode(True)
         # Official generate_traffic.py settings → calm, rule-abiding traffic.
         tm.set_global_distance_to_leading_vehicle(2.5)
@@ -111,6 +119,25 @@ class SceneManager:
         tier_cfg = self._config.get("distance_tiers", {})
         self._distance_tier = self._pick_distance_tier(tier_cfg)
         self._tier_alt = tier_cfg.get(self._distance_tier, {}).get("altitude", [24, 32])
+        # §8 (redo): per-episode HORIZONTAL tracking standoff (metres the UAV TRAILS the
+        # target — applied in expert_action) → randomises the target's forward/depth position
+        # in the frame → decorrelates its depth RANK. NOT altitude (that only scales absolute
+        # depth uniformly, leaving the rank — the actual `nearest` shortcut — unchanged).
+        _dec = self._config.get("scene", {}).get("decorrelate_position", {})
+        if _dec.get("enabled", False):
+            sr = _dec.get("standoff_range", [8.0, 40.0])
+            self._tracking_standoff = float(random.uniform(float(sr[0]), float(sr[1])))
+            # §9: smooth per-episode camera-AIM offset so the target is NOT locked at image
+            # centre → decorrelates 'most-central'. The aim point = target + a ground-plane
+            # offset from two low-freq sinusoids (random per-episode phase/freq) whose
+            # amplitude scales with viewing distance (constant IMAGE spread ~aim_frac,
+            # target stays in frame). Smooth + independent of maneuver/loss events (§9.3.5).
+            self._aim_frac = float(_dec.get("aim_offset_frac", 0.32))
+            self._aim_fx = random.uniform(0.04, 0.11); self._aim_px = random.uniform(0.0, 6.283)
+            self._aim_fy = random.uniform(0.04, 0.11); self._aim_py = random.uniform(0.0, 6.283)
+        else:
+            self._tracking_standoff = 0.0
+            self._aim_frac = 0.0
 
         # A1c③ — decide per-episode whether to (a) spawn the target so it drives into an
         # overhead occluder (in-frame structural occlusion), and (b) use an oblique,
@@ -170,9 +197,14 @@ class SceneManager:
         self._maneuver_injector = ManeuverInjector(
             ManeuverConfig(**{k: v for k, v in man_cfg.items()
                               if k in ManeuverConfig.__dataclass_fields__}),
-            traffic_manager=self._client.get_trafficmanager(8000),
+            traffic_manager=self._client.get_trafficmanager(_tm_port()),
         )
         self._maneuver_injector.reset()
+
+        # -- (c) deliberate SUSTAINED loss events for predict-intercept recovery --
+        env_cfg = self._config.get("environment", {})
+        self._loss_scheduler = LossEventScheduler(env_cfg, fps=env_cfg.get("fps", 10))
+        self._loss_scheduler.reset(seed=env_cfg.get("seed"))
 
         # -- Obstacle avoider --
         from carla_uav.obstacle_avoidance import ObstacleAvoider
@@ -325,12 +357,17 @@ class SceneManager:
 
         if decorrelate:
             band = float(dec_cfg.get("cluster_band_m", 24.0))
-            # L1 — target gets a RANDOM slot from the same ± band as the look-alikes.
+            # L1 — target gets a RANDOM slot; capture its along-road offset off_t so the
+            # distractors can be placed to BRACKET it in depth (§8: the target used to be
+            # the depth-nearest candidate ~50% of frames because fillers were pushed forward
+            # /farther by the down-forward camera — no candidate was ever nearer than the
+            # target. Bracketing off_t makes the target a uniform depth-RANK member).
+            off_t = 0.0
             self._target = None
             for _try in range(6):
+                off_t = 0.0 if _try == 5 else random.uniform(-band, band)
                 sp = (anchor if _try == 5 else
-                      self._lane_offset_transform(random.choice(lanes),
-                                                  random.uniform(-band, band)))
+                      self._lane_offset_transform(random.choice(lanes), off_t))
                 try:
                     self._target = VehicleTarget(
                         self._world, tgt["bp"], sp, carla_client=self._client,
@@ -342,8 +379,11 @@ class SceneManager:
                 except RuntimeError:
                     continue
             for d in plan["distractors"]:
-                # Similar look-alikes share the target's ± band (framed-centroid cluster →
-                # target is a random member). Plain fillers spread moderately & symmetrically.
+                # Similars share the anchor ±band (INDEPENDENT of the target — they + the
+                # target form the framed centroid, so the target stays a random member).
+                # NOTE: the residual DEPTH shortcut (target is depth-nearest ~50% of frames)
+                # is NOT fixed by any distractor PLACEMENT — the target sits at the back of
+                # the followed cluster by tracking geometry; see data-fix-spec §8 follow-up.
                 if d.get("similar"):
                     off = random.uniform(-band, band)
                 else:
@@ -373,7 +413,8 @@ class SceneManager:
                     d, self._lane_offset_transform(random.choice(lanes), off), convoy_speed)
 
         self._target_in_frame = True      # updated each step by the recorder (recovery gate)
-        self._servo_smooth = None          # reset the camera-setpoint EMA (anti-jitter)
+        self._recovery_mode = False       # hysteresis state for the centroid↔recovery framing switch
+        self._reacq = 0
         self._assign_convoy_route()
 
     def _lane_offset_transform(self, base_wp, offset_m: float) -> "carla.Transform":
@@ -406,6 +447,7 @@ class SceneManager:
             self._distractor_meta.append({
                 "id": obj.id, "bp": d["bp"], "color": d.get("color"),
                 "desc": d["desc"], "similar": d.get("similar", False), "cls": cls,
+                "desired_off": d.get("_desired_off"),   # §8 depth station-keeping target (or None)
             })
         except RuntimeError:
             pass  # spawn collision — skip this distractor
@@ -435,7 +477,7 @@ class SceneManager:
         cfg = self._config.get("scene", {}).get("convoy", {})
         if not cfg.get("enabled", True):
             return
-        tm = self._client.get_trafficmanager(8000)
+        tm = self._client.get_trafficmanager(_tm_port())
         if not hasattr(tm, "set_route"):
             return
         sb = float(cfg.get("straight_bias", 0.7))
@@ -477,7 +519,7 @@ class SceneManager:
             tloc = self._target.transform.location
         except RuntimeError:
             return
-        tm = self._client.get_trafficmanager(8000)
+        tm = self._client.get_trafficmanager(_tm_port())
 
         # Official mechanism: hybrid physics around the hero (target) + respawn dormant
         # vehicles → ambient traffic auto-concentrates near the moving target.
@@ -647,8 +689,9 @@ class SceneManager:
         if tgt_wp is None:
             return
         W, H = self._config.get("output", {}).get("rgb_resolution", [336, 336])
+        _fov = float(self._config.get("output", {}).get("fov", 90.0))   # §10: match sensor FOV
         M = np.array(cam_t.get_inverse_matrix())
-        focal = W / (2.0 * np.tan(np.radians(90.0) / 2.0))
+        focal = W / (2.0 * np.tan(np.radians(_fov) / 2.0))
 
         def _visible(p) -> bool:
             q = M @ np.array([p[0], p[1], p[2], 1.0])
@@ -704,9 +747,6 @@ class SceneManager:
                 continue
             for _try in range(8):                # find a clear on-road slot near the target, in view
                 wp = random.choice(lanes)
-                # SYMMETRIC ± offset around the target (behind → lower frame, ahead → upper)
-                # so the framing centroid stays ~on the target; wide enough to reliably find
-                # a collision-free slot (a too-tight slot fails and co-visibility collapses).
                 off = random.uniform(-14.0, 14.0)
                 for _ in range(int(abs(off) / 8)):
                     nxt = wp.next(8.0) if off > 0 else wp.previous(8.0)
@@ -726,6 +766,46 @@ class SceneManager:
                         pass
                     break                        # placed (or failed) → next needy actor
 
+    def station_keep_lookalikes(self) -> None:
+        """§8 depth decorrelation: hold each SIMILAR look-alike at its assigned signed
+        along-road offset relative to the target (some BEHIND → nearer camera, some ahead →
+        farther) via smooth TM speed nudges, so the target's depth RANK stays ~uniform
+        instead of systematically nearest. Speed-based, not teleport: a teleported decoy is
+        immediately driven forward again by autopilot; a proportional speed offset keeps it
+        stationed. No-op for distractors without a desired_off (fillers)."""
+        if self._target is None or self._maneuver_injector is None:
+            return
+        tm = getattr(self._maneuver_injector, "_tm", None)
+        if tm is None:
+            return
+        try:
+            tloc = self._target.transform.location
+            tyaw = np.radians(self._target.transform.rotation.yaw)
+        except (RuntimeError, AttributeError):
+            return
+        fwd = np.array([np.cos(tyaw), np.sin(tyaw)])   # target's forward (+ = ahead / farther)
+        tp = np.array([tloc.x, tloc.y])
+        for obj, meta in zip(self._distractors, self._distractor_meta):
+            desired = meta.get("desired_off")
+            if desired is None:                 # only stationed fillers carry a desired_off
+                continue
+            veh = getattr(obj, "_vehicle", None)
+            if veh is None:
+                continue
+            try:
+                p = obj.get_state()[0]
+            except (RuntimeError, AttributeError):
+                continue
+            off = float(np.dot(np.array([p[0], p[1]]) - tp, fwd))   # signed along-road offset
+            err = off - float(desired)          # >0 → ahead of slot → slow down; <0 → speed up
+            # TM convention: +% = drive that % BELOW the speed limit (slower). Proportional,
+            # clamped so it never stops dead or races off.
+            pct = float(np.clip(err * 5.0, -45.0, 70.0))
+            try:
+                tm.vehicle_percentage_speed_difference(veh, pct)
+            except (RuntimeError, AttributeError):
+                pass
+
     def get_distractor_states(self) -> np.ndarray:
         """Return (D, 6) array: [x, y, z, vx, vy, vz] for each distractor (order = meta)."""
         out = []
@@ -738,6 +818,13 @@ class SceneManager:
         arr = np.array(out, dtype=np.float32) if out else np.zeros((0, 6), dtype=np.float32)
         self._distractor_states = arr        # cache for _cluster_centroid (same step)
         return arr
+
+    def get_distractor_similar(self) -> np.ndarray:
+        """(D,) bool: is each distractor a look-alike of the target? Same order as
+        get_distractor_states / distractors/positions. Lets (d)-evaluation slice
+        look-alike vs plain distractors per-FRAME (§4.1 request)."""
+        return np.array([bool(m.get("similar", False)) for m in self._distractor_meta],
+                        dtype=np.uint8)
 
     def step_target(self, dt: float = 0.1) -> None:
         if self._target is not None and hasattr(self._target, "step"):
@@ -804,19 +891,59 @@ class SceneManager:
         #    straight to where the target re-appears). The episode then continues through
         #    the loss and generates recovery demonstrations, rather than being truncated.
         servo_pos = target_pos
-        if (target_pos is not None and getattr(self, "_frame_centroid", False)
-                and getattr(self, "_target_in_frame", True)):
-            servo_pos = self._cluster_centroid(np.asarray(target_pos, dtype=float))
-        # Time-smooth the setpoint (EMA) so the camera does NOT lurch when it jumps — the
-        # centroid↔target framing switch on loss, or the centroid shift when a look-alike is
-        # teleported by the recycle. This is what fixes the severe shaking during
-        # occlusion/off-screen (the UAV eases toward the new setpoint over a few frames).
-        if servo_pos is not None:
-            sp = np.asarray(servo_pos, dtype=float)
-            prev = getattr(self, "_servo_smooth", None)
-            servo_pos = sp if prev is None else 0.3 * sp + 0.7 * prev
-            self._servo_smooth = np.asarray(servo_pos, dtype=float)
-        action = self.expert.act(servo_pos, uav_pos, uav_yaw, target_visible, timestamp)
+        # During a deliberate loss window the expert is flown BLIND: target_visible=False
+        # makes the PID dead-reckon (predict) instead of re-centering, so the forced-evading
+        # target genuinely leaves frame and stays off — the predict-intercept loss arc.
+        if target_visible and target_pos is not None and getattr(self, "_frame_centroid", False):
+            # HYSTERESIS on the centroid↔recovery switch: once the target is lost, stay in
+            # target-recovery framing until it is STABLY back (in-frame ≥8 consecutive frames).
+            # Without this, a target flickering at the frame edge flips the servo setpoint
+            # between the cluster centroid and the (far) target every frame → the camera shakes.
+            if not getattr(self, "_target_in_frame", True):
+                self._recovery_mode = True
+                self._reacq = 0
+            elif getattr(self, "_recovery_mode", False):
+                self._reacq = getattr(self, "_reacq", 0) + 1
+                if self._reacq >= 8:
+                    self._recovery_mode = False
+            if not getattr(self, "_recovery_mode", False):
+                servo_pos = self._cluster_centroid(np.asarray(target_pos, dtype=float))
+        # §8 (redo): TRAIL the target by a per-episode random HORIZONTAL standoff so the
+        # target sits at a random forward/depth position in the frame (near the bottom when
+        # the UAV trails close, higher/farther when it trails far) → the ground BETWEEN the
+        # UAV and the target holds distractors NEARER than the target → the target's depth
+        # RANK is decorrelated (was systematically nearest because the UAV hovered ~over the
+        # target). The camera still FACES the target (look_pos), only its POSITION trails.
+        # Skip during loss/recovery so re-acquisition still cuts straight to the target.
+        pos_setpoint, look_pos = servo_pos, None
+        standoff = getattr(self, "_tracking_standoff", 0.0)
+        aim_frac = getattr(self, "_aim_frac", 0.0)
+        if (target_visible and target_pos is not None
+                and not getattr(self, "_recovery_mode", False)
+                and (standoff > 0.0 or aim_frac > 0.0)):
+            try:
+                tyaw = np.radians(self._target.transform.rotation.yaw)
+                fwd = np.array([np.cos(tyaw), np.sin(tyaw)])
+                aim = np.asarray(servo_pos, dtype=float).copy()
+                if aim_frac > 0.0:
+                    # §9: LATERAL-only AIM offset (perpendicular to the target's heading) → the
+                    # target's horizontal image position (u) spreads like a distractor's, killing
+                    # the 'most-central' shortcut. Lateral ONLY (not forward/back) so it does NOT
+                    # move the target in DEPTH → leaves the §8 `nearest` decorrelation intact
+                    # (a forward/back aim component pushed the target far → nearest collapsed).
+                    # Vertical (v) spread is already provided by the per-episode standoff.
+                    # Amplitude ∝ viewing distance → constant image spread, target stays in frame.
+                    depth = float(np.linalg.norm(aim - np.asarray(uav_pos, dtype=float)))
+                    perp = np.array([-fwd[1], fwd[0]])
+                    lat = aim_frac * depth * np.sin(2 * np.pi * self._aim_fx * timestamp + self._aim_px)
+                    aim[:2] = aim[:2] + lat * perp
+                look_pos = aim                                # camera FACES the shifted aim point
+                pos_setpoint = aim.copy()
+                pos_setpoint[:2] = pos_setpoint[:2] - standoff * fwd   # §8: trail the aim point
+            except (RuntimeError, AttributeError):
+                pos_setpoint, look_pos = servo_pos, None
+        action = self.expert.act(pos_setpoint, uav_pos, uav_yaw, target_visible, timestamp,
+                                 look_pos=look_pos)
         pert_event = None
         if self._perturbation_injector is not None and target_pos is not None:
             action, pert_event = self._perturbation_injector.maybe_perturb(
@@ -827,6 +954,149 @@ class SceneManager:
         if self._maneuver_injector is not None and self._target_type == "vehicle":
             return self._maneuver_injector.maybe_inject(self._target._vehicle, timestamp)
         return None
+
+    # -- (c) deliberate loss-event hooks (driven by the recorder loop) --
+    def in_loss_window(self, elapsed: float) -> bool:
+        """True while inside a scheduled loss window → fly the expert blind (predict)."""
+        sched = getattr(self, "_loss_scheduler", None)
+        return bool(sched and sched.in_predict(elapsed))
+
+    def loss_window_onset(self, elapsed: float) -> float | None:
+        """Window duration once at onset (→ force the target to deviate); else None."""
+        sched = getattr(self, "_loss_scheduler", None)
+        return sched.onset(elapsed) if sched else None
+
+    def _target_tm(self):
+        veh = getattr(self._target, "_vehicle", None) if self._target_type == "vehicle" else None
+        tm = getattr(self._maneuver_injector, "_tm", None) if self._maneuver_injector else None
+        return veh, tm
+
+    def force_target_evade(self, elapsed: float, duration: float) -> None:
+        """§11: at loss-window onset, force the target to TURN at the upcoming junctions
+        (set_route) so it leaves the UAV's forward view. A pure forward sprint does NOT work
+        (target just gets far & small while staying in the forward frame, and the gap becomes
+        un-re-acquirable); a TURN makes the target go off-frame while staying CLOSE, so the
+        intercepting UAV must cut across and can re-acquire → genuine long loss + intercept."""
+        veh, tm = self._target_tm()
+        if veh is None or tm is None:
+            return
+        try:
+            tm.set_route(veh, [random.choice(["Left", "Right"]) for _ in range(4)])
+            tm.set_desired_speed(veh, 16.0)   # moderate → stays close (re-acquirable), not sprint-away
+        except (RuntimeError, AttributeError):
+            pass
+
+    def sustain_target_evade(self, elapsed: float) -> None:
+        """§11: keep the target moving at a moderate speed through its forced turns for the
+        whole window (TM can otherwise reset it at a light), so it stays off the forward view
+        while the expert flies to INTERCEPT the true target."""
+        veh, tm = self._target_tm()
+        if veh is None or tm is None:
+            return
+        try:
+            tm.set_desired_speed(veh, 16.0)
+        except (RuntimeError, AttributeError):
+            pass
+
+    def restore_target_speed(self) -> None:
+        """§11: at loss-window end, drop the target back to normal traffic speed so the
+        intercepting UAV catches up and re-acquires."""
+        veh, tm = self._target_tm()
+        if veh is None or tm is None:
+            return
+        try:
+            tm.set_desired_speed(veh, 9.0)
+        except (RuntimeError, AttributeError):
+            pass
+
+    def loss_window_offset(self, elapsed: float) -> bool:
+        """True once when a loss window just ended (target re-appearing)."""
+        sched = getattr(self, "_loss_scheduler", None)
+        return bool(sched and sched.offset(elapsed))
+
+    def force_covisible_lookalikes(self, min_n: int = 2) -> None:
+        """§11: at target re-appearance, GUARANTEE >=min_n similar look-alikes co-visible near
+        the target, so re-acquisition must use LANGUAGE (not 'whichever car just appeared').
+        Teleports off-screen/far similars to clear, on-road, IN-FRAME slots beside the target."""
+        if self._target is None or self.drone is None:
+            return
+        try:
+            cam_t = self.drone.get_camera_transform()
+            tloc = self._target.transform.location
+        except (RuntimeError, AttributeError):
+            return
+        tgt_wp = self._map.get_waypoint(tloc)
+        if tgt_wp is None:
+            return
+        W, H = self._config.get("output", {}).get("rgb_resolution", [336, 336])
+        _fov = float(self._config.get("output", {}).get("fov", 90.0))
+        M = np.array(cam_t.get_inverse_matrix())
+        focal = W / (2.0 * np.tan(np.radians(_fov) / 2.0))
+
+        def _visible(p) -> bool:
+            q = M @ np.array([p[0], p[1], p[2], 1.0])
+            if q[0] <= 0.1:
+                return False
+            u = focal * (q[1] / q[0]) + W / 2.0
+            v = focal * (-q[2] / q[0]) + H / 2.0
+            return 0 <= u < W and 0 <= v < H
+
+        tpos = np.array([tloc.x, tloc.y, tloc.z])
+        on_screen, movable = 0, []
+        for obj, meta in zip(self._distractors, self._distractor_meta):
+            if not meta.get("similar"):
+                continue
+            try:
+                p, _, _, _ = obj.get_state()
+            except RuntimeError:
+                continue
+            if _visible(p):
+                on_screen += 1
+            else:
+                movable.append(obj)
+        need = max(0, min_n - on_screen)
+        if need <= 0 or not movable:
+            return
+        lanes = [tgt_wp]
+        for g in ("get_left_lane", "get_right_lane"):
+            try:
+                c = getattr(tgt_wp, g)()
+            except RuntimeError:
+                c = None
+            if c is not None and c.lane_type == carla.LaneType.Driving and c.lane_id * tgt_wp.lane_id > 0:
+                lanes.append(c)
+        occupied = [tpos]
+        try:
+            for a in self._world.get_actors().filter("vehicle.*"):
+                loc = a.get_location()
+                if abs(loc.x - tloc.x) < 45 and abs(loc.y - tloc.y) < 45:
+                    occupied.append(np.array([loc.x, loc.y, loc.z]))
+        except RuntimeError:
+            pass
+        random.shuffle(movable)
+        for obj in movable[:need]:
+            actor = getattr(obj, "_vehicle", None)
+            if actor is None:
+                continue
+            for _try in range(10):
+                wp = random.choice(lanes)
+                off = random.uniform(-12.0, 12.0)
+                for _ in range(int(abs(off) / 8)):
+                    nxt = wp.next(8.0) if off > 0 else wp.previous(8.0)
+                    if not nxt:
+                        break
+                    wp = nxt[0]
+                loc = wp.transform.location
+                slot = np.array([loc.x, loc.y, loc.z])
+                if _visible(slot) and all(np.linalg.norm(slot[:2] - o[:2]) > 6.0 for o in occupied):
+                    try:
+                        actor.set_transform(carla.Transform(
+                            carla.Location(loc.x, loc.y, loc.z + 0.3), wp.transform.rotation))
+                        actor.set_target_velocity(carla.Vector3D(0, 0, 0))
+                        occupied.append(slot)
+                    except RuntimeError:
+                        pass
+                    break
 
     def step_drone(self, action: tuple[float, float, float, float]) -> None:
         assert self.drone is not None

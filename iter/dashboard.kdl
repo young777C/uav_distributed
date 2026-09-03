@@ -1,0 +1,13 @@
+// zellij layout for the ACoT data<->training iteration dashboard.
+//
+//   create + attach:   zellij -s version_iter -l iter/dashboard.kdl
+//   re-attach later:   zellij attach version_iter
+//   leave running:     Ctrl+o d   (detach; session keeps running in the background)
+//   switch sessions:   Ctrl+o w
+//
+// Read-only TUI; auto-restarts if the python process ever exits.
+layout {
+    pane name="ACoT-iter" command="bash" {
+        args "-lc" "cd /nvidia/hque/code/cyhe/uav-acot-track && while true; do python iter/dashboard_tui.py; echo '[dashboard exited — restarting in 2s; Ctrl-C to stop]'; sleep 2; done"
+    }
+}

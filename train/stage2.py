@@ -106,8 +106,17 @@ def run_training_stage2(train_ds, val_ds, *, cfg, ear_ckpt=None, tag="stage2"):
     dit = DiT(A, H, cond_dim, d_ex=3, d_im=m["iar"]["d"], proprio_dim=s["proprio"].shape[0],
               d=m["dit"]["d_model"], n_layers=m["dit"]["n_layers"], n_heads=m["dit"]["n_heads"]).to(device)
     tid = TargetIDHead(cand_dim, cond_dim, d=m.get("tid_d", 256)).to(device)
-    params = list(ear.parameters()) + list(iar.parameters()) + list(dit.parameters()) + list(tid.parameters())
-    opt = torch.optim.AdamW(params, lr=cfg["train"]["lr"], weight_decay=cfg["train"].get("weight_decay", 1e-4))
+    # Separate, stronger weight decay on the tid head (it overfits the thin language
+    # signal much faster than the action stack); cosine LR decay settles late training
+    # so the early mis_follow peak is held instead of drifting back to chance.
+    tid_params = list(tid.parameters())
+    other_params = list(ear.parameters()) + list(iar.parameters()) + list(dit.parameters())
+    params = other_params + tid_params
+    opt = torch.optim.AdamW(
+        [{"params": other_params, "weight_decay": cfg["train"].get("weight_decay", 1e-4)},
+         {"params": tid_params, "weight_decay": cfg["train"].get("tid_weight_decay", 1e-2)}],
+        lr=cfg["train"]["lr"])
+    sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=cfg["train"]["epochs"])
 
     lw = cfg["loss"]
     tiers = [train_ds[i]["tier"] for i in range(len(train_ds))]
@@ -122,10 +131,27 @@ def run_training_stage2(train_ds, val_ds, *, cfg, ear_ckpt=None, tag="stage2"):
     ckpt_dir = Path(cfg["train"].get("stage2_ckpt_dir", "runs/stage2"))
     ckpt_dir.mkdir(parents=True, exist_ok=True)
 
+    # Full hyperparams stored in the ckpt so downstream runs INHERIT them (rigor
+    # guardrail: reproduce/compare by inheriting a reference run's params + OFAT,
+    # never hand-retype lr/epochs/split/fov — see memory acot-uav-experiment-rigor).
+    hparams = {
+        "lr": cfg["train"]["lr"], "epochs": cfg["train"]["epochs"],
+        "batch_size": cfg["train"]["batch_size"],
+        "weight_decay": cfg["train"].get("weight_decay", 1e-4),
+        "tid_weight_decay": cfg["train"].get("tid_weight_decay", 1e-2),
+        "split_manifest": cfg["data"].get("split_manifest"),
+        "stage2_context_cache": cfg["data"].get("stage2_context_cache"),
+        "ctx_grid": cfg["backbone"].get("ctx_grid"), "vlm_layer": cfg["backbone"].get("layer"),
+        "image_wh": [cfg["image"]["width"], cfg["image"]["height"]], "fov_deg": cfg["image"]["fov_deg"],
+        "wp_scale": cfg["waypoint"]["scale"], "wp_offsets_s": cfg["waypoint"]["offsets_s"],
+        "flow_steps": cfg["flow"]["sample_steps"], "tid_d": cfg["model"].get("tid_d", 256),
+        "supervise_intercept": cfg["train"].get("supervise_intercept", False),
+    }
+
     def _save(name, ep, met):
         torch.save({"ear": ear.state_dict(), "iar": iar.state_dict(),
                     "dit": dit.state_dict(), "tid": tid.state_dict(),
-                    "epoch": ep, "metrics": met,
+                    "epoch": ep, "metrics": met, "hparams": hparams,
                     "dims": {"cond_dim": cond_dim, "K": K, "H": H, "A": A,
                              "n_layers_in": n_layers_in, "cand_dim": cand_dim, "pdim": pdim}},
                    ckpt_dir / name)
@@ -133,7 +159,14 @@ def run_training_stage2(train_ds, val_ds, *, cfg, ear_ckpt=None, tag="stage2"):
     cw = cfg.get("curriculum", {})
     a_floor = float(cw.get("a_floor", 0.15)); ramp = float(cw.get("ramp", 1.2))
     grad_clip = float(cfg["train"].get("grad_clip", 0.0))
-    print(f"[{tag}] seed={seed} a_floor={a_floor} ramp={ramp} grad_clip={grad_clip}")
+    # Module ablations (H1/H2): zero the reasoner's conditioning into the DiT so the
+    # action head learns WITHOUT it, and drop that module's own loss. The tid head is
+    # untouched (mis_follow unaffected) — the H1/H2 signal is action quality, not消歧.
+    abl = cfg.get("ablate", {})
+    abl_ear = bool(abl.get("ear", False))     # w/o-EAR (H1): z_ex -> 0, drop L_ear
+    abl_iar = bool(abl.get("iar", False))     # w/o-IAR (H2): z_im -> 0 into DiT, drop L_vis/L_man
+    print(f"[{tag}] seed={seed} a_floor={a_floor} ramp={ramp} grad_clip={grad_clip}"
+          f"{' ABLATE=EAR' if abl_ear else ''}{' ABLATE=IAR' if abl_iar else ''}")
 
     best = float("inf"); metrics = {}
     for ep in range(cfg["train"]["epochs"]):
@@ -148,45 +181,61 @@ def run_training_stage2(train_ds, val_ds, *, cfg, ear_ckpt=None, tag="stage2"):
         for b in tl:
             b = {k: _to(v, device) for k, v in b.items()}
             z_ex = _stale(b["waypoint"], stale_p, cfg["train"].get("staleness_noise", 0.2))
+            if abl_ear:
+                z_ex = torch.zeros_like(z_ex)                # w/o-EAR: no waypoint guidance to DiT
             z_im, aux = iar(b["vlm_ctx_layers"], b["ctx_mask"])
-            l_act = action_flow_loss(dit, b["action"], z_ex, z_im, b["vlm_ctx"],
+            z_im_dit = torch.zeros_like(z_im) if abl_iar else z_im   # w/o-IAR: no prior to DiT
+            l_act = action_flow_loss(dit, b["action"], z_ex, z_im_dit, b["vlm_ctx"],
                                      b["proprio"], b["ctx_mask"], b["act_supervise"])
             l_ear = cfm_loss(ear, b["waypoint"], b["vlm_ctx"], b["ctx_mask"], proprio=b["proprio"])
             l_vis = F.mse_loss(torch.sigmoid(aux["occ_structural"]), b["occ_structural"])
             l_man = F.binary_cross_entropy_with_logits(aux["maneuver"], b["maneuver"])
-            logits = tid(b["cand_feats"], _ctx_vec(b["vlm_ctx"], b["ctx_mask"]), b["cand_mask"])
-            l_tid = F.cross_entropy(logits, b["target_idx"])
-            loss = (l_act + lw["ear"] * l_ear + lw["vis"] * l_vis
-                    + lw["maneuver"] * l_man + lw["target_id"] * l_tid)
+            logits = tid(b["cand_feats"], b["vlm_ctx"], b["ctx_mask"], b["cand_mask"])
+            tv = b["tid_valid"]                              # 0 on target-absent (loss) frames
+            l_tid = (F.cross_entropy(logits, b["target_idx"], reduction="none") * tv).sum() / tv.sum().clamp_min(1.0)
+            loss = (l_act + (0.0 if abl_ear else lw["ear"]) * l_ear
+                    + (0.0 if abl_iar else lw["vis"]) * l_vis
+                    + (0.0 if abl_iar else lw["maneuver"]) * l_man
+                    + lw["target_id"] * l_tid)
             opt.zero_grad(); loss.backward()
             if grad_clip > 0:
                 torch.nn.utils.clip_grad_norm_(params, grad_clip)
             opt.step()
             for k, val in zip(agg, [l_act, l_ear, l_vis, l_man, l_tid]): agg[k] += val.item()
         if ep % cfg["eval"].get("every", 5) == 0 or ep == cfg["train"]["epochs"] - 1:
-            metrics = _evaluate(ear, iar, dit, tid, vl, device, steps, K, H, A)
+            metrics = _evaluate(ear, iar, dit, tid, vl, device, steps, K, H, A,
+                                abl_ear=abl_ear, abl_iar=abl_iar)
             n = max(len(tl), 1)
-            print(f"[{tag}] ep{ep:3d} " + " ".join(f"{k}={agg[k]/n:.3f}" for k in agg)
-                  + f" | val mis_follow={metrics['mis_follow']:.3f} act_mse={metrics['act_mse']:.3f}")
-            if metrics["act_mse"] < best:
-                best = metrics["act_mse"]
+            # select best on mis_follow (the language-grounding metric this experiment
+            # targets), NOT act_mse — act_mse keeps improving while mis_follow overfits,
+            # so an act_mse-best ckpt saved the WORST language epoch.
+            if metrics["mis_follow"] < best:
+                best = metrics["mis_follow"]
                 _save(f"{tag}_best.pt", ep, metrics)
             _save(f"{tag}_last.pt", ep, metrics)
-    return {"best_act_mse": best, "final": metrics}
+            print(f"[{tag}] ep{ep:3d} " + " ".join(f"{k}={agg[k]/n:.3f}" for k in agg)
+                  + f" | val mis_follow={metrics['mis_follow']:.3f} act_mse={metrics['act_mse']:.3f}"
+                  + f" best_mis={best:.3f}")
+        sched.step()
+    return {"best_mis_follow": best, "final": metrics}
 
 
 @torch.no_grad()
-def _evaluate(ear, iar, dit, tid, loader, device, steps, K, H, A):
+def _evaluate(ear, iar, dit, tid, loader, device, steps, K, H, A, abl_ear=False, abl_iar=False):
     for m_ in (ear, iar, dit, tid): m_.eval()
     mis, n_grp, se, n = 0, 0, 0.0, 0
     for b in loader:
         b = {k: _to(v, device) for k, v in b.items()}
+        z_ex = torch.zeros_like(b["waypoint"]) if abl_ear else b["waypoint"]
         z_im, _ = iar(b["vlm_ctx_layers"], b["ctx_mask"])
-        pred = action_sample(dit, b["waypoint"], z_im, b["vlm_ctx"], b["proprio"],
+        if abl_iar:
+            z_im = torch.zeros_like(z_im)
+        pred = action_sample(dit, z_ex, z_im, b["vlm_ctx"], b["proprio"],
                              b["ctx_mask"], H, A, steps)
         se += F.mse_loss(pred, b["action"], reduction="sum").item(); n += b["action"].numel()
-        logits = tid(b["cand_feats"], _ctx_vec(b["vlm_ctx"], b["ctx_mask"]), b["cand_mask"])
-        mis += int((logits.argmax(1) != b["target_idx"]).sum()); n_grp += b["target_idx"].shape[0]
+        logits = tid(b["cand_feats"], b["vlm_ctx"], b["ctx_mask"], b["cand_mask"])
+        tv = b["tid_valid"] > 0.5                        # mis_follow only over target-present frames
+        mis += int(((logits.argmax(1) != b["target_idx"]) & tv).sum()); n_grp += int(tv.sum())
     return {"mis_follow": mis / max(n_grp, 1), "act_mse": se / max(n, 1)}
 
 

@@ -6,28 +6,61 @@
 
 ---
 
-## ⚑ 当前状态（2026-07-29）
+## ⚑ 当前状态与主线计划（2026-08-18 更新）
 
-| Phase | 状态 | 备注 |
+**一句话**：语言必要性（H0）已在 mvp_full_v5 上**干净证成**;研究重心正式转向**核心贡献——目标出可视范围后,如何靠 VLA+WAM 预测-拦截重捕获**。语言识别是创新点之一,服务于重捕获时的"认领"。
+
+### 两个创新点(语言服务于核心)
+| | 创新点 | 状态 | 作用 |
+|---|---|---|---|
+| **① 语言识别** | 语言 grounding 消歧目标 | ✅ **已证(H0 干净)** | 出画重捕获时,在共视 look-alike 里认出是哪一辆 |
+| **② VLA+WAM 出画重捕获**(核心) | 目标出画后预测其位置 + 直飞拦截重捕获 | 🟡 **有据待建**(2026-08-18 公平 no-WM 基线证成单帧无法出画预测,见下) | 空中差异化(无路网约束、可抄近路直飞),地面跟踪做不到 |
+
+**咬合**:出画 → WAM 预测去向 → VLA 飞拦截点 → 重现时语言认对(而非"哪辆先出现算哪辆")。
+
+### H0 干净证成(2026-08-16,取代旧的位置捷径叙事)
+- 经**指标净化**(候选打乱修 argmax 平局漏洞)+ **多版本几何去相关**(v3 深度 / v4 居中 / **v5 分辨率 336→512**)后:E1 **有语言 ~58% vs 无语言 ~72%(≈chance),稳定 gap ~13pp**,有语言破 chance。
+- **关键定位**:v4 卡 chance 的真因是**图像分辨率**(车 12px 身份不可读),非数据/头——由"同分布探针 make 55% vs by-episode 6%"锁定,512px(车 27px)一改即翻盘。全过程见 `transition-diary-801.md` §七、memory `acot-uav-language-necessity`。
+- **稳定化四件套**(tid dropout+独立wd+余弦LR+best-on-mis_follow)+ **省磁盘配方**(layer24-only+fp16 缓存=86GB)已固化。
+
+### 公平 no-WM 基线证成 WM 必要性(2026-08-18,建 WM 前的"先测量"闭环)
+**先回答"原模型是否已到上限、要不要过早加 WM"**(用户方法论)。E1 的 EAR 欠训,故先**公平重训**(`train/train_v5_fair.sh`:Stage-1a EAR 预热 + 5 层 IAR + `supervise_intercept` → `runs/stage2_v5_fair`,mis_follow 0.582)再用 `train/intercept_eval.py` 测出画预测:
+
+| 指标 | E1(欠训) | **公平** | 判读 |
+|---|---|---|---|
+| 可见 EAR FDE 1s/6s | 15.2/23.3m | **14.2/21.2m** | 仅好 1-2m,**仍不如 persist**(13.7m@6s) |
+| 丢失 EAR FDE 1s/6s | 58.5/77.2m | **58.3/77.7m** | **几乎不变,训练救不回** |
+| 拦截 cos 丢失(中位/>0.5) | 0.92/71% | 0.87/**66%** | 部分拦截靠 BC 惯性,34% 飞错 |
+| mis_follow | 0.579 | **0.582** | ≈,不受 EAR/IAR 层数影响 |
+
+**定论**:公平版 EAR ≈ 欠训版 → EAR 出画预测的失败是**架构性(单帧限制),非欠训** → **反应式单帧无法预测出画位置 → WM(路网世界建模,P2)有据**;继续 tune 原模型无用。语言(mis_follow)在 grounding 天花板,优化走 grounding 不走加层。`stage2_v5_fair` = 干净的 no-WM 离线基线(M0),WM 须超越之。详见 `transition-diary-801.md` §八、`experiment-design.md` §7.4 ★callout、memory `acot-uav-wm-roadgraph`。
+
+### 已完成工作
+| 模块 | 状态 | 位置 |
 |---|---|---|
-| A1 修标签 / A2 划分 / A3 dataloader+预计算 | ✅ 完成 | `runs/ctx_cache`(5GB) + `runs/ctx_cache_ml`(mmap) |
-| B1 骨干选型 | ⚠️ 部分 | PaliGemma 被 license 挡 → 直接选 Qwen3-VL-4B/第24层/100token；未做 head-to-head |
-| C Stage-1 EAR | ✅ 完成 | 6s=18m 未达 <10m 门槛，但已诊断为不可约预测不确定性（相机系+proprio 把地板 14→7m） |
-| D Stage-2 端到端 | ✅ 训练完成 | mis_follow ~2%；A(中性语言)+C(稳课程) 已做 3-seed 消融：C 稳健、A 只 ~20-27%（非2×） |
-| **D 语言必要性门槛** | 🔴 **未通过（blocker）** | 见下 |
-| E Stage-3 RL | ❌ 未启动 | 计划本就可选/后置 |
+| VLA 架构(EAR/IAR/DiT/tid) | ✅ | `train/{ear,iar,dit}.py` |
+| 训练管线 Stage-1/2 + 稳定化 | ✅ | `train/stage{1_ear,2}.py` |
+| 语言必要性 H0 | ✅ 证成 | memory `acot-uav-language-necessity` |
+| **公平 no-WM 基线**(证 WM 必要性) | ✅ 证成 | `train/train_v5_fair.sh` + `intercept_eval.py` → `runs/stage2_v5_fair` |
+| 数据 mvp_full_v5(几何清+512+描述唯一+`distractors/similar`) | ✅ | `mvp_full_v5` |
+| **mask 反转** `supervise_intercept`(遮挡帧监督拦截) | ✅ 代码就位,待长丢失数据激活 | `dataset_stage2.py` §3.2 |
+| 长丢失数据 | 🟡 部分(≤16.5s,缺拦截演示+重现共视) | data-fix-spec §3 |
+| **WAM 目标状态记忆** | 🔲 只设计未实现 | memory `acot-uav-predict-intercept` |
+| **闭环 rollout harness** | 🟡 env.py 骨架已搭,最大缺口 | memory `acot-uav-harness` |
+| Stage-3 RL | 🔲 设计完成未启动 | memory `acot-uav-stage3-rl`、Phase E |
 
-### 🔴 关键 blocker：benchmark 位置捷径（语言不 load-bearing）
+### 未来主线:5-Phase(按依赖排,关键路径优先)
+| Phase | 内容 | 归属 | 依赖 |
+|---|---|---|---|
+| **P1 长丢失+拦截数据** | 5-15s 长丢失事件 + 专家演示直飞拦截 + 目标重现 + 重现处 ≥2 look-alike 共视 | 数据侧 | 无(可立即) |
+| **P2 WM 路网图预测器**(RoadGraphPredictor,**方案A**) | 反应式→世界建模。**不靠速度**(UAV 自身动/目标非匀速/瞬时速度无意义),靠**路网结构**预测目标未来位置:2D 自由预测→"1D 车道遍历+分叉选择"(PGP/DenseTNT 式 velocity-free)。**功能划分(方案A)**:WM 定**远端 where**(路网/遮挡)· **EAR 保留近端 where**(视觉/可见)+ 融合成 z_ex · 语言定 which · DiT 定 how(**EAR 不删,重定范围**)。**IAR 耦合**:occ 头→WM 可见/遮挡门控、man 头→WM 分叉 seed、z_im→DiT(**复用现有 IAR 头,不新训**)。**训练三阶段**:Stage-1a EAR 预热(已有)‖ Stage-1b WM 预热(新:车道遍历 BC + 走廊损失)→ Stage-2 联合(warmstart 两者,加 L_wm,EAR/WM 共适应)。分级 P2a 最小(CARLA 路网GT+单步遍历+走廊,验 H7)→P2b 多步遍历+latent→P2c 语言 which-way(H8)+视觉车道图。详见 `wm-roadgraph-design.md` / `wm_scheme_compare.html` | 架构(本 agent) | **依赖 P1**(BC 拦截演示)+ CARLA 车道图GT |
+| **P3 闭环 harness** | 完成 env.py:感知→策略→动作→CARLA→下一帧(S1 20Hz/S2 1Hz);场景生成/reset/终止/特权GT奖励 | 工程(本 agent) | 无(可立即,与 P1 并行) |
+| **P4 闭环评测 + 语言集成** | E5 断裂后重捕获(有vs无语言 mis_follow 大涨)、重捕获锁对率(硬失败)/收敛时间、SR vs 丢失时长 T 曲线 | 本 agent | 依赖 P2+P3 |
+| **P5 Stage-3 闭环 RL**(可选/加分) | GRPO 微调 DiT 末层,reward=R_correct_id+**R_reacquire**;治 BC 分布漂移 | 本 agent | 依赖 P3+P4 |
 
-正式 w/o-language 消融（3 seed）：困难子集(≥2候选) mis_follow **有语言 6.16%±1.81 ≈ 无语言 6.23%±1.12**，无差异。根因：**最优纯位置分类器(无外观/无语言)就能到 ~3-5%**（随机 70%、最居中 53%、最近 19%）→ 目标几何位置被系统性泄漏，任何模型不需语言即可选对。
+**关键路径**:`P1 数据 + P3 harness(并行起步)→ P2 WAM(待 P1)→ P4 闭环评测(E5)→ [P5 RL]`;语言识别(已完成)在 P4 重捕获处集成。
 
-- **验证工具**：`python -m train.benchmark_leak_probe --config <cfg> --split val`（数据修好后位置 floor 应升向 ~70%）。
-- **修复（数据侧）**：目标位置/深度/排名与"它是目标"**去相关**——干扰车与目标共享同一位置分布，随机化目标占据的位置槽。见 memory `acot-uav-benchmark-leak`。
-- **注意**：这是**数据生成 blocker，非模型 bug**；语言价值在堵住捷径前无法显现，是投稿致命风险。
-
-### 训练基建（本轮新增）
-- Stage-2 缓存改 **mmap 共享**（`.ctx.npy` + 瘦 npz）+ **workers=4** → 每 run 私有内存 48GB→2.5GB，可 8 卡齐跑。转换器 `train.mmap_cache`。
-- seed/课程/grad_clip 全 config 可控（`train.stage2 --seed/--ckpt-dir/--device`）。
+**建议起点(两条并行)**:① P1 数据(数据 agent,见 data-fix-spec §11);② P3 harness(本 agent,env.py 收尾——不依赖数据、是评测+Stage-3 共同底座、当前最大缺口)。**P2 WAM 是核心创新落点,待 P1 数据到位。**
 
 ---
 
@@ -87,9 +120,35 @@
 
 ### Phase E — Stage 3：闭环 RL 精调（可选，后置）
 
-- 冻结 VLM/EAR/IAR，训 DiT 末 4 层（或 LoRA）；GRPO，CARLA on-policy
-- Reward 含 **R_correct_id**（跟对/跟错被指目标），防 RL 崩成"跟任意车"
-- 门槛：SR 与 Mis-follow 均优于 Stage 2 BC；无 reward hacking
+**摘要**：冻结 VLM/EAR/IAR，训 DiT 末 4 层（或 LoRA）；GRPO，CARLA on-policy；Reward 含 **R_correct_id**（跟对/跟错被指目标），防 RL 崩成"跟任意车"；门槛：SR 与 Mis-follow 均优于 Stage 2 BC、无 reward hacking。
+
+**定位**：这是**后训练的 RL fine-tuning 子阶段**（预训练=冻结的 Qwen3-VL；SFT/BC=Stage 1-2；RL 精调=本阶段），与 LLM 的 RLHF、机器人"BC 预训练→RL 精调"同构。**动机**：Stage 2 是离线 BC，存在**误差累积/分布漂移**（走到专家没演示的状态就步步偏）；闭环 RL 让策略**真的在 CARLA 里飞**（on-policy rollout），经历自己造成的状态分布，直接优化"有没有跟对目标"的真实目标。
+
+#### E.1 观测空间 o_t（只用部署可得信息，与 BC 一致）
+- 当前帧经**冻结 VLM** → `vlm_ctx (100,2560)` + `vlm_ctx_layers (5,100,2560)`；语言指令（目标身份，整段固定）；`cand_feats (N,2560)`（消歧）；`proprio (5)`（高度/俯仰+三轴速度）；可选 EAR 航点 / IAR 先验。
+- ⚠️ **工程约束**：闭环状态是新的，**VLM 必须在线推理**（不能预计算）→ 冻结 VLM/EAR/IAR 只训 DiT 末层 + 双系统 S1(20Hz)/S2(1Hz) 异步，使在线可行。
+
+#### E.2 动作空间 a_t（同 BC）
+- 连续控制 `[dx,dy,dz,dyaw] + search_mode`，DiT 用 flow-matching **生成 16 步动作块**；有界。
+- RL 需**随机策略**：flow-matching 采样天然给动作分布 → 采样多条供 GRPO 算相对优势。
+
+#### E.3 奖励函数 r_t（加权和；用仿真器特权 GT 算，部署不用）
+| 分量 | 含义 | 作用 |
+|---|---|---|
+| **★ R_correct_id** | 跟对被指目标 +，锁上干扰车重罚 | **防 reward hacking 崩成"跟任意车"（最大风险）** |
+| R_track | 目标在画面内/居中/合适距离 | 跟踪主目标 |
+| R_reacquire | 长丢失后成功重捕获 | 强化预测-拦截（旗舰场景，见 [[predict-intercept]]） |
+| R_smooth / R_effort | 惩罚抖动/过大动作 | 平滑飞行 |
+| R_safety | 撞击/出界惩罚 | 安全 |
+
+#### E.4 算法与冻结
+- **GRPO**：每状态采样一组 K 条 rollout，用"奖励−组内均值"作相对优势，**无需 critic**（契合扩散策略本就在采样）。
+- **冻结 VLM/EAR/IAR，只训 DiT 末 4 层或 LoRA**：①省算力；②**别破坏 BC 学到的语言 grounding（tid 头）与几何（EAR）**；③防灾难性遗忘 —— RL 只精修"动作生成"最后一环。
+
+#### E.5 门槛与依赖
+- **Gate**：SR 与 mis_follow **均优于 Stage-2 BC**，且无 reward hacking（靠 R_correct_id + 持续监控 mis_follow 守住）。
+- **依赖（硬前置）**：闭环 rollout harness（`experiment-design.md` §7「双重角色」note，**当前待建**）。**为什么是硬前置**：RL 的目标 = "策略在环境里飞出的轨迹分布"上的期望——没有环境在训练回路里就**没有轨迹/奖励/可优化对象**（on-policy 数据须现场 rollout 生成、状态分布由策略自身动作决定）。BC(Stage 1-2)读固定离线数据集**不需要** harness；RL(Stage 3)**必须**把环境放进训练回路。**先有 harness，才谈得上 Stage-3 训练与其闭环 gate**——这也是本阶段排最后、标"可选/后置"的原因。**MVP 靠 Stage-2 BC 即可交付**，Stage 3 为加分项。
+- **三大难点**：①在线 VLM 推理成本；②reward 设计/hacking；③on-policy 样本效率。
 
 ---
 

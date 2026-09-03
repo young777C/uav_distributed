@@ -78,6 +78,7 @@ class SyntheticStage2Dataset(Dataset):
                 "target_idx": tgt,
                 "visible": torch.tensor(1.0),
                 "act_supervise": torch.tensor(1.0),
+                "tid_valid": torch.tensor(1.0),
                 "tier": tier,
             })
 
@@ -98,6 +99,10 @@ class RealStage2Dataset(Dataset):
         from . import curriculum
         self.cfg = cfg
         self.ctx_dir = Path(cfg["data"]["stage2_context_cache"])
+        # If the ctx cache was regenerated with more layers than a target ckpt used,
+        # this restricts IAR to the LAST layer (layer 24) so n_layers_in==1 — matches
+        # stage2_v5 (1-layer) for controlled ablations against a 5-layer cache.
+        self.last_layer_only = bool(cfg["data"].get("use_last_layer_only", False))
         self.H = cfg["action"]["horizon"]
         fps = cfg.get("fps", 10)
         self.offsets = [int(o * fps) for o in cfg["waypoint"].get("offsets_s", [2, 4, 6])]
@@ -117,6 +122,17 @@ class RealStage2Dataset(Dataset):
         self.index = self._build_index(_select_episodes(cfg, split), cfg)
         self.cond_dim = self._peek()
 
+    # h5 datasets _h5/_candidates read unconditionally; an episode missing any is
+    # skipped (some CARLA runs write partial episodes, e.g. mvp_full ep011 lacked
+    # annotation/*, mvp_full_v3 ep066 lacked search_mode+off_screen -> KeyError mid-train).
+    _REQUIRED_H5 = (
+        "target/tx", "target/ty", "target/tz",
+        "state/cam_x", "state/cam_y", "state/cam_z", "state/cam_pitch", "state/cam_yaw",
+        "state/uav_vx", "state/uav_vy", "state/uav_vz",
+        "action/dx", "action/dy", "action/dz", "action/dyaw",
+        "annotation/search_mode", "annotation/off_screen",
+    )
+
     def _build_index(self, eps, cfg):
         import h5py
         stride = int(cfg["data"].get("frame_stride", 3))
@@ -128,6 +144,10 @@ class RealStage2Dataset(Dataset):
             if not ctx.exists():
                 continue
             with h5py.File(ep, "r") as f:
+                miss = [k for k in self._REQUIRED_H5 if k not in f]
+                if miss:
+                    print(f"[stage2] skip {Path(ep).name}: missing {miss}")
+                    continue
                 n = f["rgb"].shape[0]
                 a = f.attrs
                 tier = self._tier_of(str(a.get("strategy", "")), int(a.get("num_similar", 0)))
@@ -174,8 +194,17 @@ class RealStage2Dataset(Dataset):
                     "sm": g("annotation/search_mode"),
                     "occ_s": g("annotation/occ_structural") if "annotation/occ_structural" in f else None,
                     "man": g("state/maneuver") if "state/maneuver" in f else None,
-                    "vis": (labels.combined_occlusion(f) < 0.8).astype(np.float32),
+                    # target observable = low occlusion AND on-screen. off_screen must be
+                    # included: combined_occlusion only reaches ~0.5-0.7 during full out-of-frame
+                    # (misses it at the 0.8 thresh), so long out-of-frame losses were wrongly
+                    # marked visible -> skipped. Fixes long-loss frames reaching intercept training.
+                    "vis": ((labels.combined_occlusion(f) < 0.8) &
+                            (f["annotation/off_screen"][:] < 0.5
+                             if "annotation/off_screen" in f else True)).astype(np.float32),
                     "distr": g("distractors/positions") if "distractors/positions" in f else None,
+                    # target language identity (color+make) — for the language-binding head
+                    "tcolor": str(f.attrs.get("target_color", "?")),
+                    "tmake": str(f.attrs.get("target_bp", "?")),
                 }
             self._hc[ep] = d
         return d
@@ -196,22 +225,22 @@ class RealStage2Dataset(Dataset):
                               img.get("box_min_px", 10), img.get("box_max_px", 140)))
             return Candidate(u, v, s, s, depth, is_t, idx)
         t = mk(h["tgt"][i], True, -1)
-        if t is None:
-            return []
-        out = [t]
+        out = [t] if t is not None else []          # target may be off-screen (absent)
         if h["distr"] is not None:
             for d in range(h["distr"].shape[1]):
                 c = mk(h["distr"][i, d, :3], False, d)
                 if c is not None:
                     out.append(c)
-        return out
+        return out                                   # may lack target (all is_target=False) or be empty
 
     def __getitem__(self, j):
         from acot_probe.backbones import pool_box
         ep, ctx_path, i, tier = self.index[j]
         frames, (gh, gw), ctx_all = self._ctx(ctx_path)
         row = min(int(np.searchsorted(frames, i)), len(frames) - 1)
-        ctx = np.ascontiguousarray(ctx_all[row])   # (L, gh*gw, C); page-in mmap row -> owned array
+        ctx = np.ascontiguousarray(ctx_all[row]).astype(np.float32)   # (L, gh*gw, C); fp16 cache -> fp32 for model
+        if self.last_layer_only:
+            ctx = ctx[-1:]                                            # keep only layer 24 (last) -> L=1
         L, _, C = ctx.shape
         layers = [torch.from_numpy(ctx[l]) for l in range(L)]
         grid_last = ctx[-1].reshape(gh, gw, C)
@@ -238,16 +267,40 @@ class RealStage2Dataset(Dataset):
         # §3.2 mask reversal: on temporary-loss frames (target occluded now but
         # reappears within the EAR horizon) supervise the intercept action instead of
         # masking it. act_supervise == visible when the flag is off (current behavior).
-        act_sup = vis
+        act_sup = vis; intercept = False
         if self.supervise_intercept and vis < 0.5:
-            fut = h["vis"][i:i + self.intercept_hz]
-            if fut.size and float(fut.max()) >= 0.5:     # temporary loss -> intercept-eligible
-                act_sup = 1.0
+            fut_vis = h["vis"][i:i + self.intercept_hz]
+            if fut_vis.size and float(fut_vis.max()) >= 0.5:  # temporary loss -> intercept-eligible
+                act_sup = 1.0; intercept = True
         cands = self._candidates(h, i)
-        if not cands:                              # target off-screen -> pick another frame
+        has_target = any(c.is_target for c in cands)
+        target_px = next((float(c.w) for c in cands if c.is_target), 0.0)  # target box size (grounding probe)
+        # target_central: same central-30%-box convention as the closed-loop scorer (metrics.py),
+        # to directly compare offline vs closed-loop off-center grounding (extreme-OOD check).
+        _tc = next((c for c in cands if c.is_target), None); _m = 0.3
+        _W, _H = self.img["width"], self.img["height"]
+        target_central = float(_tc is not None and
+                               (0.5 - _m / 2) * _W <= _tc.u <= (0.5 + _m / 2) * _W and
+                               (0.5 - _m / 2) * _H <= _tc.v <= (0.5 + _m / 2) * _H)
+        # Skip target-absent frames UNLESS intercept-eligible: keep them so the intercept
+        # action (fly toward EAR-predicted position) is supervised during a temporary loss;
+        # target_id loss is masked on such frames via tid_valid (no target candidate to pick).
+        if not cands or (not has_target and not intercept):
             return self.__getitem__((j + 1) % len(self.index))
         cand_feats = np.stack([pool_box(grid_last, c.frac_box(W, H)) for c in cands]).astype(np.float32)
-        tgt_idx = next(k for k, c in enumerate(cands) if c.is_target)
+        tgt_idx = next((k for k, c in enumerate(cands) if c.is_target), 0)   # 0 placeholder if absent
+        tid_valid = 1.0 if has_target else 0.0
+        # Shuffle candidate order so the target is NOT always index 0. `_candidates`
+        # prepends the target, so target_idx was 100% idx0. mis_follow's argmax breaks
+        # ties toward the lowest index -> a non-discriminative head whose scores collapse
+        # to near-ties gets argmax==0==target => fake-low error (v2-nolang read 0% this
+        # way). The tid head is permutation-equivariant, so this leaves the training loss
+        # and gradients unchanged and ONLY makes the mis_follow metric honest. Seed by j
+        # for reproducible per-sample order.
+        if cand_feats.shape[0] > 1:
+            perm = np.random.default_rng(j).permutation(cand_feats.shape[0])
+            cand_feats = cand_feats[perm]
+            tgt_idx = int(np.nonzero(perm == tgt_idx)[0][0])
         return {
             "vlm_ctx_layers": layers, "vlm_ctx": layers[-1],
             "proprio": torch.from_numpy(proprio), "action": torch.from_numpy(action),
@@ -256,7 +309,10 @@ class RealStage2Dataset(Dataset):
             "maneuver": torch.tensor(man, dtype=torch.float32),
             "cand_feats": torch.from_numpy(cand_feats), "target_idx": tgt_idx,
             "visible": torch.tensor(vis), "act_supervise": torch.tensor(act_sup),
-            "tier": tier,
+            "tid_valid": torch.tensor(tid_valid), "tier": tier,
+            "target_px": torch.tensor(target_px, dtype=torch.float32),
+            "target_central": torch.tensor(target_central, dtype=torch.float32),
+            "target_color": h["tcolor"], "target_make": h["tmake"],
         }
 
 
@@ -292,5 +348,10 @@ def collate_stage2(batch):
         "waypoint": stack("waypoint"), "occ_structural": stack("occ_structural"),
         "maneuver": stack("maneuver"), "cand_feats": cand, "cand_mask": cand_mask,
         "target_idx": tgt, "visible": stack("visible"), "act_supervise": stack("act_supervise"),
+        "tid_valid": stack("tid_valid"),
         "tiers": [b["tier"] for b in batch],
+        **({"target_px": stack("target_px")} if "target_px" in batch[0] else {}),
+        **({"target_central": stack("target_central")} if "target_central" in batch[0] else {}),
+        **({"target_colors": [b["target_color"] for b in batch],
+            "target_makes": [b["target_make"] for b in batch]} if "target_color" in batch[0] else {}),
     }

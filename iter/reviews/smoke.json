@@ -1,0 +1,154 @@
+{
+  "verdict": "CHANGES_REQUESTED",
+  "round": 0,
+  "dir": "/nvidia/hque/data/carla_data/mvp_fix_val",
+  "n_episodes": 12,
+  "integrity": {
+    "ok": true,
+    "problems": []
+  },
+  "checks": {
+    "leak_floor": {
+      "value": 0.4896,
+      "status": "waived",
+      "why": "position-only MLP mis_follow; low => geometry solves target selection => language not load-bearing"
+    },
+    "covis": {
+      "value": 0.9445,
+      "status": "pass",
+      "why": "co-visible look-alikes force the model to disambiguate"
+    },
+    "offscreen": {
+      "value": 0.2189,
+      "status": "pass",
+      "why": "some loss needed for recovery skill; too much = untrackable"
+    },
+    "recovery": {
+      "value": 0.0,
+      "status": "fail",
+      "why": "fraction of episodes with a >=3s loss that is re-acquired"
+    },
+    "jitter": {
+      "value": 3.5701,
+      "status": "fail",
+      "why": "camera yaw JERK (|d2yaw|, deg/frame^2) during occlusion/off-screen; jerk (not rate) so a smooth fast pan is not flagged, only oscillating shake is"
+    }
+  },
+  "leak_meta": {
+    "hard_train": 790,
+    "hard_val": 384,
+    "avg_candidates": 3.49
+  },
+  "changes_requested": [
+    {
+      "check": "recovery",
+      "value": 0.0,
+      "status": "fail",
+      "target": {
+        "pass": 0.2,
+        "waive": 0.08,
+        "dir": "up",
+        "why": "fraction of episodes with a >=3s loss that is re-acquired"
+      },
+      "why": "fraction of episodes with a >=3s loss that is re-acquired"
+    },
+    {
+      "check": "jitter",
+      "value": 3.5701262265443803,
+      "status": "fail",
+      "target": {
+        "pass": 1.0,
+        "waive": 2.5,
+        "dir": "down",
+        "why": "camera yaw JERK (|d2yaw|, deg/frame^2) during occlusion/off-screen; jerk (not rate) so a smooth fast pan is not flagged, only oscillating shake is"
+      },
+      "why": "camera yaw JERK (|d2yaw|, deg/frame^2) during occlusion/off-screen; jerk (not rate) so a smooth fast pan is not flagged, only oscillating shake is"
+    }
+  ],
+  "per_episode": [
+    {
+      "ep": "episode_000000.h5",
+      "T": 450,
+      "covis_frac": 1.0,
+      "off_frac": 0.0,
+      "recovered": false
+    },
+    {
+      "ep": "episode_000001.h5",
+      "T": 450,
+      "covis_frac": 0.493,
+      "off_frac": 0.507,
+      "recovered": false
+    },
+    {
+      "ep": "episode_000002.h5",
+      "T": 450,
+      "covis_frac": 1.0,
+      "off_frac": 0.0,
+      "recovered": false
+    },
+    {
+      "ep": "episode_000003.h5",
+      "T": 450,
+      "covis_frac": 0.431,
+      "off_frac": 0.529,
+      "recovered": false
+    },
+    {
+      "ep": "episode_000004.h5",
+      "T": 450,
+      "covis_frac": 0.84,
+      "off_frac": 0.16,
+      "recovered": false
+    },
+    {
+      "ep": "episode_000005.h5",
+      "T": 450,
+      "covis_frac": 0.387,
+      "off_frac": 0.489,
+      "recovered": false
+    },
+    {
+      "ep": "episode_000006.h5",
+      "T": 450,
+      "covis_frac": 0.229,
+      "off_frac": 0.42,
+      "recovered": false
+    },
+    {
+      "ep": "episode_000008.h5",
+      "T": 450,
+      "covis_frac": 0.989,
+      "off_frac": 0.011,
+      "recovered": false
+    },
+    {
+      "ep": "episode_000010.h5",
+      "T": 450,
+      "covis_frac": 0.924,
+      "off_frac": 0.071,
+      "recovered": false
+    },
+    {
+      "ep": "episode_000012.h5",
+      "T": 450,
+      "covis_frac": 0.991,
+      "off_frac": 0.009,
+      "recovered": false
+    },
+    {
+      "ep": "episode_000013.h5",
+      "T": 450,
+      "covis_frac": 0.958,
+      "off_frac": 0.042,
+      "recovered": false
+    },
+    {
+      "ep": "episode_000014.h5",
+      "T": 450,
+      "covis_frac": 0.611,
+      "off_frac": 0.389,
+      "recovered": false
+    }
+  ]
+}
