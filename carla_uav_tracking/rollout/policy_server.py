@@ -105,7 +105,7 @@ def main():
                          "loss only; needs run_rollout --predict-road) | track (Plan A: seed from "
                          "tid-COMMITTED candidate → grounding drives control). no-WM baseline = cv_gated.")
     ap.add_argument("--commit-k", type=int, default=5, help="track: hysteresis frames to switch committed target")
-    ap.add_argument("--tid-head", default="xattn", choices=["xattn", "attrbind", "reid"],
+    ap.add_argument("--tid-head", default="xattn", choices=["xattn", "attrbind", "reid", "oracle"],
                     help="xattn=language grounding (default) | attrbind=CLIP-style head (needs --tid-ckpt) "
                          "| reid=temporal appearance-memory re-ID (match the tracked instance, not the "
                          "language; reframe test — no ckpt, falls back to xattn before a template exists)")
@@ -115,6 +115,9 @@ def main():
                          "instance-discriminative; offline milestone K2 breaks 0.5)")
     ap.add_argument("--reid-bank", type=int, default=1, help="reid K-view gallery size (sweet spot ~2-3)")
     ap.add_argument("--reid-topm", type=int, default=1, help="reid match = top-m mean cosine to gallery")
+    ap.add_argument("--frame-gain", type=float, default=0.0,
+                    help="②: yaw-centering gain on the committed target (deg per frac-offset from center; "
+                         "breaks the framing→reid cascade). 0=off; sign per camera convention.")
     ap.add_argument("--conf-tau", type=float, default=0.0,
                     help="①: min pick-margin (top1-top2) to commit-fly in track mode; below it, hold "
                          "commitment + dead-reckon (don't chase an ambiguous look-alike). 0=off")
@@ -128,7 +131,7 @@ def main():
                     s2_period=a.s2_period, ablate=a.ablate, ex_source=a.ex_source, commit_k=a.commit_k,
                     tid_head=a.tid_head, tid_ckpt=tck,
                     reid_feature=a.reid_feature, reid_bank=a.reid_bank, reid_topm=a.reid_topm,
-                    conf_tau=a.conf_tau)
+                    conf_tau=a.conf_tau, frame_gain=a.frame_gain)
     print(f"[policy-server] loaded policy (language_mode={a.language_mode}, "
           f"s2_period={a.s2_period}, ablate={a.ablate}, ex_source={a.ex_source}, commit_k={a.commit_k}, "
           f"tid_head={a.tid_head})", flush=True)

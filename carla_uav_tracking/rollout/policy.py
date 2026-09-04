@@ -97,7 +97,7 @@ class Policy:
                  ex_source: str = "ear", commit_k: int = 5,
                  tid_head: str = "xattn", tid_ckpt: str | None = None,
                  reid_feature: str = "vlmpool", reid_bank: int = 1, reid_topm: int = 1,
-                 conf_tau: float = 0.0):
+                 conf_tau: float = 0.0, frame_gain: float = 0.0):
         self.device = device
         self.cfg = cfg
         self.vlm = vlm                              # OnlineVLM (owns the frozen backbone + language mode)
@@ -117,6 +117,7 @@ class Policy:
         self._track = (ex_source == "track")                   # Plan A: grounding drives control
         self.commit_k = int(commit_k)                          # hysteresis frames to switch target
         self.conf_tau = float(conf_tau)                        # ①: min pick-margin to commit-fly (track)
+        self.frame_gain = float(frame_gain)                    # ②: yaw-centering gain on committed target
         wp = cfg["waypoint"]
         self.estimator = TargetStateEstimator(wp["offsets_s"], wp["scale"], cfg.get("fps", 10))
 
@@ -166,6 +167,7 @@ class Policy:
         self._chal = None; self._chal_n = 0
         self._reid_bank = []            # reid: K-view diversity gallery of the tracked target
         self._pred_conf = 0.0           # ①: current pick top1−top2 margin
+        self._frame_cw = None           # ②: committed target world pos to keep centered
         self.estimator.reset()
         self._dagger_flush()            # DAgger: flush the finished episode's frames, start fresh
         self._dagger_buf = []
@@ -291,6 +293,15 @@ class Policy:
                     if rl is not None:
                         self._tid_logits = rl
                         self._pred_slot = int(rl.argmax())
+                # oracle-identity diagnostic: always pick the TRUE target (isolates the control/WHERE
+                # ceiling — if identity were perfect, can deployable control keep the target in frame?).
+                if self.tid_head == "oracle":
+                    if cset.true_idx is not None and cset.true_idx >= 0:
+                        self._tid_logits = np.zeros(len(cset.cands), np.float32)
+                        self._tid_logits[cset.true_idx] = 1.0
+                        self._pred_slot = int(cset.true_idx)
+                    else:
+                        self._pred_slot = -1                              # target off-screen this frame
                 # pick confidence = top1−top2 margin (used to gate commit-fly in track mode).
                 tl = self._tid_logits
                 self._pred_conf = float(np.sort(tl)[-1] - np.sort(tl)[-2]) if tl.size >= 2 else 1.0
@@ -317,6 +328,7 @@ class Policy:
                     if confident:
                         self._update_commit(cset)
                     cw = self._committed_world(tpos, dstates)
+                    self._frame_cw = cw if (confident and cw is not None) else None   # ②: keep this centered
                     if cw is not None:
                         if confident and self._in_frame(cw, campose):
                             self.estimator.update(cw, obs.step)
@@ -349,6 +361,16 @@ class Policy:
         a0 = act[0, 0].float().cpu().numpy()
         dx, dy, dz, dyaw = (a0[:4] * self.a_scale).tolist()
         search_mode = float(a0[4] > 0.5)
+        # ②: yaw-centering correction on the committed target (breaks the framing→reid cascade —
+        # diagnostic: deployable control only centers 8% of frames → off-center mis 0.39). Nudge
+        # the camera toward the committed target's projected horizontal offset; gated by confidence.
+        if self._track and self.frame_gain and self._frame_cw is not None:
+            from acot_probe.projection import project_point
+            W = self.image_cfg["width"]; H = self.image_cfg["height"]; fov = self.image_cfg["fov_deg"]
+            pr = project_point(tuple(float(x) for x in self._frame_cw),
+                               tuple(float(x) for x in gt_candidates[2]), W, H, fov)
+            if pr is not None and pr[2] > 0:
+                dyaw = dyaw + self.frame_gain * (pr[0] / W - 0.5)   # +gain turns toward a right-of-center target
         info = ActInfo(tid_logits=self._tid_logits, pred_slot=self._pred_slot,
                        cand_set=self._cand_set, z_ex=self._z_ex[0].float().cpu().numpy())
         return (dx, dy, dz, dyaw), search_mode, info
