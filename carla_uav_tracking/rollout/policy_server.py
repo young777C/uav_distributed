@@ -115,6 +115,9 @@ def main():
                          "instance-discriminative; offline milestone K2 breaks 0.5)")
     ap.add_argument("--reid-bank", type=int, default=1, help="reid K-view gallery size (sweet spot ~2-3)")
     ap.add_argument("--reid-topm", type=int, default=1, help="reid match = top-m mean cosine to gallery")
+    ap.add_argument("--warmup-oracle-s", type=float, default=0.0,
+                    help="diag: first N seconds use oracle identity (establish tracking) then hand to reid — "
+                         "tests if the deployable gap is cascade-INITIATION vs reid-intrinsic")
     ap.add_argument("--frame-gain", type=float, default=0.0,
                     help="②: yaw-centering gain on the committed target (deg per frac-offset from center; "
                          "breaks the framing→reid cascade). 0=off; sign per camera convention.")
@@ -131,7 +134,7 @@ def main():
                     s2_period=a.s2_period, ablate=a.ablate, ex_source=a.ex_source, commit_k=a.commit_k,
                     tid_head=a.tid_head, tid_ckpt=tck,
                     reid_feature=a.reid_feature, reid_bank=a.reid_bank, reid_topm=a.reid_topm,
-                    conf_tau=a.conf_tau, frame_gain=a.frame_gain)
+                    conf_tau=a.conf_tau, frame_gain=a.frame_gain, warmup_oracle_s=a.warmup_oracle_s)
     print(f"[policy-server] loaded policy (language_mode={a.language_mode}, "
           f"s2_period={a.s2_period}, ablate={a.ablate}, ex_source={a.ex_source}, commit_k={a.commit_k}, "
           f"tid_head={a.tid_head})", flush=True)

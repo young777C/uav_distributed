@@ -50,7 +50,7 @@ def main():
     client.set_timeout(60.0)
 
     summaries = []
-    postproc = PostProcessor(output_dir)
+    postproc = PostProcessor(output_dir, fov=float(cfg.get("output", {}).get("fov", 90.0)))
 
     # Load the scenario's first town up front (skip if the server is already on
     # it — important for crash-resume so we don't reload every restart).

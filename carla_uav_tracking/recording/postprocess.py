@@ -94,8 +94,12 @@ def compute_occlusion_labels(bbox_u, bbox_v, bbox_w, occ_raycast, W, H,
 class PostProcessor:
     """Add training annotations to raw recording data."""
 
-    def __init__(self, output_dir: Path):
+    def __init__(self, output_dir: Path, fov: float = _FOV_DEG):
         self._output_dir = Path(output_dir)
+        # §10: the sensor FOV was narrowed 90→70; bbox/off_screen projection MUST use the
+        # SAME fov as the camera (else off_screen under-reports — the target leaves the real
+        # 70° frame but a 90° projection still counts it in-frame). Caller passes output.fov.
+        self._fov = float(fov)
 
     def process_episode(self, episode_path: Path) -> None:
         """Add annotations to one episode HDF5 file."""
@@ -103,8 +107,8 @@ class PostProcessor:
             n_steps = f["rgb"].shape[0]
 
             # 1. Correct-projection 2D bboxes: TARGET + ALL DISTRACTORS
-            bboxes = self._compute_bboxes(f, n_steps)               # (n, 4)
-            dbboxes = self._compute_distractor_bboxes(f, n_steps)   # (n, D, 4)
+            bboxes = self._compute_bboxes(f, n_steps, self._fov)               # (n, 4)
+            dbboxes = self._compute_distractor_bboxes(f, n_steps, self._fov)   # (n, D, 4)
 
             # 2. Occlusion (from the correct target bbox)
             occlusions = self._compute_occlusions(f, n_steps, bboxes)
@@ -157,24 +161,24 @@ class PostProcessor:
                 float(f["state/cam_yaw"][i]))
 
     @staticmethod
-    def _compute_bboxes(f: h5py.File, n: int) -> np.ndarray:
+    def _compute_bboxes(f: h5py.File, n: int, fov: float = _FOV_DEG) -> np.ndarray:
         """TARGET 2D pseudo-bbox [u, v, w, h] (px) via the CORRECT projection (real
-        camera pose incl. pitch/yaw + actual W,H). [-1,-1,0,0] if behind the camera."""
+        camera pose incl. pitch/yaw + actual W,H + sensor fov). [-1,-1,0,0] if behind."""
         H, W = int(f["rgb"].shape[1]), int(f["rgb"].shape[2])
         tx, ty, tz = f["target/tx"][:], f["target/ty"][:], f["target/tz"][:]
         out = np.zeros((n, 4), dtype=np.float32)
         for i in range(n):
-            pr = _project((tx[i], ty[i], tz[i]), PostProcessor._campose(f, i), W, H)
+            pr = _project((tx[i], ty[i], tz[i]), PostProcessor._campose(f, i), W, H, fov)
             if pr is None:
                 out[i] = (-1, -1, 0, 0)
                 continue
             u, v, depth = pr
-            s = _pseudo_box(depth, W)
+            s = _pseudo_box(depth, W, fov)
             out[i] = (u, v, s, s)
         return out
 
     @staticmethod
-    def _compute_distractor_bboxes(f: h5py.File, n: int) -> np.ndarray:
+    def _compute_distractor_bboxes(f: h5py.File, n: int, fov: float = _FOV_DEG) -> np.ndarray:
         """ALL distractors' 2D pseudo-bbox → (n, D, 4) [u,v,w,h] (px) for Stage-2
         L_target_id. [-1,-1,0,0] where a distractor is behind the camera."""
         if "distractors/positions" not in f:
@@ -187,11 +191,11 @@ class PostProcessor:
         for i in range(n):
             cp = PostProcessor._campose(f, i)
             for d in range(D):
-                pr = _project((dpos[i, d, 0], dpos[i, d, 1], dpos[i, d, 2]), cp, W, H)
+                pr = _project((dpos[i, d, 0], dpos[i, d, 1], dpos[i, d, 2]), cp, W, H, fov)
                 if pr is None:
                     continue
                 u, v, depth = pr
-                s = _pseudo_box(depth, W)
+                s = _pseudo_box(depth, W, fov)
                 out[i, d] = (u, v, s, s)
         return out
 

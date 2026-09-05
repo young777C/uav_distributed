@@ -97,7 +97,7 @@ class Policy:
                  ex_source: str = "ear", commit_k: int = 5,
                  tid_head: str = "xattn", tid_ckpt: str | None = None,
                  reid_feature: str = "vlmpool", reid_bank: int = 1, reid_topm: int = 1,
-                 conf_tau: float = 0.0, frame_gain: float = 0.0):
+                 conf_tau: float = 0.0, frame_gain: float = 0.0, warmup_oracle_s: float = 0.0):
         self.device = device
         self.cfg = cfg
         self.vlm = vlm                              # OnlineVLM (owns the frozen backbone + language mode)
@@ -118,6 +118,8 @@ class Policy:
         self.commit_k = int(commit_k)                          # hysteresis frames to switch target
         self.conf_tau = float(conf_tau)                        # ①: min pick-margin to commit-fly (track)
         self.frame_gain = float(frame_gain)                    # ②: yaw-centering gain on committed target
+        self.warmup_oracle_s = float(warmup_oracle_s)          # diag: first N s use oracle id (est. tracking)
+        self.fps = int(cfg.get("fps", 10))
         wp = cfg["waypoint"]
         self.estimator = TargetStateEstimator(wp["offsets_s"], wp["scale"], cfg.get("fps", 10))
 
@@ -302,6 +304,15 @@ class Policy:
                         self._pred_slot = int(cset.true_idx)
                     else:
                         self._pred_slot = -1                              # target off-screen this frame
+                # WARM-START diagnostic: first N seconds use ORACLE identity (establish good tracking/
+                # framing before handing off to reid) — the gallery still builds from the GT target
+                # during warmup (reid_select ran above). Tests "does reid sustain if the cascade
+                # isn't initiated early" → is the deployable gap cascade-INITIATION or reid-intrinsic.
+                if self.warmup_oracle_s > 0 and obs.step < self.warmup_oracle_s * self.fps:
+                    if cset.true_idx is not None and cset.true_idx >= 0:
+                        self._tid_logits = np.zeros(len(cset.cands), np.float32)
+                        self._tid_logits[cset.true_idx] = 1.0
+                        self._pred_slot = int(cset.true_idx)
                 # pick confidence = top1−top2 margin (used to gate commit-fly in track mode).
                 tl = self._tid_logits
                 self._pred_conf = float(np.sort(tl)[-1] - np.sort(tl)[-2]) if tl.size >= 2 else 1.0

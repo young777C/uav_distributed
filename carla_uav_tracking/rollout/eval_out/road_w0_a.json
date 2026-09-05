@@ -1,0 +1,231 @@
+{
+  "aggregate": {
+    "episodes": 4,
+    "scored": 4,
+    "SR": 0.0,
+    "mis_follow_sustained": 0.40312520061951307,
+    "mis_follow_inst": 0.39653756355180353,
+    "id_switches_mean": 16.75,
+    "track_seconds_mean": 55.125,
+    "centering_rate": 0.09970512275239272,
+    "reacquire_attempts_total": 9,
+    "reacquire_success_rate": 0.6666666666666666,
+    "reacquire_timeout_rate": 0.33333333333333337,
+    "reacquire_lock_wrong_rate": 0.6666666666666666,
+    "reacquire_convergence_s_mean": 7.933333333333333,
+    "shortcut_nearest_rate": 0.18022822673135958,
+    "shortcut_target_central_rate": 0.09970512275239272
+  },
+  "episodes": [
+    {
+      "success": false,
+      "mis_follow_inst": 0.42934782608695654,
+      "mis_follow_sustained": 0.4320652173913043,
+      "id_switches": 13,
+      "track_frames": 368,
+      "track_seconds": 36.8,
+      "centering_rate": 0.09239130434782608,
+      "max_wrong_run_s": 4.1,
+      "mean_uav_target_dist": 68.50527613898383,
+      "reacquire_attempts": 3,
+      "reacquire_success_rate": 0.6666666666666666,
+      "reacquire_timeout_rate": 0.3333333333333333,
+      "reacquire_lock_wrong_rate": 0.6666666666666666,
+      "reacquire_convergence_s_mean": 13.5,
+      "shortcut_nearest_rate": 0.02717391304347826,
+      "shortcut_target_central_rate": 0.09239130434782608,
+      "mis_by_N": {
+        "6": 0.45454545454545453,
+        "5": 0.625,
+        "4": 0.28440366972477066,
+        "3": 0.42857142857142855
+      },
+      "n_dist": {
+        "6": 165,
+        "5": 48,
+        "4": 109,
+        "3": 42
+      },
+      "mis_by_central": {
+        "central": 0.14705882352941177,
+        "off": 0.45151515151515154
+      },
+      "c_dist": {
+        "central": 34,
+        "off": 330
+      },
+      "mis_by_depth": {
+        "d30-60": 0.3448275862068966,
+        "d<30": 0.4418604651162791,
+        "d>=60": 0.5102040816326531
+      },
+      "d_dist": {
+        "d30-60": 174,
+        "d<30": 43,
+        "d>=60": 147
+      },
+      "steps": 722,
+      "episode_seed": 91006,
+      "duration_seconds": 240.34464716911316,
+      "language": "Pursue the red Seat Leon directly ahead, heading west, maintaining a tracking distance of about 30 m."
+    },
+    {
+      "success": false,
+      "mis_follow_inst": 0.19047619047619047,
+      "mis_follow_sustained": 0.2,
+      "id_switches": 16,
+      "track_frames": 840,
+      "track_seconds": 84.0,
+      "centering_rate": 0.1738095238095238,
+      "max_wrong_run_s": 2.2,
+      "mean_uav_target_dist": 42.42503315476626,
+      "reacquire_attempts": 2,
+      "reacquire_success_rate": 1.0,
+      "reacquire_timeout_rate": 0.0,
+      "reacquire_lock_wrong_rate": 0.5,
+      "reacquire_convergence_s_mean": 3.7,
+      "shortcut_nearest_rate": 0.13214285714285715,
+      "shortcut_target_central_rate": 0.1738095238095238,
+      "mis_by_N": {
+        "6": 0.1947565543071161,
+        "5": 0.0,
+        "4": 0.0
+      },
+      "n_dist": {
+        "6": 801,
+        "5": 12,
+        "4": 23
+      },
+      "mis_by_central": {
+        "central": 0.17123287671232876,
+        "off": 0.18985507246376812
+      },
+      "c_dist": {
+        "central": 146,
+        "off": 690
+      },
+      "mis_by_depth": {
+        "d30-60": 0.24390243902439024,
+        "d<30": 0.10465116279069768
+      },
+      "d_dist": {
+        "d30-60": 492,
+        "d<30": 344
+      },
+      "steps": 899,
+      "episode_seed": 91007,
+      "duration_seconds": 300.4808044433594,
+      "language": "Keep tracking the dark green Seat Leon directly ahead, heading west, maintaining a tracking distance of about 35 m."
+    },
+    {
+      "success": false,
+      "mis_follow_inst": 0.47795414462081126,
+      "mis_follow_sustained": 0.49206349206349204,
+      "id_switches": 21,
+      "track_frames": 567,
+      "track_seconds": 56.7,
+      "centering_rate": 0.0582010582010582,
+      "max_wrong_run_s": 3.6,
+      "mean_uav_target_dist": 156.1645401254764,
+      "reacquire_attempts": 3,
+      "reacquire_success_rate": 0.6666666666666666,
+      "reacquire_timeout_rate": 0.3333333333333333,
+      "reacquire_lock_wrong_rate": 0.6666666666666666,
+      "reacquire_convergence_s_mean": 6.6,
+      "shortcut_nearest_rate": 0.273224043715847,
+      "shortcut_target_central_rate": 0.0582010582010582,
+      "mis_by_N": {
+        "6": 0.48322147651006714,
+        "4": 0.5102040816326531,
+        "3": 0.56,
+        "2": 0.0,
+        "1": 0.0,
+        "5": 0.5
+      },
+      "n_dist": {
+        "6": 149,
+        "4": 294,
+        "3": 75,
+        "2": 18,
+        "1": 18,
+        "5": 12
+      },
+      "mis_by_central": {
+        "central": 0.45454545454545453,
+        "off": 0.47842401500938087
+      },
+      "c_dist": {
+        "central": 33,
+        "off": 533
+      },
+      "mis_by_depth": {
+        "d30-60": 0.3333333333333333,
+        "d<30": 0.27692307692307694,
+        "d>=60": 0.5314685314685315
+      },
+      "d_dist": {
+        "d30-60": 72,
+        "d<30": 65,
+        "d>=60": 429
+      },
+      "steps": 818,
+      "episode_seed": 91008,
+      "duration_seconds": 287.67083263397217,
+      "language": "Keep an eye on the light blue Lincoln sedan directly ahead, heading south, maintaining a tracking distance of about 25 m."
+    },
+    {
+      "success": false,
+      "mis_follow_inst": 0.4883720930232558,
+      "mis_follow_sustained": 0.4883720930232558,
+      "id_switches": 17,
+      "track_frames": 430,
+      "track_seconds": 43.0,
+      "centering_rate": 0.07441860465116279,
+      "max_wrong_run_s": 3.6,
+      "mean_uav_target_dist": 122.88847834787614,
+      "reacquire_attempts": 1,
+      "reacquire_success_rate": 0.0,
+      "reacquire_timeout_rate": 1.0,
+      "reacquire_lock_wrong_rate": 1.0,
+      "reacquire_convergence_s_mean": null,
+      "shortcut_nearest_rate": 0.28837209302325584,
+      "shortcut_target_central_rate": 0.07441860465116279,
+      "mis_by_N": {
+        "4": 0.47368421052631576,
+        "5": 0.4,
+        "6": 0.5,
+        "3": 0.6,
+        "2": 0.0
+      },
+      "n_dist": {
+        "4": 228,
+        "5": 60,
+        "6": 48,
+        "3": 90,
+        "2": 4
+      },
+      "mis_by_central": {
+        "central": 0.25,
+        "off": 0.507537688442211
+      },
+      "c_dist": {
+        "central": 32,
+        "off": 398
+      },
+      "mis_by_depth": {
+        "d<30": 0.375,
+        "d30-60": 0.35714285714285715,
+        "d>=60": 0.5436241610738255
+      },
+      "d_dist": {
+        "d<30": 48,
+        "d30-60": 84,
+        "d>=60": 298
+      },
+      "steps": 609,
+      "episode_seed": 91009,
+      "duration_seconds": 224.82428550720215,
+      "language": "Track the silver Jeep Wrangler directly ahead, heading east, maintaining a tracking distance of about 25 m."
+    }
+  ]
+}
