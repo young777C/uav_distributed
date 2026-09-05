@@ -44,10 +44,16 @@ run_arm () {  # name tavg out
   docker rm -f acot-policy-server >/dev/null 2>&1 || true
 }
 
-run_arm base 0     "$OUT_CTR/reid_tavg0.json"
-run_arm temporal "$TAVG" "$OUT_CTR/reid_tavg${TAVG}.json"
+# SKIP_BASE=1 to reuse an existing reid_tavg0.json; TAVGS = space-separated list (default = $TAVG)
+[ "${SKIP_BASE:-0}" = "1" ] || run_arm base 0 "$OUT_CTR/reid_tavg0.json"
+for t in ${TAVGS:-$TAVG}; do
+  run_arm "t$t" "$t" "$OUT_CTR/reid_tavg${t}.json"
+done
 
 echo ""
-echo "=== PAIRED comparison (same seeds): single-frame reid vs temporal reid ==="
-docker exec cyh-carla python /workspace/rollout/compare_runs.py \
-  "$OUT_CTR/reid_tavg0.json" "$OUT_CTR/reid_tavg${TAVG}.json" --label-a reid0 --label-b "reid_t${TAVG}"
+echo "=== PAIRED comparison (same seeds): single-frame reid (base) vs each tavg ==="
+for t in ${TAVGS:-$TAVG}; do
+  echo "--- reid0 vs tavg$t ---"
+  docker exec cyh-carla python /workspace/rollout/compare_runs.py \
+    "$OUT_CTR/reid_tavg0.json" "$OUT_CTR/reid_tavg${t}.json" --label-a reid0 --label-b "t${t}"
+done

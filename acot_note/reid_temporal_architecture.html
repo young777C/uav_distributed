@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>ACoT-UAV — 当前测试架构 (track + reid-DINOv2-K2 + conf-gate + 时序EMA)</title>
+<style>
+  :root{
+    --ink:#1c2430; --muted:#6b7688; --line:#8a94a3;
+    --frozen-fill:#eef1f5; --frozen-stroke:#c6cedb;
+    --id-panel:#f4f8ff; --id-stroke:#cddcf4;
+    --new-fill:#fff3da; --new-stroke:#e8a317; --new-ink:#7a5200;
+    --where-fill:#e6f6f0; --where-stroke:#9fd6c4;
+    --how-fill:#eef1f5; --env-fill:#f0ecfb; --env-stroke:#c7bdea;
+  }
+  html,body{margin:0;background:#fbfbfd;color:var(--ink);
+    font-family:-apple-system,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;}
+  .wrap{max-width:1280px;margin:0 auto;padding:22px 20px 40px;}
+  h1{font-size:19px;margin:0 0 2px;}
+  .sub{color:var(--muted);font-size:13px;margin:0 0 6px;}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin:8px 0 4px;}
+  .legend .k{display:inline-flex;align-items:center;gap:6px;}
+  .sw{width:14px;height:14px;border-radius:3px;border:1.5px solid #999;display:inline-block;}
+  text{font-family:inherit;}
+  .nt{font-size:12.5px;font-weight:600;fill:var(--ink);}
+  .ns{font-size:11px;fill:var(--muted);}
+  .newt{font-size:12.5px;font-weight:700;fill:var(--new-ink);}
+  .edgelbl{font-size:10.5px;fill:var(--muted);}
+  .lane{font-size:12px;font-weight:700;letter-spacing:.04em;}
+  .cap{font-size:12.5px;color:#455; background:#f4f8ff;border:1px solid #cddcf4;
+    border-radius:8px;padding:10px 14px;margin-top:14px;line-height:1.5;}
+  .cap b{color:#1c2430;}
+  .star{fill:var(--new-stroke);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>ACoT-UAV · 当前闭环测试架构</h1>
+  <p class="sub">全可部署 tracking 策略 — <b>track + reid-DINOv2-K2 gallery + 置信门控 + ★时序EMA re-ID</b>　（纯推理，主干无训练）</p>
+  <div class="legend">
+    <span class="k"><span class="sw" style="background:var(--frozen-fill);border-color:var(--frozen-stroke)"></span>冻结模块 ❄</span>
+    <span class="k"><span class="sw" style="background:var(--id-panel);border-color:var(--id-stroke)"></span>WHICH 身份路径</span>
+    <span class="k"><span class="sw" style="background:var(--new-fill);border-color:var(--new-stroke)"></span>★ 本轮新增/测试重点</span>
+    <span class="k"><span class="sw" style="background:var(--where-fill);border-color:var(--where-stroke)"></span>WHERE 控制先验</span>
+    <span class="k"><span class="sw" style="background:var(--env-fill);border-color:#c7bdea"></span>环境闭环</span>
+  </div>
+
+<svg viewBox="0 0 1240 1010" width="100%" role="img" aria-label="架构流程图">
+  <defs>
+    <marker id="arw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8a94a3"/>
+    </marker>
+    <marker id="arwN" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#e8a317"/>
+    </marker>
+  </defs>
+
+  <!-- ============ highlighted WHICH lane panel ============ -->
+  <rect x="676" y="96" width="486" height="612" rx="14" fill="var(--id-panel)" stroke="var(--id-stroke)" stroke-width="1.5"/>
+  <text x="690" y="120" class="lane" fill="#3f6fb0">WHICH · 时序外观 re-ID（身份）</text>
+
+  <!-- lane labels -->
+  <text x="70" y="120" class="lane" fill="#5a6577">冻结感知主干</text>
+  <text x="70" y="700" class="lane" fill="#2f8a6e">WHERE · HOW · 闭环</text>
+
+  <!-- ============ edges (drawn first, under nodes) ============ -->
+  <g fill="none" stroke="var(--line)" stroke-width="2" marker-end="url(#arw)">
+    <!-- inputs -> qwen -->
+    <path d="M135,168 C 190,168 200,168 235,168"/>
+    <path d="M135,235 C 200,235 210,190 235,182"/>
+    <!-- qwen -> iar -->
+    <path d="M360,196 C 360,220 360,232 360,256"/>
+    <!-- inputs(rgb,cand) -> crop -->
+    <path d="M760,166 C 790,150 900,140 900,150" transform="translate(0,0)"/>
+    <!-- crop chain -->
+    <path d="M900,200 C 900,222 900,232 900,254"/>
+    <path d="M900,314 C 900,336 900,348 900,372"/>
+    <path d="M900,442 C 900,466 900,476 900,500"/>
+    <path d="M900,556 C 900,578 900,588 900,612"/>
+    <!-- vlm_ctx -> DiT (long down-left) -->
+    <path d="M300,196 C 300,430 250,560 220,772"/>
+    <!-- iar z_im -> DiT -->
+    <path d="M360,310 C 360,560 320,660 300,772"/>
+    <!-- proprio -> DiT -->
+    <path d="M600,95 C 640,300 560,600 420,800"/>
+    <!-- z_ex -> DiT -->
+    <path d="M520,715 C 460,730 430,745 415,772"/>
+    <!-- DiT -> action -->
+    <path d="M280,838 C 280,858 280,866 280,884"/>
+    <!-- action -> carla -->
+    <path d="M420,908 C 445,908 452,908 476,908"/>
+  </g>
+
+  <!-- committed identity -> z_ex (WHICH feeds WHERE) : accent -->
+  <g fill="none" stroke="var(--new-stroke)" stroke-width="2.2" marker-end="url(#arwN)">
+    <path d="M820,668 C 700,690 660,700 636,700"/>
+  </g>
+
+  <!-- closed loop: carla -> back up to inputs (dashed) -->
+  <g fill="none" stroke="#a99cd6" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arw)">
+    <path d="M560,930 C 560,975 60,990 40,700 C 30,420 40,120 58,70 C 60,58 62,56 66,52"/>
+  </g>
+  <text x="120" y="985" class="edgelbl" fill="#8a7fc0">闭环：新帧回到感知（10Hz）</text>
+
+  <!-- edge labels -->
+  <text x="250" y="150" class="edgelbl">RGB+语言</text>
+  <text x="905" y="240" class="edgelbl">每候选特征</text>
+  <text x="905" y="360" class="edgelbl">匹配分 logits</text>
+  <text x="905" y="490" class="edgelbl">时序积分→argmax</text>
+  <text x="905" y="600" class="edgelbl">committed 身份</text>
+  <text x="648" y="688" class="edgelbl" fill="var(--new-ink)">CV外推→z_ex</text>
+  <text x="150" y="360" class="edgelbl">vlm_ctx</text>
+  <text x="300" y="640" class="edgelbl">z_im</text>
+  <text x="600" y="470" class="edgelbl">proprio</text>
+
+  <!-- ============ NODES ============ -->
+  <!-- inputs -->
+  <g>
+    <rect x="10" y="142" width="125" height="52" rx="9" fill="#fff" stroke="var(--frozen-stroke)" stroke-width="1.5"/>
+    <text x="72" y="164" text-anchor="middle" class="nt">RGB 512×512</text>
+    <text x="72" y="182" text-anchor="middle" class="ns">UAV 相机</text>
+
+    <rect x="10" y="210" width="125" height="50" rx="9" fill="#fff" stroke="var(--frozen-stroke)" stroke-width="1.5"/>
+    <text x="72" y="231" text-anchor="middle" class="nt">语言指令</text>
+    <text x="72" y="248" text-anchor="middle" class="ns">neutral 模式</text>
+
+    <rect x="700" y="60" width="180" height="52" rx="9" fill="#fff" stroke="var(--frozen-stroke)" stroke-width="1.5"/>
+    <text x="790" y="82" text-anchor="middle" class="nt">CandidateSet</text>
+    <text x="790" y="100" text-anchor="middle" class="ns">目标+干扰车框 · 稳定 actor idx</text>
+
+    <rect x="520" y="44" width="160" height="50" rx="9" fill="#fff" stroke="var(--frozen-stroke)" stroke-width="1.5"/>
+    <text x="600" y="65" text-anchor="middle" class="nt">Proprio 5D</text>
+    <text x="600" y="82" text-anchor="middle" class="ns">cam_z · pitch · uav_vel×3</text>
+  </g>
+
+  <!-- backbone frozen -->
+  <g>
+    <rect x="235" y="140" width="250" height="58" rx="10" fill="var(--frozen-fill)" stroke="var(--frozen-stroke)" stroke-width="1.5"/>
+    <text x="360" y="165" text-anchor="middle" class="nt">Qwen3-VL-4B ❄</text>
+    <text x="360" y="184" text-anchor="middle" class="ns">→ vlm_ctx（场景语义）+ 逐层 layers</text>
+
+    <rect x="235" y="256" width="250" height="54" rx="10" fill="var(--frozen-fill)" stroke="var(--frozen-stroke)" stroke-width="1.5"/>
+    <text x="360" y="278" text-anchor="middle" class="nt">IAR ❄ → z_im</text>
+    <text x="360" y="296" text-anchor="middle" class="ns">隐式先验 + occ/maneuver 头</text>
+    <text x="360" y="330" text-anchor="middle" class="ns" fill="#a0a8b5">（track 模式不用 EAR）</text>
+  </g>
+
+  <!-- WHICH lane nodes -->
+  <g>
+    <rect x="800" y="150" width="200" height="50" rx="10" fill="var(--frozen-fill)" stroke="var(--frozen-stroke)" stroke-width="1.5"/>
+    <text x="900" y="171" text-anchor="middle" class="nt">crop → DINOv2 ❄</text>
+    <text x="900" y="189" text-anchor="middle" class="ns">vit-s/14 · 实例判别特征</text>
+
+    <rect x="800" y="254" width="200" height="60" rx="10" fill="#fff" stroke="var(--id-stroke)" stroke-width="1.5"/>
+    <text x="900" y="277" text-anchor="middle" class="nt">K-view gallery（K=2）</text>
+    <text x="900" y="295" text-anchor="middle" class="ns">多视角时序模板</text>
+    <text x="900" y="309" text-anchor="middle" class="ns">top-m 均值余弦匹配</text>
+
+    <!-- NEW: temporal EMA -->
+    <rect x="792" y="372" width="216" height="70" rx="11" fill="var(--new-fill)" stroke="var(--new-stroke)" stroke-width="2.4"/>
+    <text x="806" y="392" class="star" font-size="15">★</text>
+    <text x="900" y="393" text-anchor="middle" class="newt">时序 EMA 累积（本轮新增）</text>
+    <text x="900" y="411" text-anchor="middle" class="ns">按 actor：score=α·prev+(1−α)·logit</text>
+    <text x="900" y="429" text-anchor="middle" class="ns">时序积分 argmax（≠单帧）</text>
+
+    <rect x="800" y="500" width="200" height="56" rx="10" fill="#fff" stroke="var(--id-stroke)" stroke-width="1.5"/>
+    <text x="900" y="522" text-anchor="middle" class="nt">K 帧滞回提交</text>
+    <text x="900" y="540" text-anchor="middle" class="ns">challenger 连胜 K 次才换 → committed 身份</text>
+
+    <!-- NEW: conf-gate -->
+    <rect x="792" y="612" width="216" height="66" rx="11" fill="var(--new-fill)" stroke="var(--new-stroke)" stroke-width="2.4"/>
+    <text x="806" y="632" class="star" font-size="15">★</text>
+    <text x="900" y="633" text-anchor="middle" class="newt">置信门控 conf-gate</text>
+    <text x="900" y="651" text-anchor="middle" class="ns">margin≥τ → commit-fly</text>
+    <text x="900" y="667" text-anchor="middle" class="ns">否则 保持承诺 + 航位推算</text>
+  </g>
+
+  <!-- WHERE -->
+  <rect x="520" y="688" width="180" height="54" rx="10" fill="var(--where-fill)" stroke="var(--where-stroke)" stroke-width="1.5"/>
+  <text x="610" y="710" text-anchor="middle" class="nt">WHERE：CV 外推</text>
+  <text x="610" y="728" text-anchor="middle" class="ns">committed GT位 → z_ex（相机系/scale）</text>
+
+  <!-- HOW: DiT -->
+  <rect x="140" y="772" width="280" height="66" rx="11" fill="var(--how-fill)" stroke="var(--frozen-stroke)" stroke-width="1.5"/>
+  <text x="280" y="795" text-anchor="middle" class="nt">DiT ❄ · 32层 flow-matching 动作头</text>
+  <text x="280" y="813" text-anchor="middle" class="ns">{z_ex, z_im, vlm_ctx, proprio}</text>
+  <text x="280" y="830" text-anchor="middle" class="ns">→ (dx,dy,dz,dyaw) + search_mode</text>
+
+  <!-- action + carla -->
+  <rect x="140" y="884" width="280" height="46" rx="10" fill="#fff" stroke="var(--frozen-stroke)" stroke-width="1.5"/>
+  <text x="280" y="906" text-anchor="middle" class="nt">action×scale → drone.step</text>
+  <text x="280" y="922" text-anchor="middle" class="ns">pos += Δ · yaw += Δyaw</text>
+
+  <rect x="476" y="884" width="170" height="46" rx="10" fill="var(--env-fill)" stroke="#c7bdea" stroke-width="1.5"/>
+  <text x="561" y="906" text-anchor="middle" class="nt">CARLA 环境</text>
+  <text x="561" y="922" text-anchor="middle" class="ns">→ 新帧（闭环）</text>
+</svg>
+
+  <div class="cap">
+    <b>三问分解</b>：<b style="color:#3f6fb0">WHICH</b>（身份，本轮重点）= crop-DINOv2 特征 → K-view gallery 模板 → <b style="color:#7a5200">★时序 EMA 时序积分</b> → 滞回提交 → <b style="color:#7a5200">★置信门控</b>；　<b style="color:#2f8a6e">WHERE</b> = committed 目标 CV 外推 → z_ex；　<b>HOW</b> = DiT flow-matching 动作。<br>
+    <b>本轮改动（高亮橙）</b>：gallery 模板本已时序，但 query 一直是<b>单帧 argmax</b> → off-center 单帧让 look-alike 偶然胜出 → 误认 → 级联。★时序 EMA 把匹配证据<b>按稳定 actor 跨帧积分</b>，用时序最优提交 → 对单个坏帧鲁棒、跨短暂丢失保留证据。<br>
+    <b>初步闭环结果</b>（5-ep 同种子配对，tavg 0→0.7）：id_switches <b>13.4→6.2（显著减半）</b>，mis_follow 0.27→0.23、lock_wrong 0.63→0.54、track_s 55.7→65.2 全方向向好，<b>无任何 trade-off</b>——SR-informative 种子上的判定进行中。
+  </div>
+</div>
+</body>
+</html>
