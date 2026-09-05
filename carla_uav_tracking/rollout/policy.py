@@ -97,7 +97,8 @@ class Policy:
                  ex_source: str = "ear", commit_k: int = 5,
                  tid_head: str = "xattn", tid_ckpt: str | None = None,
                  reid_feature: str = "vlmpool", reid_bank: int = 1, reid_topm: int = 1,
-                 conf_tau: float = 0.0, frame_gain: float = 0.0, warmup_oracle_s: float = 0.0):
+                 conf_tau: float = 0.0, frame_gain: float = 0.0, warmup_oracle_s: float = 0.0,
+                 reid_tavg: float = 0.0):
         self.device = device
         self.cfg = cfg
         self.vlm = vlm                              # OnlineVLM (owns the frozen backbone + language mode)
@@ -119,6 +120,7 @@ class Policy:
         self.conf_tau = float(conf_tau)                        # ①: min pick-margin to commit-fly (track)
         self.frame_gain = float(frame_gain)                    # ②: yaw-centering gain on committed target
         self.warmup_oracle_s = float(warmup_oracle_s)          # diag: first N s use oracle id (est. tracking)
+        self.reid_tavg = float(reid_tavg)                      # temporal re-ID: per-actor EMA of match score
         self.fps = int(cfg.get("fps", 10))
         wp = cfg["waypoint"]
         self.estimator = TargetStateEstimator(wp["offsets_s"], wp["scale"], cfg.get("fps", 10))
@@ -168,6 +170,7 @@ class Policy:
         self._committed_idx = None      # Plan A: committed target identity (-1=target, d=distractor)
         self._chal = None; self._chal_n = 0
         self._reid_bank = []            # reid: K-view diversity gallery of the tracked target
+        self._reid_score = {}           # temporal re-ID: actor_idx -> EMA of gallery-match score
         self._pred_conf = 0.0           # ①: current pick top1−top2 margin
         self._frame_cw = None           # ②: committed target world pos to keep centered
         self.estimator.reset()
@@ -295,6 +298,24 @@ class Policy:
                     if rl is not None:
                         self._tid_logits = rl
                         self._pred_slot = int(rl.argmax())
+                        # TEMPORAL re-ID: the gallery template is temporal but the QUERY is single-frame
+                        # (argmax) → an off-center/far frame lets a look-alike fluke-win → mis-commit →
+                        # cascade. Accumulate per-ACTOR (stable cand.idx) EMA of the match score and pick
+                        # the TEMPORALLY-INTEGRATED best visible candidate → robust to single bad frames,
+                        # persists evidence across brief losses. reid_tavg=decay (0=off=single-frame).
+                        if self.reid_tavg > 0:
+                            a = self.reid_tavg
+                            for s, c in enumerate(cset.cands):
+                                prev = self._reid_score.get(c.idx, float(rl[s]))
+                                self._reid_score[c.idx] = a * prev + (1 - a) * float(rl[s])
+                            best_s, best_v = self._pred_slot, -1e9
+                            for s, c in enumerate(cset.cands):
+                                v = self._reid_score.get(c.idx, -1e9)
+                                if v > best_v:
+                                    best_v, best_s = v, s
+                            self._pred_slot = int(best_s)
+                            self._tid_logits = np.array([self._reid_score.get(c.idx, -1e9)
+                                                         for c in cset.cands], np.float32)
                 # oracle-identity diagnostic: always pick the TRUE target (isolates the control/WHERE
                 # ceiling — if identity were perfect, can deployable control keep the target in frame?).
                 if self.tid_head == "oracle":

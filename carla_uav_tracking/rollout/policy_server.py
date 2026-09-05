@@ -124,6 +124,9 @@ def main():
     ap.add_argument("--conf-tau", type=float, default=0.0,
                     help="①: min pick-margin (top1-top2) to commit-fly in track mode; below it, hold "
                          "commitment + dead-reckon (don't chase an ambiguous look-alike). 0=off")
+    ap.add_argument("--reid-tavg", type=float, default=0.0,
+                    help="temporal re-ID: per-actor EMA decay of the reid match score (0=off=single-frame "
+                         "argmax; e.g. 0.7 = integrate evidence over ~3 ticks → robust to off-center frames)")
     ap.add_argument("--port", type=int, default=5555)
     a = ap.parse_args()
 
@@ -134,7 +137,8 @@ def main():
                     s2_period=a.s2_period, ablate=a.ablate, ex_source=a.ex_source, commit_k=a.commit_k,
                     tid_head=a.tid_head, tid_ckpt=tck,
                     reid_feature=a.reid_feature, reid_bank=a.reid_bank, reid_topm=a.reid_topm,
-                    conf_tau=a.conf_tau, frame_gain=a.frame_gain, warmup_oracle_s=a.warmup_oracle_s)
+                    conf_tau=a.conf_tau, frame_gain=a.frame_gain, warmup_oracle_s=a.warmup_oracle_s,
+                    reid_tavg=a.reid_tavg)
     print(f"[policy-server] loaded policy (language_mode={a.language_mode}, "
           f"s2_period={a.s2_period}, ablate={a.ablate}, ex_source={a.ex_source}, commit_k={a.commit_k}, "
           f"tid_head={a.tid_head})", flush=True)
