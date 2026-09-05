@@ -50,8 +50,11 @@ def main():
     paths = sys.argv[1:]
     arms = [(p.split("/")[-1].replace(".json", ""), load(p)) for p in paths]
     base_seeds = sorted(arms[0][1])
-    common = [s for s in base_seeds if all(s in a[1] for a in arms)]
-    print(f"paired seeds (n={len(common)}): {common}\n")
+    common = [s for s in base_seeds
+              if all(s in a[1] and "mis_follow_inst" in a[1][s] for a in arms)]  # drop unscored eps
+    dropped = [s for s in base_seeds if s not in common]
+    print(f"paired scored seeds (n={len(common)}): {common}"
+          + (f"   [dropped unscored: {dropped}]" if dropped else "") + "\n")
     rows = {}
     for name, eps in arms:
         sub = {s: eps[s] for s in common}
