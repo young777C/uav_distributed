@@ -102,7 +102,7 @@ def main() -> int:
 
     cfg = load_config()
     client = carla.Client("127.0.0.1", a.carla_port)
-    client.set_timeout(30.0)
+    client.set_timeout(60.0)   # first load_world after a fresh CARLA boot is slow (port-open != ready)
     world = client.load_world(a.town) if a.town else client.get_world()
     print(f"[rollout] map={world.get_map().name} policy={a.policy_host}:{a.policy_port} "
           f"episodes={a.episodes}", flush=True)

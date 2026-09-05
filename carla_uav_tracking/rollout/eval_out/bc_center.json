@@ -1,0 +1,199 @@
+{
+  "aggregate": {
+    "episodes": 4,
+    "scored": 4,
+    "SR": 0.0,
+    "mis_follow_sustained": 0.4679945054945055,
+    "mis_follow_inst": 0.39418498168498173,
+    "id_switches_mean": 1.0,
+    "track_seconds_mean": 2.2249999999999996,
+    "centering_rate": 0.1678113553113553,
+    "reacquire_attempts_total": 19,
+    "reacquire_success_rate": 0.15789473684210525,
+    "reacquire_timeout_rate": 0.8421052631578947,
+    "reacquire_lock_wrong_rate": 0.6842105263157895,
+    "reacquire_convergence_s_mean": 0.7333333333333334,
+    "shortcut_nearest_rate": 0.0,
+    "shortcut_target_central_rate": 0.1678113553113553
+  },
+  "episodes": [
+    {
+      "success": false,
+      "mis_follow_inst": 0.3076923076923077,
+      "mis_follow_sustained": 0.3076923076923077,
+      "id_switches": 1,
+      "track_frames": 13,
+      "track_seconds": 1.3,
+      "centering_rate": 0.23076923076923078,
+      "max_wrong_run_s": 0.4,
+      "mean_uav_target_dist": 17981.07311062846,
+      "reacquire_attempts": 3,
+      "reacquire_success_rate": 0.3333333333333333,
+      "reacquire_timeout_rate": 0.6666666666666666,
+      "reacquire_lock_wrong_rate": 0.3333333333333333,
+      "reacquire_convergence_s_mean": 0.1,
+      "shortcut_nearest_rate": 0.0,
+      "shortcut_target_central_rate": 0.23076923076923078,
+      "mis_by_N": {
+        "5": 0.0
+      },
+      "n_dist": {
+        "5": 6
+      },
+      "mis_by_central": {
+        "central": 0.0,
+        "off": 0.0
+      },
+      "c_dist": {
+        "central": 3,
+        "off": 3
+      },
+      "mis_by_depth": {
+        "d30-60": 0.0
+      },
+      "d_dist": {
+        "d30-60": 6
+      },
+      "steps": 196,
+      "episode_seed": 91000,
+      "duration_seconds": 64.08600091934204,
+      "language": "Lock onto the yellow Nissan Patrol SUV directly ahead, heading east, maintaining a tracking distance of about 35 m."
+    },
+    {
+      "success": false,
+      "mis_follow_inst": 0.4,
+      "mis_follow_sustained": 0.26666666666666666,
+      "id_switches": 1,
+      "track_frames": 15,
+      "track_seconds": 1.5,
+      "centering_rate": 0.0,
+      "max_wrong_run_s": 0.4,
+      "mean_uav_target_dist": 516880.3899847246,
+      "reacquire_attempts": 5,
+      "reacquire_success_rate": 0.2,
+      "reacquire_timeout_rate": 0.8,
+      "reacquire_lock_wrong_rate": 0.6,
+      "reacquire_convergence_s_mean": 0.5,
+      "shortcut_nearest_rate": 0.0,
+      "shortcut_target_central_rate": 0.0,
+      "mis_by_N": {
+        "6": 0.6
+      },
+      "n_dist": {
+        "6": 10
+      },
+      "mis_by_central": {
+        "central": null,
+        "off": 0.6
+      },
+      "c_dist": {
+        "central": 0,
+        "off": 10
+      },
+      "mis_by_depth": {
+        "d30-60": 0.0,
+        "d>=60": 1.0
+      },
+      "d_dist": {
+        "d30-60": 4,
+        "d>=60": 6
+      },
+      "steps": 306,
+      "episode_seed": 91001,
+      "duration_seconds": 99.29290628433228,
+      "language": "Focus on the brown Mini Cooper directly ahead, heading east, maintaining a tracking distance of about 30 m."
+    },
+    {
+      "success": false,
+      "mis_follow_inst": 0.3333333333333333,
+      "mis_follow_sustained": 0.3333333333333333,
+      "id_switches": 1,
+      "track_frames": 33,
+      "track_seconds": 3.3,
+      "centering_rate": 0.3333333333333333,
+      "max_wrong_run_s": 1.1,
+      "mean_uav_target_dist": 1104498.6755790904,
+      "reacquire_attempts": 6,
+      "reacquire_success_rate": 0.0,
+      "reacquire_timeout_rate": 1.0,
+      "reacquire_lock_wrong_rate": 0.8333333333333334,
+      "reacquire_convergence_s_mean": null,
+      "shortcut_nearest_rate": 0.0,
+      "shortcut_target_central_rate": 0.3333333333333333,
+      "mis_by_N": {
+        "6": 0.4782608695652174,
+        "5": 0.0
+      },
+      "n_dist": {
+        "6": 23,
+        "5": 6
+      },
+      "mis_by_central": {
+        "central": 0.0,
+        "off": 0.6111111111111112
+      },
+      "c_dist": {
+        "central": 11,
+        "off": 18
+      },
+      "mis_by_depth": {
+        "d30-60": 0.29411764705882354,
+        "d<30": 0.0,
+        "d>=60": 1.0
+      },
+      "d_dist": {
+        "d30-60": 17,
+        "d<30": 6,
+        "d>=60": 6
+      },
+      "steps": 299,
+      "episode_seed": 91002,
+      "duration_seconds": 98.6928961277008,
+      "language": "Focus on the gray Lincoln sedan directly ahead, heading north, maintaining a tracking distance of about 35 m."
+    },
+    {
+      "success": false,
+      "mis_follow_inst": 0.5357142857142857,
+      "mis_follow_sustained": 0.9642857142857143,
+      "id_switches": 1,
+      "track_frames": 28,
+      "track_seconds": 2.8,
+      "centering_rate": 0.10714285714285714,
+      "max_wrong_run_s": 2.6,
+      "mean_uav_target_dist": 1136889.2297006035,
+      "reacquire_attempts": 5,
+      "reacquire_success_rate": 0.2,
+      "reacquire_timeout_rate": 0.8,
+      "reacquire_lock_wrong_rate": 0.8,
+      "reacquire_convergence_s_mean": 1.6,
+      "shortcut_nearest_rate": 0.0,
+      "shortcut_target_central_rate": 0.10714285714285714,
+      "mis_by_N": {
+        "6": 0.6875
+      },
+      "n_dist": {
+        "6": 16
+      },
+      "mis_by_central": {
+        "central": 1.0,
+        "off": 0.6153846153846154
+      },
+      "c_dist": {
+        "central": 3,
+        "off": 13
+      },
+      "mis_by_depth": {
+        "d30-60": 1.0,
+        "d>=60": 0.5454545454545454
+      },
+      "d_dist": {
+        "d30-60": 5,
+        "d>=60": 11
+      },
+      "steps": 257,
+      "episode_seed": 91003,
+      "duration_seconds": 82.22460126876831,
+      "language": "Follow the red Chevrolet Impala directly ahead, heading east, maintaining a tracking distance of about 30 m."
+    }
+  ]
+}
