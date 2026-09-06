@@ -67,7 +67,7 @@
 **集成层**
 - [x] **`tid_head=assoc`**:DeepSORT/OC-SORT 式运动(CV 图像位预测+门)+外观(crop-DINOv2 EMA)关联,接入 `policy.py`+`policy_server.py`;`--assoc-mode {motion,deepsort} --assoc-gate-px --assoc-lambda`;motion-mode 逻辑单测通过(选最近/GT更新/出画不更新+门控);SELECT用过去态、UPDATE用GT(与reid同无泄漏特权)。**待评测**(GPU2 主 batch 占用中)
 - [x] **`tid_head=dam4sam`**:DAM4SAM 独立 env+socket 服务+tid_head 全通,smoke PASS,20ep 评测链式排队
-- [ ] `tid_head=refmot`:iKUN/TransRMOT referring 头,候选框+语言打分
+- [~] iKUN/JointNLT:**决策 A(2026-09-06)= 停在 assoc+DAM4SAM 强外部套件,iKUN/JointNLT 转 future work**。JointNLT 已 de-risk(权重可下、env 配方验证 py3.7+torch1.11+cu113),续做低风险但零样本域差/边际低;顶会再补。
 - [ ] (可选)JointNLT/UVLTrack 被动感知对照(离线在 episode 帧上跑)
 - [ ] (加码)TrackVLA/OmTrackVLA 全闭环适配调研
 
