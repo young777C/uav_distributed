@@ -99,3 +99,14 @@
 - DAM4SAM https://github.com/jovanavidenovic/dam4sam
 - TrackVLA https://github.com/wsakobe/TrackVLA · OmTrackVLA https://github.com/om-ai-lab/OmTrackVLA · TrackVLA++ https://pku-epic.github.io/TrackVLA-plus-plus-Web/
 - AerialMind https://arxiv.org/abs/2511.21053
+
+## 附:DAM4SAM env 配方(2026-09-06,实测打通)
+持久容器 `dam4sam-svc`(基 `acot-uav-train:cu118`,GPU3,cyh-carla-net,`sleep infinity`)。独立 conda env:
+```
+mamba create -n dam4sam python=3.10.15 -y && conda activate dam4sam
+pip install torch==2.1.0 torchvision==0.16.0 --index-url https://download.pytorch.org/whl/cu118   # cu118 绕开驱动470
+pip install numpy==1.26.4 opencv-python-headless==4.10.0.84 hydra-core iopath pillow tqdm omegaconf einops
+pip install vot-toolkit==0.7.1 vot-trax==4.0.2      # dam4sam_tracker 需 vot.region(精确版本)
+cd external/DAM4SAM && pip install -e .              # 装 sam2(bundled)
+```
+**踩坑**:① 官方 cu121 撞驱动470→改 cu118;② numpy 必须 <2(torch2.1 ABI),**opencv-python 5.0 会把 numpy 拉回 2.x→卸掉只留 headless 4.10**;③ dam4sam_tracker 用 PIL Image 不是 ndarray;④ vot 精确版 0.7.1/trax4.0.2。SAM2.1 权重 `checkpoints/download_ckpts.sh`(large ~900MB)。smoke:`initialize(PIL,None,bbox=(x,y,w,h))`→`track(PIL)`→`{'pred_mask'}` 正确跟随。

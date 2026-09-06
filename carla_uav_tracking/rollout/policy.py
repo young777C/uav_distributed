@@ -99,7 +99,8 @@ class Policy:
                  reid_feature: str = "vlmpool", reid_bank: int = 1, reid_topm: int = 1,
                  conf_tau: float = 0.0, frame_gain: float = 0.0, warmup_oracle_s: float = 0.0,
                  reid_tavg: float = 0.0, assoc_mode: str = "deepsort",
-                 assoc_gate_px: float = 160.0, assoc_lambda: float = 1.0):
+                 assoc_gate_px: float = 160.0, assoc_lambda: float = 1.0,
+                 dam4sam_host: str = "dam4sam-svc", dam4sam_port: int = 5601):
         self.device = device
         self.cfg = cfg
         self.vlm = vlm                              # OnlineVLM (owns the frozen backbone + language mode)
@@ -151,6 +152,13 @@ class Policy:
             print(f"[policy] DINOv2 crop features loaded (tid_head={tid_head})", flush=True)
         # external-baseline: DeepSORT/OC-SORT-style tracking-by-detection association
         self.assoc_mode = assoc_mode; self.assoc_gate_px = float(assoc_gate_px); self.assoc_lambda = float(assoc_lambda)
+        # external-baseline: DAM4SAM (SOTA distractor-aware SAM2 memory), served over a socket bridge
+        self._dam4sam_sock = None
+        if tid_head == "dam4sam":
+            import socket as _sk
+            self._dam4sam_sock = _sk.socket(_sk.AF_INET, _sk.SOCK_STREAM)
+            self._dam4sam_sock.connect((dam4sam_host, int(dam4sam_port)))
+            print(f"[policy] connected to DAM4SAM service {dam4sam_host}:{dam4sam_port}", flush=True)
         self._cvoc = self._mvoc = None
         if tid_head == "attrbind":
             assert tid_ckpt, "tid_head=attrbind requires --tid-ckpt (the standalone attrbind head)"
@@ -179,6 +187,7 @@ class Policy:
         self._assoc_uv = None           # assoc baseline: last GT-target image pos (2,)
         self._assoc_vel = None          # assoc baseline: image-space velocity (2,)
         self._assoc_feat = None         # assoc baseline: appearance template (EMA, C,)
+        self._dam4sam_inited = False     # dam4sam baseline: has the tracker been init'd this episode
         self._pred_conf = 0.0           # ①: current pick top1−top2 margin
         self._frame_cw = None           # ②: committed target world pos to keep centered
         self.estimator.reset()
@@ -259,6 +268,38 @@ class Policy:
                 self._assoc_feat = t if self._assoc_feat is None else \
                     (0.9 * self._assoc_feat + 0.1 * t) / (np.linalg.norm(0.9 * self._assoc_feat + 0.1 * t) + 1e-8)
         return score.astype(np.float32)
+
+    def _dam4sam_select(self, cset, rgb):
+        """EXTERNAL BASELINE: DAM4SAM (CVPR'25 SOTA distractor-aware SAM2 memory) as the WHICH module,
+        served over a socket bridge (separate torch2.1/SAM2 env). On the first target-visible frame,
+        init the tracker with the GT target box (same oracle-seed privilege as reid/assoc); each S2
+        tick, track → predicted target box → assign the candidate whose center is nearest (within a
+        gate) → pred_slot. Returns (N,) scores (higher=nearer the DAM4SAM box); -1e9 gate for far."""
+        from rollout.bridge import send_msg, recv_msg
+        cands = cset.cands
+        n = len(cands)
+        ti = cset.true_idx
+        bbox = None
+        if not self._dam4sam_inited:
+            if ti is not None and ti >= 0:                              # init from GT target box
+                c = cands[ti]
+                box = (c.u - c.w / 2.0, c.v - c.h / 2.0, c.w, c.h)
+                send_msg(self._dam4sam_sock, {"cmd": "init", "rgb": np.asarray(rgb, np.uint8), "box": box})
+                bbox = recv_msg(self._dam4sam_sock).get("bbox")
+                self._dam4sam_inited = True
+            else:
+                return np.full(n, -1e9, np.float32)                     # target never seen yet → no pick
+        else:
+            send_msg(self._dam4sam_sock, {"cmd": "track", "rgb": np.asarray(rgb, np.uint8)})
+            bbox = recv_msg(self._dam4sam_sock).get("bbox")
+        if bbox is None:
+            return np.full(n, -1e9, np.float32)                         # lost (empty mask) → hold
+        bx, by, bw, bh = bbox
+        pc = np.array([bx + bw / 2.0, by + bh / 2.0])                   # DAM4SAM predicted center
+        uv = np.array([[c.u, c.v] for c in cands], np.float64)
+        dist = np.linalg.norm(uv - pc[None], axis=1)
+        gate = float(self.assoc_gate_px)
+        return np.where(dist < gate, -dist / gate, -1e9).astype(np.float32)
 
     def _update_commit(self, cset):
         """Commit the tid-selected candidate IDENTITY with K-frame hysteresis (Plan A).
@@ -369,6 +410,10 @@ class Policy:
                     al = self._assoc_select(cset, obs.rgb)
                     self._tid_logits = al
                     self._pred_slot = int(al.argmax())
+                if self.tid_head == "dam4sam":
+                    dl = self._dam4sam_select(cset, obs.rgb)
+                    self._tid_logits = dl
+                    self._pred_slot = int(dl.argmax()) if float(dl.max()) > -1e8 else -1
                 # oracle-identity diagnostic: always pick the TRUE target (isolates the control/WHERE
                 # ceiling — if identity were perfect, can deployable control keep the target in frame?).
                 if self.tid_head == "oracle":
