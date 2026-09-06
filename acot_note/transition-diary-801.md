@@ -1,10 +1,10 @@
 # 研究迭代总结 · Transition Diary
 
-> 2026-07-29 起 · 2026-08-11 增补"研究点收敛(去发散)"(§五)· 用于近期工作汇报 · 配套:`acot-uav-design.md`、`experiment-design.md`、`data-fix-spec.md`、`world-model-survey.md`、`language-seeded-prediction-survey.md`、`learning_diary_0729.md`
+> 2026-07-29 起 · 2026-08-11 增补"研究点收敛(去发散)"(§五)· 2026-09-05 增补"瓶颈重构→re-ID→客观度量"(§九)· 用于近期工作汇报 · 配套:`acot-uav-design.md`、`experiment-design.md`、`data-fix-spec.md`、`world-model-survey.md`、`language-seeded-prediction-survey.md`、`learning_diary_0729.md`、memory `acot-uav-reid-reframe`/`acot-uav-stage3-rl`
 
 ## TL;DR(一句话迭代线)
 
-我们从"**空中·语言指定·多相似车消歧跟踪**"的 VLA 出发,打通了完整训练管线;但在 MVP 严谨消融中发现:**纯目标跟踪(不含长时间丢失)靠视觉/几何已能很好求解,语言几乎无净贡献,且该问题在现有工作里已相对成熟**。据此,我们把问题**难度升级为"长时间画面丢失后的预测-重捕获"(源于真实需求)**——这一升级同时**恢复了语言的必要性**、**兑现了 EAR 预测的价值**,并暴露出**架构需从反应式 VLA 向具备世界建模能力的 WAM(World-Action Model)演进**。此后(08-05~11)又派生出三条探索线——**SEP 结构化环境先验 / world-model 方法学综述 / 语言 which-way 意图种子**;它们**不是三个平行新课题,而是同一主线的三个层**,§五做统一收敛。最后(08-18)在建 WM 之前先**公平测量原模型的预测上限**(§八):公平重训后 EAR 的出画预测**仍然失败且训练救不回**——坐实"反应式单帧模型无法预测出画位置",**为 WM(路网世界建模)提供了干净判据**。
+我们从"**空中·语言指定·多相似车消歧跟踪**"的 VLA 出发,打通了完整训练管线;但在 MVP 严谨消融中发现:**纯目标跟踪(不含长时间丢失)靠视觉/几何已能很好求解,语言几乎无净贡献,且该问题在现有工作里已相对成熟**。据此,我们把问题**难度升级为"长时间画面丢失后的预测-重捕获"(源于真实需求)**——这一升级同时**恢复了语言的必要性**、**兑现了 EAR 预测的价值**,并暴露出**架构需从反应式 VLA 向具备世界建模能力的 WAM(World-Action Model)演进**。此后(08-05~11)又派生出三条探索线——**SEP 结构化环境先验 / world-model 方法学综述 / 语言 which-way 意图种子**;它们**不是三个平行新课题,而是同一主线的三个层**,§五做统一收敛。最后(08-18)在建 WM 之前先**公平测量原模型的预测上限**(§八):公平重训后 EAR 的出画预测**仍然失败且训练救不回**——坐实"反应式单帧模型无法预测出画位置",**为 WM(路网世界建模)提供了干净判据**。**(08-31→09-05,§九)** 闭环诊断进一步把 SR=0 的墙从 **WHERE(预测-拦截)** 移到 **WHICH(look-alike 身份重捕获)**:WHERE 被 CV 先验便宜地补上、WM 边际价值被压缩;沿 WHICH 做出**单调改进的客观指标阶梯**(单帧语言 grounding → crop-DINOv2 → K-view gallery → track → 置信门控 → **时序 EMA re-ID**),**正确跟踪时间占比翻倍(0.31→0.72)、最长错跟时长缩到 1/3.4**;两次"控制侧修取景"(BC-居中 / Stage-3 RL)被证伪(居中在身份下游、放大身份错);并确立**用客观连续指标(而非饱和的 latch-SR)衡量逐步改进**的度量方法学。
 
 ---
 
@@ -271,6 +271,72 @@ EAR 每一格都被 CV 碾压 **2-6×** → **反应式网络连"匀速外推"�
 
 ---
 
+## 九、瓶颈重构 → re-ID 主线 → 控制修复证伪 → 时序 reID + 客观度量(2026-08-31 → 09-05)
+
+> 一句话:闭环证据把 SR=0 的墙从 **WHERE(预测-拦截)** 彻底移到 **WHICH(look-alike 中的身份重捕获)**;沿这条线做出了一条**单调改进的客观指标阶梯**(crop-DINOv2 → K-gallery → track → conf-gate → 时序EMA),两次"修控制取景"(BC / RL)被证伪,最后落到"**报客观连续指标而非饱和的 latch-SR**"。
+
+### 9.1 实验记录(逐步改进的证据链)
+
+**① REFRAME:WHERE 已解、WHICH 是墙(2026-08-31)。** 4 臂 WHERE 阶梯(ear→cv_gated→road→**road_oracle**=近完美当前真值锚)把 track_seconds 从 24→**65s**,但 **SR 全程 0**、`reacquire_lock_wrong≈0.74 在所有臂平坦**——即"即便 WM/完美目标位,你仍重捕获**错车**"。⇒ WHERE 便宜地饱和(CV 够),瓶颈是**单帧语言 grounding 认不出 look-alike 的同一实例**。
+
+**② re-ID 主线的客观阶梯(旧数据 19 局同种子配对,`continuous_metrics.py`)** —— 逐步单调改进:
+
+| 客观指标 | cv+xattn(语言) | +vlmpool-EMA | +DINO-K2 | track(可部署) | +conf-gate |
+|---|---|---|---|---|---|
+| 正确跟踪帧占比(1−mis_inst) | 0.309 | 0.452 | 0.622 | 0.650 | 0.626 |
+| 最长错跟时长(均值,s) | 11.98 | 7.06 | 4.40 | 4.27 | **3.53** |
+| 无>5s错跟局占比 latch@5s | 0.105 | 0.263 | 0.684 | 0.737 | **0.789** |
+| ID 切换 | 16.8 | 16.3 | 18.4 | 11.5 | 11.9 |
+| 每事件重捕获率 q_reacq | 0.55 | 0.63 | 0.65 | 0.58 | 0.53 |
+| SR(latch,保守操作点) | 0.00 | 0.00 | 0.105 | 0.053 | 0.105 |
+
+正面表述:**正确跟踪时间占比翻倍(0.31→0.65)**、**最长错跟时长缩短 3.4×(12s→3.5s)**、**无长错跟局占比升 7.5×(0.11→0.79)**——全部客观、无手挑阈值、领域标准。
+
+**③ SR 天花板诊断(oracle 分解)。** D1(专家取景+reid)=**0.579**、D2(oracle 身份+track)=**0.579** → **真上界 0.58**,其中 **~42% 是场景难度地板**(超长遮挡,oracle 也败);可部署 0.105 的 gap = **identity×control 恶性级联**(框偏→reid 看偏心 crop→误认→飞错车→丢目标→框更偏)。
+
+**④ 修"控制取景"的两次证伪。** 级联诊断出"框偏"是主导边,遂两次尝试让 DiT 把目标框正:
+- **BC-居中**(flow-matching 微调 DiT 末层朝几何居中动作;blend 0.4/0.7/1.0):centering 机械上升,但 **track_seconds 崩(33.8→2.2)**、mis/lock_wrong 升,**无甜点**。
+- **Stage-3 RL E0**(SVG 可微多步 rollout,R_center):训练里 R_center **0.78→0.98**,**闭环复现完全相同失效**。
+- **定论**:居中在身份**下游**——激进居中把 z_ex(reid 认定车的 CV,可能错)的误差**放大**成大幅甩头。**RL 也修不了**;控制不是 SR 杠杆,身份才是。
+
+**⑤ 时序 reID(query 侧,本轮新增)。** gallery 模板已时序,但 query 一直是**单帧 argmax**。改为按稳定 actor 累积匹配分 EMA、时序积分提交。18 局配对确认(`reid_tavg0` vs `tavg0.4`):**正确跟踪占比 0.627→0.715(+0.088,8-ep 与 18-ep 双复现)**、id_switches 15.7→10.2(显著)、latch@2s/@3s 升;**latch-SR 未动(场景地板)**、q_reacq/latch@4-5s 轻微退化(EMA 跨长丢失持陈旧证据)。甜点 **tavg=0.4**(短记忆:够平滑单帧噪声,又够快纠错)。
+
+**⑥ 客观度量方法学(关键转向)。** latch-SR(90s 内任意 ≥2s 错窗→永久失败,SR≈(1−q)^N)由**最坏错窗+场景地板**主导 → **饱和、无分辨力**(temporal 身份更好却 SR→0)。改用**连续/分段客观指标**(正确跟踪占比 / 最长错跟时长 / 重捕获率&延迟 / 丢失时长 / ID切换)——既更正面又更严谨;SR 保留为一个保守操作点。
+
+### 9.2 模型设计完善(本阶段落到 `rollout/policy.py`)
+
+- **`tid_head=reid`**:判定从"哪个候选最符合**语言描述**"(look-alike 都部分符合)→"哪个是我一直跟踪的**同一实例**"(外观记忆关联),绕开单帧语言 grounding 的天花板。
+- **crop-DINOv2 特征**(替代 Qwen 粗网格池化):实例判别力强,look-alike 余弦 0.877→**0.614**;身份信息在 26px 像素里,粗网格池化把它浪费了。
+- **K-view 多视角 gallery(K=2)**:存目标多个过去视角为时序模板 + top-m 均值匹配 → 视角鲁棒;离线首破 0.5 墙。
+- **`ex-source=track`(Plan A)**:reid 认定车的 CV 驱动 z_ex/控制,去掉 GT-WHERE 拐杖 = 全可部署。
+- **置信门控 conf-gate**(`--conf-tau`):top1−top2 margin 低 → 不 commit-fly,保持承诺+航位推算 → 打破"认错→飞错车→丢目标"的控制耦合(SR 0.053→0.105)。
+- **★时序 EMA(`--reid-tavg`)**:候选 `cand.idx` 是稳定 actor → 按 actor 累积 `score=α·prev+(1−α)·logit`,用时序积分 argmax(≠单帧)提交(把 MOT 的**轨迹级证据累积**原则补进 query 侧)。
+- **搁置的设计尝试**(证伪但有价值):BC-居中(`train/bc_center_train.py`)、Stage-3 RL E0 SVG(`train/rl_e0_center.py`,可微运动学+投影+R_center)、奖励 `train/rl_reward.py`(anti-hack 单测过)——结论:控制侧修取景不可行,留作 future work / 负结果证据。
+
+### 9.3 踩过的坑(避免重复浪费算力)
+
+**方法学 / 严谨性**
+- **cherry-picked 子集 vs 全集 aggregate**:warm-start 首次用硬全败子集(91000-05)对比旧 19-ep 全集 → 假警报"SR 退化"。**Guardrail:永远同种子配对**。
+- **短 smoke 骗人**:frame-gain 3ep@400 显示"有效"(SR 0.5),6ep@900 反转(放大身份错)。**小 n / 短步 smoke 不可下结论**。
+- **frame-gain 符号错**:用了 −30(∝−off),几何+专家 corr 应为 +off;但**两符号都失败**——固定增益太弱且放大 reid 错。
+- **latch-SR 无分辨力**:n=8 下 SR=0/1 次成功是纯噪声,误导选参;须用连续指标。
+
+**基础设施**
+- **数据被 root 清理删除**(mvp_full_v5,还带走 151GB ctx 缓存)→ 重生成(注意新数据 ~333帧/ep 短于旧 ~1500,不可与旧 run 同框配对)。
+- **容器禁占 172.x 网段**(host 默认池保留)→ `docker-compose.yml` pin `cyh-carla-net` 到 `192.168.240.0/24`。
+- **CARLA 未自启**:cyh-carla 只跑 `sleep infinity`,需手动 `CarlaUE4.sh -RenderOffScreen -graphicsadapter=1 -carla-rpc-port=2012`;**port-open≠ready** → `set_timeout(30→60)`;`-graphicsadapter` 选 Vulkan 渲染 GPU(忽略 CUDA_VISIBLE_DEVICES)。
+- **reid policy-server 缺 `timm`**(镜像没装,DINO 权重在 HF 缓存)→ 启动前 `pip install timm==1.0.29`。
+- **docker `-v` 变量未展开** → 首次 NO DATA;用显式绝对路径。
+
+**RL / 可微实现**
+- **`action_sample` 带 `@torch.no_grad`** → 切断 SVG 梯度(loss 不 require grad)→ 写本地带梯度采样器 `_flow_sample_grad`。
+- **缓存/索引 H 对齐**:缓存用 `d["H"]=16` 做 `range(0,n-H,stride)`,不是 max_offset;从缓存 `dims["H"]` 读,check 显示 6282==6282。
+- **可微 rollout 太慢**:sample_steps8×roll_h6=48 forwards/batch × 524 batch → 45min 0 epoch;降到 steps2×roll_h4 + 子采样 1500 帧 → 0.76s/batch(~30×)。
+- **torch 投影须与 numpy 对齐**:先 `check_proj`(误差<0.001px)再训,杜绝污染。
+- **continuous_metrics 未计分局缺字段** → 跳过(`mis_follow_inst` 不在则丢该种子)。
+
+---
+
 ## 附:关键证据与产物索引
 
 | 项 | 位置 |
@@ -297,3 +363,11 @@ EAR 每一格都被 CV 碾压 **2-6×** → **反应式网络连"匀速外推"�
 | **L2 定位/切割**:SEP 时不变路网先验(2×2、逐件切割) | `related-work-and-positioning.md` §4D |
 | **L3 定位/切割**:语言双功能 which+which-way | `related-work-and-positioning.md` §4E |
 | **L2/L3 实验**:SEP guard(§2.0c)、which-way 三臂+冗余 guard(§2.0d)、H7/H8、M11/M12、R9–R12 | `acot_note/experiment-design.md` |
+| **★ REFRAME 诊断全链**(WHERE 解/WHICH 墙、D1/D2 上界 0.58、级联、时序 reID、客观度量) | memory `acot-uav-reid-reframe` |
+| **★ re-ID 客观阶梯 run**(xattn→vlmpool→DINO-K2→track→conf,旧数据 20ep) | `rollout/eval_out/road_{cv_gated,reid,reiddino,trackreiddino,trackreiddino_conf05}.json` |
+| **★ 时序 EMA re-ID + 甜点扫描**(policy `reid_tavg` / `--reid-tavg`;tavg 0/0.4/0.5/0.7) | `rollout/policy.py` · `rollout/eval_reid_temporal.sh` · `eval_out/reid_tavg{0,0.4,0.5,0.7}.json` |
+| **★ 客观连续/分段指标工具**(正确跟踪占比/最长错跟时长/重捕获/latch@Ts) | `rollout/continuous_metrics.py` |
+| **★ 控制修取景的两次证伪**(BC-居中、Stage-3 RL E0 SVG,均搁置) | `train/bc_center_train.py` · `train/rl_e0_center.py` · `train/rl_reward.py` · `rollout/eval_bc_center.sh` |
+| Stage-3 RL 设计(obs/reward/action、GRPO、E0 门、为何 RL≠BC) | `acot_note/stage3-rl-design.md` · memory `acot-uav-stage3-rl` |
+| 当前测试架构图(track+reid-DINOv2-K2+conf+时序EMA) | `acot_note/reid_temporal_architecture.html` |
+| reid-DINOv2+gallery 流水线图 | `acot_note/reid_dinov2_gallery_pipeline.html` |
