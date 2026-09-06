@@ -14,6 +14,20 @@
 
 ---
 
+## 进展快照(2026-09-06)
+
+**内部对照基线已定稿(外部 baseline 要比的对象)** —— 主 batch 完成:7 臂 20ep 同种子 91000-19、live CARLA、消除 run 方差,`eval_out/paper_*.json`。
+
+- **主阶梯(l1_xattn→l5_temporal)客观指标定稿**(19 计分,`continuous_metrics.py`):track_correct_frac **0.251→0.519→0.653→0.671→0.738**(~2.9×);最长错跟时长(中位)**9.70→3.00s**;latch@5s **0.105→0.895**(8.5×);id_switches 13.7→…→9.32(**非单调**);q_reacq 0.448→…→0.471(**l5 退化**);SR 0→0.053→0.105→0.105→0.105(l3 起**场景地板**不动)。
+- **负结果(l4 vs BC-b0.4 vs RL-E0)20ep 定稿**:SR 0.105→0→0;track_fraction 0.217→0.073→0.040(崩)。⚠️ RL 的 latch@5s=1.0 是**近零跟踪的假象**,须点破。
+- 诚实 caveat 全部写回 memory `acot-uav-paper-writing-kickoff`(FINAL PINNED NUMBERS)。
+
+**外部 baseline 进度**:
+- ✅ **`tid_head=assoc`(DeepSORT/OC-SORT)已实现+单测+提交**;**评测待跑**(GPU2 主 batch 刚结束、现空闲;两模式 motion/deepsort × 20ep 约 1-1.5h)。
+- ⏳ DAM4SAM / iKUN / JointNLT:未开始(独立 repo 集成,见 §5)。
+
+---
+
 ## 1. ⚠️ 诚实警示(引用核验)
 
 2026 年 UAV 预印本**须逐篇二次核验存在性/代码**;memory 已核出 **CosFly-VLA 是 fabricated → 禁用**。搜索摘要模型可能 confabulate,**未经核验不写进论文、不作 baseline**。
@@ -61,7 +75,8 @@
 - [ ] UAV-Track VLA / DeTrack 逐篇核验(存在性/代码)
 
 **评测层**
-- [ ] ext baseline 各臂 20ep(seeds 91000-19)→ `eval_out/paper_ext_<name>.json`
+- [x] **内部对照阶梯定稿**(l1_xattn→l5_temporal + 负结果 BC/RL,20ep 同批次)`eval_out/paper_*.json`；两表 + 诚实 caveat 已写回 memory
+- [ ] ext baseline(assoc 先)各臂 20ep(seeds 91000-19)→ `eval_out/paper_ext_<name>.json`
 - [ ] `continuous_metrics.py` 出"内部阶梯 + 外部 baseline"合并 WHICH 对比表
 - [ ] 定稿数字写回 memory `acot-uav-paper-writing-kickoff`
 
