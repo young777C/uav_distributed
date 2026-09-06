@@ -105,7 +105,7 @@ def main():
                          "loss only; needs run_rollout --predict-road) | track (Plan A: seed from "
                          "tid-COMMITTED candidate → grounding drives control). no-WM baseline = cv_gated.")
     ap.add_argument("--commit-k", type=int, default=5, help="track: hysteresis frames to switch committed target")
-    ap.add_argument("--tid-head", default="xattn", choices=["xattn", "attrbind", "reid", "oracle"],
+    ap.add_argument("--tid-head", default="xattn", choices=["xattn", "attrbind", "reid", "oracle", "assoc"],
                     help="xattn=language grounding (default) | attrbind=CLIP-style head (needs --tid-ckpt) "
                          "| reid=temporal appearance-memory re-ID (match the tracked instance, not the "
                          "language; reframe test — no ckpt, falls back to xattn before a template exists)")
@@ -127,6 +127,11 @@ def main():
     ap.add_argument("--reid-tavg", type=float, default=0.0,
                     help="temporal re-ID: per-actor EMA decay of the reid match score (0=off=single-frame "
                          "argmax; e.g. 0.7 = integrate evidence over ~3 ticks → robust to off-center frames)")
+    ap.add_argument("--assoc-mode", default="deepsort", choices=["motion", "deepsort"],
+                    help="external baseline (--tid-head assoc): motion (OC-SORT-like CV image-space) | "
+                         "deepsort (motion gate + crop-DINOv2 appearance) tracking-by-detection association")
+    ap.add_argument("--assoc-gate-px", type=float, default=160.0, help="assoc motion gate radius (px)")
+    ap.add_argument("--assoc-lambda", type=float, default=1.0, help="assoc appearance weight vs motion")
     ap.add_argument("--port", type=int, default=5555)
     a = ap.parse_args()
 
@@ -138,7 +143,8 @@ def main():
                     tid_head=a.tid_head, tid_ckpt=tck,
                     reid_feature=a.reid_feature, reid_bank=a.reid_bank, reid_topm=a.reid_topm,
                     conf_tau=a.conf_tau, frame_gain=a.frame_gain, warmup_oracle_s=a.warmup_oracle_s,
-                    reid_tavg=a.reid_tavg)
+                    reid_tavg=a.reid_tavg, assoc_mode=a.assoc_mode,
+                    assoc_gate_px=a.assoc_gate_px, assoc_lambda=a.assoc_lambda)
     print(f"[policy-server] loaded policy (language_mode={a.language_mode}, "
           f"s2_period={a.s2_period}, ablate={a.ablate}, ex_source={a.ex_source}, commit_k={a.commit_k}, "
           f"tid_head={a.tid_head})", flush=True)

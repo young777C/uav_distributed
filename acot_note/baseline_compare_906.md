@@ -50,7 +50,7 @@
 ## 4. 进度清单(勾选追踪)
 
 **集成层**
-- [ ] `tid_head=assoc`:OC-SORT 式运动+外观关联,接入 `policy.py`(与 reid_tavg 同插槽),`--assoc-*` 参数
+- [x] **`tid_head=assoc`**:DeepSORT/OC-SORT 式运动(CV 图像位预测+门)+外观(crop-DINOv2 EMA)关联,接入 `policy.py`+`policy_server.py`;`--assoc-mode {motion,deepsort} --assoc-gate-px --assoc-lambda`;motion-mode 逻辑单测通过(选最近/GT更新/出画不更新+门控);SELECT用过去态、UPDATE用GT(与reid同无泄漏特权)。**待评测**(GPU2 主 batch 占用中)
 - [ ] `tid_head=dam4sam`:DAM4SAM 作 tracker,给出 committed 目标(引入 repo+权重)
 - [ ] `tid_head=refmot`:iKUN/TransRMOT referring 头,候选框+语言打分
 - [ ] (可选)JointNLT/UVLTrack 被动感知对照(离线在 episode 帧上跑)

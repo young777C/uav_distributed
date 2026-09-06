@@ -98,7 +98,8 @@ class Policy:
                  tid_head: str = "xattn", tid_ckpt: str | None = None,
                  reid_feature: str = "vlmpool", reid_bank: int = 1, reid_topm: int = 1,
                  conf_tau: float = 0.0, frame_gain: float = 0.0, warmup_oracle_s: float = 0.0,
-                 reid_tavg: float = 0.0):
+                 reid_tavg: float = 0.0, assoc_mode: str = "deepsort",
+                 assoc_gate_px: float = 160.0, assoc_lambda: float = 1.0):
         self.device = device
         self.cfg = cfg
         self.vlm = vlm                              # OnlineVLM (owns the frozen backbone + language mode)
@@ -142,10 +143,14 @@ class Policy:
         # reid appearance feature + K-view gallery (offline milestone: dinov2+K2 breaks 0.5).
         self.reid_feature = reid_feature; self.reid_bank = int(reid_bank); self.reid_topm = int(reid_topm)
         self._dino = None
-        if tid_head == "reid" and reid_feature == "dinov2":
+        _need_dino = (tid_head == "reid" and reid_feature == "dinov2") or \
+                     (tid_head == "assoc" and assoc_mode == "deepsort")
+        if _need_dino:
             from train.reid_resolution_probe import _load_dino
             self._dino = _load_dino("vit_small_patch14_dinov2.lvd142m", device)
-            print(f"[policy] reid=dinov2 crop features + K{reid_bank}/top{reid_topm} gallery", flush=True)
+            print(f"[policy] DINOv2 crop features loaded (tid_head={tid_head})", flush=True)
+        # external-baseline: DeepSORT/OC-SORT-style tracking-by-detection association
+        self.assoc_mode = assoc_mode; self.assoc_gate_px = float(assoc_gate_px); self.assoc_lambda = float(assoc_lambda)
         self._cvoc = self._mvoc = None
         if tid_head == "attrbind":
             assert tid_ckpt, "tid_head=attrbind requires --tid-ckpt (the standalone attrbind head)"
@@ -171,6 +176,9 @@ class Policy:
         self._chal = None; self._chal_n = 0
         self._reid_bank = []            # reid: K-view diversity gallery of the tracked target
         self._reid_score = {}           # temporal re-ID: actor_idx -> EMA of gallery-match score
+        self._assoc_uv = None           # assoc baseline: last GT-target image pos (2,)
+        self._assoc_vel = None          # assoc baseline: image-space velocity (2,)
+        self._assoc_feat = None         # assoc baseline: appearance template (EMA, C,)
         self._pred_conf = 0.0           # ①: current pick top1−top2 margin
         self._frame_cw = None           # ②: committed target world pos to keep centered
         self.estimator.reset()
@@ -213,6 +221,44 @@ class Policy:
         if cset.true_idx is not None and cset.true_idx >= 0:                   # store this view (future only)
             bank_update(self._reid_bank, fn[cset.true_idx], self.reid_bank, 0.9)
         return logits
+
+    def _assoc_select(self, cset, rgb):
+        """EXTERNAL BASELINE: DeepSORT/OC-SORT-style tracking-by-detection association.
+        Motion (constant-velocity image-space prediction + gate) + optional appearance (crop-DINOv2
+        cosine to an EMA template). SELECT with the PAST track state, THEN update from the GT-visible
+        target (same oracle-seed privilege as reid's gallery → fair). Contrast to reid: an explicit
+        motion model + per-frame argmin vs appearance gallery + temporal-EMA. assoc_mode: 'motion'
+        (OC-SORT-like, no appearance) | 'deepsort' (motion+appearance). Returns (N,) scores."""
+        cands = cset.cands
+        uv = np.array([[c.u, c.v] for c in cands], np.float64)          # candidate image positions
+        n = len(cands)
+        if self._assoc_uv is not None:                                  # motion: predict + gate
+            pred = self._assoc_uv + (self._assoc_vel if self._assoc_vel is not None else 0.0)
+            dist = np.linalg.norm(uv - pred[None], axis=1)
+            score = -dist / self.assoc_gate_px                          # higher = closer
+            gate = dist < self.assoc_gate_px
+        else:
+            score = np.zeros(n); gate = np.ones(n, bool)
+        fn = None
+        if self.assoc_mode == "deepsort":                              # + appearance cosine
+            from train.reid_resolution_probe import _dino_feats
+            W, H = self.image_cfg["width"], self.image_cfg["height"]
+            feats = _dino_feats(self._dino, rgb, cands, W, H, 224, 1.3, self.device).astype(np.float64)
+            fn = feats / (np.linalg.norm(feats, axis=1, keepdims=True) + 1e-8)
+            if self._assoc_feat is not None:
+                score = score + self.assoc_lambda * (fn @ self._assoc_feat)
+        if self._assoc_uv is not None and gate.any():                  # hard motion gate (fall back if empty)
+            score = np.where(gate, score, -1e9)
+        # UPDATE track state from the GT target (fair: same privilege as reid gallery); select used PAST state
+        ti = cset.true_idx
+        if ti is not None and ti >= 0:
+            self._assoc_vel = (uv[ti] - self._assoc_uv) if self._assoc_uv is not None else np.zeros(2)
+            self._assoc_uv = uv[ti].copy()
+            if fn is not None:
+                t = fn[ti]
+                self._assoc_feat = t if self._assoc_feat is None else \
+                    (0.9 * self._assoc_feat + 0.1 * t) / (np.linalg.norm(0.9 * self._assoc_feat + 0.1 * t) + 1e-8)
+        return score.astype(np.float32)
 
     def _update_commit(self, cset):
         """Commit the tid-selected candidate IDENTITY with K-frame hysteresis (Plan A).
@@ -316,6 +362,13 @@ class Policy:
                             self._pred_slot = int(best_s)
                             self._tid_logits = np.array([self._reid_score.get(c.idx, -1e9)
                                                          for c in cset.cands], np.float32)
+                # external baseline: DeepSORT/OC-SORT-style association (motion + appearance),
+                # a common tracking-by-detection identity mechanism — the natural comparison for
+                # our temporal appearance-memory re-ID. Same z_ex/control path; only WHICH differs.
+                if self.tid_head == "assoc":
+                    al = self._assoc_select(cset, obs.rgb)
+                    self._tid_logits = al
+                    self._pred_slot = int(al.argmax())
                 # oracle-identity diagnostic: always pick the TRUE target (isolates the control/WHERE
                 # ceiling — if identity were perfect, can deployable control keep the target in frame?).
                 if self.tid_head == "oracle":
