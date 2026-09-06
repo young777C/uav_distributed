@@ -86,7 +86,7 @@
 
 **`tid_head=assoc`(OC-SORT 式,零外部依赖,先做)**:候选已有(`cset.cands`,稳定 actor idx + depth + 投影框)。维护目标轨迹的 Kalman 状态(图像位/尺度)+ 外观(crop-DINOv2 特征可复用);每 tick 用"运动门(IoU/马氏距) + 外观相似"匹配打分,匈牙利/贪心关联,committed = 关联到目标轨迹的候选。与 reid 公平:模板同样从 GT-可见目标建、SELECT 用过去、更新用当前(无重现泄漏)。→ 与时序 EMA 只差"关联规则(运动+外观 vs 纯外观时序积分)"。
 
-**`tid_head=dam4sam`**(接口已侦察:`dam4sam_tracker.py` 首帧 bbox 初始化 → 逐帧出 mask/box):首帧目标可见时用其框(`cset.cands[true_idx]` u,v,w,h)init;每 tick step 当前 RGB → 预测目标框 → 与候选框 IoU/中心距匹配 → committed slot。⚠️ **集成风险(须单独环境)**:DAM4SAM 需 **torch 2.1.0 + py3.10.15 + SAM2.1 权重**,与主容器(Qwen 的 torch cu118)**版本冲突**;且 SAM2 与 Qwen 同 GPU 恐 OOM。方案:**独立容器/venv 跑 DAM4SAM 作 socket 服务**,policy-server 通过 bridge 请求目标框(类似 CARLA↔policy 的双容器桥),避免污染主环境。= 一块独立集成工程。
+**`tid_head=dam4sam`**(接口已侦察:`dam4sam_tracker.py` 首帧 bbox 初始化 → 逐帧出 mask/box):首帧目标可见时用其框(`cset.cands[true_idx]` u,v,w,h)init;每 tick step 当前 RGB → 预测目标框 → 与候选框 IoU/中心距匹配 → committed slot。⚠️ **集成风险(实测,须单独环境)**:官方要 torch2.1+cu121+py3.10;**但本机 GPU 驱动 470 → cu121 跑不了(需≥525)** → 须改 `torch==2.1.0+cu118`+py3.10+SAM2(还需 `python setup.py build_ext --inplace` 编 `_C`)。方案 = **独立 cu118/torch2.1 容器跑 DAM4SAM socket 服务(GPU3)**,policy-server(cu118)经 bridge(复用 `rollout/bridge.py`)请求目标框 → tid_head=dam4sam 匹配候选。**进展**:repo 已 clone(`external/DAM4SAM`),SAM2.1 权重下载中(各~160MB)。**判定 = 驱动受限的高风险多小时集成**(cu118×torch2.1×SAM2 兼容 + _C 编译 + GPU 显存 + 桥)。
 
 **`tid_head=refmot`**:iKUN 两阶段——候选 proposal(我们已有)+ 语言匹配打分;直接替换 tid_logits。
 
