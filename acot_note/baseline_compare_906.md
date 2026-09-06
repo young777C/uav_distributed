@@ -22,9 +22,10 @@
 - **负结果(l4 vs BC-b0.4 vs RL-E0)20ep 定稿**:SR 0.105→0→0;track_fraction 0.217→0.073→0.040(崩)。⚠️ RL 的 latch@5s=1.0 是**近零跟踪的假象**,须点破。
 - 诚实 caveat 全部写回 memory `acot-uav-paper-writing-kickoff`(FINAL PINNED NUMBERS)。
 
-**外部 baseline 进度**:
-- ✅ **`tid_head=assoc`(DeepSORT/OC-SORT)已实现+单测+提交**;**评测待跑**(GPU2 主 batch 刚结束、现空闲;两模式 motion/deepsort × 20ep 约 1-1.5h)。
-- ⏳ DAM4SAM / iKUN / JointNLT:未开始(独立 repo 集成,见 §5)。
+**外部 baseline 进度(更新 2026-09-06 晚)**:
+- ✅ **`tid_head=assoc`(DeepSORT/OC-SORT)**:实现+单测+提交;**20ep 评测运行中**(motion+deepsort,GPU2)。
+- ✅ **`tid_head=dam4sam`(DAM4SAM SOTA distractor-aware SAM2 记忆)**:独立 env(GPU3)+ socket 服务 + tid_head 全通,smoke PASS,**链式排在 assoc 后自动跑 20ep**。env 配方见文末附录。
+- ⏳ **iKUN / JointNLT**:已评估——**均为零样本域差**(JointNLT 训 LaSOT/TNL2K 通用物体、iKUN 训 Refer-KITTI 地面车),迁 24px 空中 look-alike 会差(是"现成方法不 transfer"的信息,但须标注 zero-shot 域差)。env 可行(JointNLT py3.7+cu113;iKUN 类似),每个是一块独立 env+服务+tid_head 集成。**边际价值低于 assoc/DAM4SAM**(与内部 xattn 语言基线重叠)。判定:assoc+DAM4SAM 已构成强外部套件;iKUN/JointNLT 视投稿目标可选。
 
 ---
 
@@ -65,7 +66,7 @@
 
 **集成层**
 - [x] **`tid_head=assoc`**:DeepSORT/OC-SORT 式运动(CV 图像位预测+门)+外观(crop-DINOv2 EMA)关联,接入 `policy.py`+`policy_server.py`;`--assoc-mode {motion,deepsort} --assoc-gate-px --assoc-lambda`;motion-mode 逻辑单测通过(选最近/GT更新/出画不更新+门控);SELECT用过去态、UPDATE用GT(与reid同无泄漏特权)。**待评测**(GPU2 主 batch 占用中)
-- [ ] `tid_head=dam4sam`:DAM4SAM 作 tracker,给出 committed 目标(引入 repo+权重)
+- [x] **`tid_head=dam4sam`**:DAM4SAM 独立 env+socket 服务+tid_head 全通,smoke PASS,20ep 评测链式排队
 - [ ] `tid_head=refmot`:iKUN/TransRMOT referring 头,候选框+语言打分
 - [ ] (可选)JointNLT/UVLTrack 被动感知对照(离线在 episode 帧上跑)
 - [ ] (加码)TrackVLA/OmTrackVLA 全闭环适配调研
