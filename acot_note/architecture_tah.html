@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh"><head><meta charset="utf-8">
+<title>ACoT-UAV-Track · 完整架构(路线B:TAH 学习模块)</title>
+<style>
+ :root{--ink:#1c2430;--muted:#6b7688;--line:#8a94a3;--frozen-fill:#eef1f5;--frozen-stroke:#c6cedb;
+  --tah-fill:#e9f3ff;--tah-stroke:#2f6fd0;--tah-ink:#1a4a92;--where-fill:#e6f6f0;--where-stroke:#9fd6c4;--env-fill:#f0ecfb;}
+ html,body{margin:0;background:#fbfbfd;color:var(--ink);font-family:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;}
+ .wrap{max-width:1240px;margin:0 auto;padding:20px;}
+ h1{font-size:19px;margin:0 0 2px;} .sub{color:var(--muted);font-size:13px;margin:0 0 8px;}
+ .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin:6px 0;}
+ .sw{width:13px;height:13px;border-radius:3px;border:1.5px solid #999;display:inline-block;vertical-align:-2px;margin-right:5px;}
+ .nt{font-size:12.5px;font-weight:600;fill:var(--ink);} .ns{font-size:11px;fill:var(--muted);}
+ .tt{font-size:13px;font-weight:700;fill:var(--tah-ink);} .edgelbl{font-size:10.5px;fill:var(--muted);}
+ .lane{font-size:12px;font-weight:700;letter-spacing:.04em;}
+ .cap{font-size:12.5px;color:#264;background:#eef7ff;border:1px solid #c5ddf5;border-radius:8px;padding:11px 14px;margin-top:14px;line-height:1.55;}
+ .cap b{color:#1c2430;}
+</style></head><body><div class="wrap">
+ <h1>ACoT-UAV-Track · 完整架构(路线 B)</h1>
+ <p class="sub">冻结 Qwen3-VL / DINOv2 / DiT + <b style="color:#1a4a92">★TAH 时序关联头(唯一可训练,0.72M)</b> —— 一个学习模块替代整个启发式 WHICH 栈</p>
+ <div class="legend">
+  <span><span class="sw" style="background:var(--frozen-fill);border-color:var(--frozen-stroke)"></span>冻结(Qwen/DINOv2/IAR/DiT)❄</span>
+  <span><span class="sw" style="background:var(--tah-fill);border-color:var(--tah-stroke)"></span>★ TAH 学习模块(0.72M)</span>
+  <span><span class="sw" style="background:var(--where-fill);border-color:var(--where-stroke)"></span>WHERE 控制先验</span>
+  <span><span class="sw" style="background:var(--env-fill);border-color:#c7bdea"></span>环境闭环</span>
+ </div>
+
+<svg viewBox="0 0 1240 960" width="100%" role="img">
+ <defs><marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8a94a3"/></marker>
+ <marker id="aT" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f6fd0"/></marker></defs>
+
+ <!-- TAH panel -->
+ <rect x="628" y="150" width="540" height="470" rx="14" fill="var(--tah-fill)" stroke="var(--tah-stroke)" stroke-width="2"/>
+ <text x="644" y="174" class="lane" fill="#1a4a92">★ TAH · 时序关联头(WHICH,一个学习模块 = 原 gallery+EMA+运动共识+共识门)</text>
+ <text x="66" y="120" class="lane" fill="#5a6577">冻结感知主干</text>
+ <text x="66" y="700" class="lane" fill="#2f8a6e">WHERE · HOW · 闭环</text>
+
+ <!-- edges -->
+ <g fill="none" stroke="var(--line)" stroke-width="2" marker-end="url(#a)">
+  <path d="M135,168 C 185,168 200,168 232,168"/>
+  <path d="M135,232 C 200,232 210,188 232,180"/>
+  <path d="M357,196 C 357,220 357,232 357,258"/>
+  <path d="M760,150 C 800,138 840,150 850,190"/>            <!-- candidates -> DINOv2 -->
+  <path d="M300,196 C 300,420 250,560 220,742"/>            <!-- vlm_ctx -> DiT -->
+  <path d="M357,312 C 357,560 320,660 300,742"/>            <!-- z_im -> DiT -->
+  <path d="M600,95 C 640,300 560,600 420,770"/>             <!-- proprio -> DiT -->
+  <path d="M520,672 C 470,690 435,715 415,742"/>            <!-- z_ex -> DiT -->
+  <path d="M280,808 C 280,828 280,836 280,854"/>
+  <path d="M420,878 C 445,878 452,878 476,878"/>
+ </g>
+ <!-- TAH internal edges -->
+ <g fill="none" stroke="var(--tah-stroke)" stroke-width="1.8" marker-end="url(#aT)">
+  <path d="M900,240 C 900,258 900,266 900,284"/>           <!-- DINOv2 -> enc -->
+  <path d="M900,344 C 900,360 900,368 900,386"/>           <!-- enc -> attn -->
+  <path d="M900,452 C 900,470 900,478 900,496"/>           <!-- attn -> logits -->
+  <path d="M1005,420 C 1080,420 1090,360 1050,320 C 1030,300 985,300 900,300" stroke-dasharray="5 4"/> <!-- memory GRU loop -->
+ </g>
+ <text x="1088" y="370" class="edgelbl" fill="#1a4a92" transform="rotate(90 1088 370)">GRU 记忆更新(committed 目标)</text>
+ <!-- committed -> z_ex -->
+ <g fill="none" stroke="var(--tah-stroke)" stroke-width="2.2" marker-end="url(#aT)"><path d="M800,540 C 700,570 660,650 636,672"/></g>
+ <!-- closed loop -->
+ <g fill="none" stroke="#a99cd6" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#a)">
+  <path d="M560,900 C 560,928 60,930 40,640 C 30,360 40,130 58,72 C 60,60 62,58 66,54"/></g>
+ <text x="120" y="925" class="edgelbl" fill="#8a7fc0">闭环(10Hz)</text>
+
+ <!-- edge labels -->
+ <text x="150" y="360" class="edgelbl">vlm_ctx</text><text x="300" y="640" class="edgelbl">z_im</text><text x="600" y="470" class="edgelbl">proprio</text>
+ <text x="648" y="660" class="edgelbl" fill="#1a4a92">committed→CV→z_ex</text>
+
+ <!-- inputs -->
+ <rect x="10" y="142" width="125" height="52" rx="9" fill="#fff" stroke="var(--frozen-stroke)" stroke-width="1.5"/><text x="72" y="164" text-anchor="middle" class="nt">RGB 512²</text><text x="72" y="182" text-anchor="middle" class="ns">UAV 相机</text>
+ <rect x="10" y="208" width="125" height="50" rx="9" fill="#fff" stroke="var(--frozen-stroke)" stroke-width="1.5"/><text x="72" y="229" text-anchor="middle" class="nt">语言指令</text><text x="72" y="246" text-anchor="middle" class="ns">neutral</text>
+ <rect x="695" y="60" width="185" height="52" rx="9" fill="#fff" stroke="var(--frozen-stroke)" stroke-width="1.5"/><text x="787" y="82" text-anchor="middle" class="nt">CandidateSet</text><text x="787" y="100" text-anchor="middle" class="ns">目标+干扰车 · 稳定 actor idx · u/v/depth</text>
+ <rect x="520" y="44" width="160" height="50" rx="9" fill="#fff" stroke="var(--frozen-stroke)" stroke-width="1.5"/><text x="600" y="65" text-anchor="middle" class="nt">Proprio 5D</text><text x="600" y="82" text-anchor="middle" class="ns">cam_z·pitch·vel×3</text>
+
+ <!-- backbone -->
+ <rect x="232" y="140" width="250" height="56" rx="10" fill="var(--frozen-fill)" stroke="var(--frozen-stroke)" stroke-width="1.5"/><text x="357" y="164" text-anchor="middle" class="nt">Qwen3-VL-4B ❄</text><text x="357" y="182" text-anchor="middle" class="ns">→ vlm_ctx + layers</text>
+ <rect x="232" y="258" width="250" height="54" rx="10" fill="var(--frozen-fill)" stroke="var(--frozen-stroke)" stroke-width="1.5"/><text x="357" y="280" text-anchor="middle" class="nt">IAR ❄ → z_im</text><text x="357" y="298" text-anchor="middle" class="ns">隐式先验(track 不用 EAR)</text>
+
+ <!-- TAH internals -->
+ <rect x="800" y="190" width="200" height="50" rx="10" fill="var(--frozen-fill)" stroke="var(--frozen-stroke)" stroke-width="1.5"/><text x="900" y="211" text-anchor="middle" class="nt">crop → DINOv2 ❄</text><text x="900" y="228" text-anchor="middle" class="ns">每候选外观(384) 冻结</text>
+ <rect x="810" y="284" width="180" height="60" rx="9" fill="#fff" stroke="var(--tah-stroke)" stroke-width="1.6"/><text x="900" y="307" text-anchor="middle" class="tt" style="font-size:12px">编码 enc</text><text x="900" y="325" text-anchor="middle" class="ns">[DINOv2 ⊕ 位置(u,v,depth)]</text><text x="900" y="339" text-anchor="middle" class="ns">→ 候选嵌入(256)</text>
+ <rect x="810" y="386" width="180" height="66" rx="9" fill="#fff" stroke="var(--tah-stroke)" stroke-width="1.6"/><text x="900" y="409" text-anchor="middle" class="tt" style="font-size:12px">注意力关联</text><text x="900" y="427" text-anchor="middle" class="ns">score = ⟨q(记忆m), k(候选)⟩</text><text x="900" y="441" text-anchor="middle" class="ns">模型自学 外观⊕运动⊕记忆 权重</text>
+ <rect x="810" y="496" width="180" height="58" rx="9" fill="#dcecff" stroke="var(--tah-stroke)" stroke-width="1.8"/><text x="900" y="518" text-anchor="middle" class="tt" style="font-size:12px">身份 logits + 置信度</text><text x="900" y="536" text-anchor="middle" class="ns">softmax→committed · 学习 conf→控制门</text>
+ <!-- memory node -->
+ <rect x="1010" y="286" width="118" height="52" rx="9" fill="#eaf1ff" stroke="var(--tah-stroke)" stroke-width="1.6"/><text x="1069" y="307" text-anchor="middle" class="tt" style="font-size:11.5px">记忆 m</text><text x="1069" y="324" text-anchor="middle" class="ns">GRU 递归</text>
+
+ <!-- WHERE/HOW -->
+ <rect x="520" y="644" width="180" height="54" rx="10" fill="var(--where-fill)" stroke="var(--where-stroke)" stroke-width="1.5"/><text x="610" y="666" text-anchor="middle" class="nt">WHERE:CV 外推</text><text x="610" y="684" text-anchor="middle" class="ns">committed 目标 → z_ex</text>
+ <rect x="140" y="742" width="280" height="66" rx="11" fill="var(--frozen-fill)" stroke="var(--frozen-stroke)" stroke-width="1.5"/><text x="280" y="765" text-anchor="middle" class="nt">DiT ❄ · 32层 flow-matching</text><text x="280" y="783" text-anchor="middle" class="ns">{z_ex,z_im,vlm_ctx,proprio}</text><text x="280" y="800" text-anchor="middle" class="ns">→ (dx,dy,dz,dyaw)+search</text>
+ <rect x="140" y="854" width="280" height="46" rx="10" fill="#fff" stroke="var(--frozen-stroke)" stroke-width="1.5"/><text x="280" y="876" text-anchor="middle" class="nt">action×scale → drone.step</text><text x="280" y="892" text-anchor="middle" class="ns">pos+=Δ · yaw+=Δyaw</text>
+ <rect x="476" y="854" width="170" height="46" rx="10" fill="var(--env-fill)" stroke="#c7bdea" stroke-width="1.5"/><text x="561" y="876" text-anchor="middle" class="nt">CARLA 环境</text><text x="561" y="892" text-anchor="middle" class="ns">→ 新帧(闭环)</text>
+</svg>
+
+ <div class="cap">
+  <b>路线 B 核心</b>:把"大乱炖"的启发式 WHICH 栈(K-view gallery + 时序EMA + 运动共识融合 + 共识门控 + 各种手工阈值)**收成一个 0.72M 学习模块 TAH**。<br>
+  <b>TAH = {crop-DINOv2 外观 ⊕ 图像位置} → enc → 注意力关联(query=递归记忆 m,key=候选)→ 身份 logits + 学习置信度;记忆 m 由 GRU 从 committed 目标递归更新。</b> gallery/EMA=GRU 记忆;运动共识=位置作输入特征模型自学权重;共识门=学习置信输出——**零手工旋钮**(RMOT/conf-tau/gate 全消)。<br>
+  <b>训练</b>:监督关联(GT 身份,CE),episode 序列 BPTT。学的是**身份关联**(信号可学,DINOv2 已证 look-alike 可分)——非失败的 BC/RL 控制。<br>
+  <b>唯一可训练=TAH 0.72M</b>;Qwen(4B)/DINOv2(22M)/IAR/DiT 全冻结复用。诚实门槛:TAH 关联准确率 ≥ 启发式栈 → B 成立(一个模块替代乱炖);显著更差 → 退回 A(定位发现/研究型)。
+ </div>
+</div></body></html>
