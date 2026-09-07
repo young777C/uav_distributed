@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ACoT-UAV-Track · WHICH-module 架构对比(Ours / OC-SORT·ByteTrack / DeepSORT / DAM4SAM)</title>
+<style>
+  :root{
+    --surface:#fcfcfb; --plane:#f9f9f7; --card:#ffffff;
+    --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+    --grid:#e1e0d9; --rule:#c3c2b7; --ring:rgba(11,11,11,.10);
+    --vision:#2a78d6;   /* 视觉/感知(VLM/图像) */
+    --motion:#eda100;   /* 运动模型(CV/Kalman) */
+    --appear:#eb6834;   /* 外观/关联(DINOv2/re-ID) */
+    --memory:#4a3aa7;   /* 时序记忆(温和EMA / SAM2记忆库) */
+    --ctrl:#1baf7a;     /* 学习控制(DiT动作) */
+    --ext:#898781;      /* 外部服务/免训练 */
+    --loss:#e34948;     /* 弱点/断点 */
+    --good:#0ca30c;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --surface:#1a1a19; --plane:#0d0d0d; --card:#212120;
+      --ink:#ffffff; --ink2:#c3c2b7; --muted:#898781;
+      --grid:#2c2c2a; --rule:#383835; --ring:rgba(255,255,255,.12);
+      --vision:#3987e5; --motion:#c98500; --appear:#d95926; --memory:#9085e9;
+      --ctrl:#199e70; --ext:#898781; --loss:#e66767; --good:#0ca30c;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--plane);color:var(--ink);
+    font:14px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+  .wrap{max-width:1280px;margin:0 auto;padding:30px 22px 90px}
+  h1{font-size:24px;margin:0 0 4px;letter-spacing:-.01em}
+  .sub{color:var(--ink2);font-size:13.5px;margin:0 0 18px}
+  .sub b{color:var(--ink)}
+  code{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+
+  .legend{display:flex;flex-wrap:wrap;gap:8px 15px;padding:11px 14px;margin:0 0 22px;
+    background:var(--card);border:1px solid var(--ring);border-radius:12px}
+  .lg{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink2)}
+  .sw{width:13px;height:13px;border-radius:4px;flex:none;box-shadow:0 0 0 1px var(--ring)}
+
+  .sec{background:var(--surface);border:1px solid var(--ring);border-radius:16px;
+    padding:15px 17px 18px;margin:0 0 13px;position:relative}
+  .sec-h{display:flex;align-items:baseline;gap:10px;margin:0 0 3px;flex-wrap:wrap}
+  .sec-n{font:600 11.5px/1 ui-monospace,monospace;color:#fff;background:var(--ink);padding:5px 9px;border-radius:7px}
+  .sec-t{font-size:16px;font-weight:650;margin:0}
+  .sec-tag{font:600 10px/1 ui-monospace,monospace;color:var(--ink2);border:1px solid var(--ring);border-radius:5px;padding:3px 6px}
+  .sec-d{color:var(--muted);font-size:12px;margin:2px 0 12px}
+  .sec-d b{color:var(--ink2)}
+
+  .flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px}
+  .node{background:var(--card);border:1px solid var(--ring);border-left:4px solid var(--rule);
+    border-radius:10px;padding:8px 10px;min-width:118px;flex:1 1 0}
+  .node.vision{border-left-color:var(--vision)} .node.motion{border-left-color:var(--motion)}
+  .node.appear{border-left-color:var(--appear)} .node.memory{border-left-color:var(--memory)}
+  .node.ctrl{border-left-color:var(--ctrl)} .node.ext{border-left-color:var(--ext)}
+  .nt{font-weight:650;font-size:12.5px;margin:0 0 2px}
+  .nd{color:var(--ink2);font-size:11.3px;margin:1px 0 0}
+  .nd .k{color:var(--ink);font-weight:600}
+  .shp{display:inline-block;font:600 10px/1 ui-monospace,monospace;color:var(--ink);background:var(--plane);
+    border:1px solid var(--ring);border-radius:5px;padding:3px 5px;margin:5px 4px 0 0}
+  .arrow{display:flex;align-items:center;justify-content:center;color:var(--rule);font-size:18px;padding:0 1px}
+
+  .brk{border:1.5px dashed var(--loss);border-radius:9px;padding:8px 10px;margin:10px 0 0;
+    background:color-mix(in srgb,var(--loss) 7%,var(--card));font-size:11.8px;color:var(--ink2)}
+  .brk b{color:var(--loss)}
+  .fix{border:1.5px dashed var(--good);border-radius:9px;padding:8px 10px;margin:10px 0 0;
+    background:color-mix(in srgb,var(--good) 8%,var(--card));font-size:11.8px;color:var(--ink2)}
+  .fix b{color:var(--good)}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+  @media(max-width:900px){.grid2{grid-template-columns:1fr}}
+
+  .metrics{display:flex;gap:10px;flex-wrap:wrap;margin-top:9px}
+  .mchip{font:600 11px/1 ui-monospace,monospace;color:var(--ink2);background:var(--plane);
+    border:1px solid var(--ring);border-radius:7px;padding:5px 8px}
+  .mchip .v{color:var(--ink)}
+
+  table{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px}
+  th,td{border:1px solid var(--ring);padding:7px 9px;text-align:left;vertical-align:top}
+  th{background:var(--plane);color:var(--ink2);font-weight:650;font-size:11.5px}
+  td b{color:var(--ink)}
+  tr:nth-child(even) td{background:color-mix(in srgb, var(--card) 92%, var(--plane))}
+
+  .imp{border:1px solid var(--ring);border-radius:11px;padding:11px 13px;background:var(--card);margin-top:8px}
+  .imp .it{font-weight:650;font-size:13px;margin:0 0 3px;display:flex;align-items:center;gap:7px}
+  .imp .it .dot{width:9px;height:9px;border-radius:50%;flex:none}
+  .imp p{margin:2px 0 0;color:var(--ink2);font-size:12px}
+  .imp p b{color:var(--ink)}
+
+  .foot{color:var(--muted);font-size:11.5px;margin-top:20px;border-top:1px solid var(--grid);padding-top:11px}
+  .hl{color:var(--memory);font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>WHICH-module 架构对比 · Ours(reid+temporal) vs OC-SORT/ByteTrack vs DeepSORT vs DAM4SAM</h1>
+  <p class="sub">4 个方法接入<b>同一闭环</b>(同 WHERE=CV 候选投影、同 HOW=DiT 控制),只替换身份识别模块(<code>tid_head</code>)——结构对比聚焦"识别目标身份"这一件事怎么做的。数据源:<code>rollout/policy.py</code>(ours/assoc/dam4sam 均为真实接入代码,非示意)+ 19ep 同种子评测(<code>baseline_compare_906.md</code>)。</p>
+
+  <div class="legend">
+    <span class="lg"><span class="sw" style="background:var(--vision)"></span>视觉/感知(VLM/RGB)</span>
+    <span class="lg"><span class="sw" style="background:var(--motion)"></span>运动模型(CV/Kalman 图像位预测)</span>
+    <span class="lg"><span class="sw" style="background:var(--appear)"></span>外观/关联(embedding 匹配)</span>
+    <span class="lg"><span class="sw" style="background:var(--memory)"></span>时序记忆(跨帧状态/记忆库)</span>
+    <span class="lg"><span class="sw" style="background:var(--ctrl)"></span>学习控制(DiT 动作,仅 ours 有)</span>
+    <span class="lg"><span class="sw" style="background:var(--ext)"></span>外部/免训练服务</span>
+  </div>
+
+  <!-- §0 Ours -->
+  <div class="sec">
+    <div class="sec-h"><span class="sec-n">Ours</span><h2 class="sec-t">reid+temporal(l5)· 语言接地 + 时序外观记忆 + 学习控制耦合</h2><span class="sec-tag">tid_head=reid, reid_tavg&gt;0</span></div>
+    <p class="sec-d">唯一把"识别目标"结果<b>接回控制</b>的方法(<code>ex_source=track</code> 时);其余三者都只输出一个 track id / 框,不参与动作生成。</p>
+    <div class="flow">
+      <div class="node vision"><p class="nt">RGB</p><span class="shp">(512,512,3)</span></div>
+      <div class="arrow">→</div>
+      <div class="node vision"><p class="nt">❄ VLM 骨干</p><p class="nd">冻结,出 vlm_ctx + candidate crop 特征</p></div>
+      <div class="arrow">→</div>
+      <div class="node appear"><p class="nt">crop-DINOv2 特征</p><p class="nd">每候选一个外观向量</p></div>
+      <div class="arrow">→</div>
+      <div class="node memory"><p class="nt">K-view 记忆库 + <span class="k">EMA</span></p><p class="nd">存"我们相信是目标"的外观(committed 视图),top-m 打分</p><span class="shp">reid_tavg 时序EMA</span></div>
+      <div class="arrow">→</div>
+      <div class="node ctrl"><p class="nt">K帧滞回 commit</p><p class="nd">连续 commit_k 帧胜出才换目标身份</p></div>
+      <div class="arrow">→</div>
+      <div class="node ctrl"><p class="nt">EAR/IAR → DiT</p><p class="nd">z_ex 由 committed 身份的世界位置重锚 → 动作</p><span class="shp">action chunk (16,5)</span></div>
+    </div>
+    <div class="brk"><b>结构弱点</b>:① <b>无显式运动模型</b>——不像 assoc 有 Kalman/CV 图像位预测做门控,候选歧义时纯靠外观相似度,易被同色同款分心物吸走。② 记忆库<b>无 distractor-aware 建模</b>(DAM4SAM 的核心创新)——只做"匹配得分",不显式学"哪些候选是持续出现的干扰项该被压制"。③ 语言仅用于冷启动/重锚,单帧决策易在 look-alike 间挑错(reanchor 实验证伪)。</div>
+  </div>
+
+  <div class="grid2">
+    <!-- OC-SORT / ByteTrack -->
+    <div class="sec">
+      <div class="sec-h"><span class="sec-n">A</span><h2 class="sec-t">OC-SORT / ByteTrack</h2><span class="sec-tag">tid_head=assoc, assoc_mode=motion</span></div>
+      <p class="sec-d">纯运动关联,<b>零外观、零学习参数</b>——最简对照。</p>
+      <div class="flow">
+        <div class="node vision"><p class="nt">候选框 (u,v,w,h)</p><p class="nd">同一套 CV 投影候选</p></div>
+        <div class="arrow">→</div>
+        <div class="node motion"><p class="nt">恒速运动预测</p><p class="nd">上一帧图像位 + 速度 → 预测位置</p></div>
+        <div class="arrow">→</div>
+        <div class="node motion"><p class="nt">距离门控 + 打分</p><p class="nd">score=−dist/gate_px,超门控 → −∞</p><span class="shp">gate_px=160</span></div>
+        <div class="arrow">→</div>
+        <div class="node motion"><p class="nt">最近邻关联</p><p class="nd">argmax → track id</p></div>
+      </div>
+      <div class="fix"><b>优点</b>:零训练、零漂移风险(无外观模板会"学坏");SR 反而<b>非最低</b>(0.053)——运动先验对短程遮挡稳健。<b>弱点</b>:纯运动在密集同速车流(look-alike 同车道同速)中歧义大,长时丢失后无法靠外观找回。</div>
+    </div>
+
+    <!-- DeepSORT -->
+    <div class="sec">
+      <div class="sec-h"><span class="sec-n">B</span><h2 class="sec-t">DeepSORT</h2><span class="sec-tag">tid_head=assoc, assoc_mode=deepsort</span></div>
+      <p class="sec-d">= A + <b>外观 embedding</b> 联合打分——运动关联的标准增强。</p>
+      <div class="flow">
+        <div class="node motion"><p class="nt">同 A:运动预测+门控</p><span class="shp">score_motion</span></div>
+        <div class="arrow">→</div>
+        <div class="node appear"><p class="nt">crop-DINOv2 + 余弦</p><p class="nd">对 EMA 外观模板打分(同 ours 特征提取器)</p></div>
+        <div class="arrow">→</div>
+        <div class="node appear"><p class="nt">加权融合</p><p class="nd">score=motion + λ·cos_sim</p><span class="shp">assoc_lambda=1.0</span></div>
+        <div class="arrow">→</div>
+        <div class="node motion"><p class="nt">关联 → track id</p></div>
+      </div>
+      <div class="fix"><b>关键差异 vs ours</b>:DeepSORT 的外观只是<b>单模板 EMA</b>(无 K-view gallery),但<b>叠加了显式运动门控</b>——两个弱信号相乘互相纠错。19ep 结果 <b>SR 全场最高(0.211)</b>,说明"运动+外观联合约束"比"纯外观时序记忆(ours)"更能防止误锁定。</div>
+    </div>
+  </div>
+
+  <!-- DAM4SAM -->
+  <div class="sec">
+    <div class="sec-h"><span class="sec-n">C</span><h2 class="sec-t">DAM4SAM(CVPR'25)</h2><span class="sec-tag">tid_head=dam4sam · 独立 SAM2.1 服务(socket 桥接)</span></div>
+    <p class="sec-d">与 A/B/ours 完全不同的范式——<b>不基于候选框打分</b>,而是密集视频分割 + distractor-aware 记忆注意力,直接在整帧上重新定位目标掩码。</p>
+    <div class="flow">
+      <div class="node ext"><p class="nt">首见帧 GT 框 init</p><p class="nd">一次性 box 初始化(与 reid/assoc 同等特权)</p></div>
+      <div class="arrow">→</div>
+      <div class="node vision"><p class="nt">SAM2.1 图像编码器</p><p class="nd">独立 torch2.1/cu118 环境(GPU3)</p></div>
+      <div class="arrow">→</div>
+      <div class="node memory"><p class="nt">★ Distractor-aware 记忆库</p><p class="nd">显式建模"持续出现的干扰目标",跨帧 attention 抑制它们,只强化真目标</p></div>
+      <div class="arrow">→</div>
+      <div class="node vision"><p class="nt">Mask 解码器</p><p class="nd">逐帧输出目标掩码/框</p></div>
+      <div class="arrow">→</div>
+      <div class="node ext"><p class="nt">框↔候选中心距匹配</p><p class="nd">桥接回我们的候选集(harness 集成层,非 DAM4SAM 自身)</p></div>
+    </div>
+    <div class="metrics">
+      <span class="mchip">正确跟踪 <span class="v">0.941</span>(全场最高)</span>
+      <span class="mchip">id_switches <span class="v">0.79</span>(近零)</span>
+      <span class="mchip">最长错跟(均值) <span class="v">16.3s</span>(全场最差)</span>
+      <span class="mchip">SR-latch <span class="v">0.105</span>(与 ours 打平)</span>
+    </div>
+    <div class="brk"><b>诚实读:结构强不等于任务强</b>——distractor-aware 记忆让它<b>极少发生 id 切换</b>(锁上就不丢),但也意味着<b>一旦在遮挡/重叠时误锁到 distractor,记忆会持续"自我确认"这个错误</b>,产生 16s 量级的粘滞长错窗(vs ours 3.2s)。SR-latch 对它<b>无区分力</b>(0.941 正确率却 SR 只有 0.105)——再次坐实"latch-SR 指标本身钝化"的结论。</div>
+  </div>
+
+  <!-- 结构差异总表 -->
+  <div class="sec">
+    <div class="sec-h"><span class="sec-n">D</span><h2 class="sec-t">结构差异总表</h2></div>
+    <table>
+      <tr><th>维度</th><th>Ours(reid+temporal)</th><th>OC-SORT/ByteTrack</th><th>DeepSORT</th><th>DAM4SAM</th></tr>
+      <tr><td><b>输入表征</b></td><td>候选框 crop + VLM 语言上下文</td><td>候选框图像位置(u,v)</td><td>候选框位置 + crop 外观</td><td>整帧密集特征(非候选级)</td></tr>
+      <tr><td><b>运动模型</b></td><td>无(仅世界坐标 CV 外推做控制,不做身份关联)</td><td>显式恒速+距离门控</td><td>显式恒速+距离门控</td><td>无显式运动;靠记忆注意力隐式建模</td></tr>
+      <tr><td><b>外观模型</b></td><td>K-view gallery + 时序 EMA(reid_tavg)</td><td>无</td><td>单模板 EMA</td><td>SAM2 稠密特征 + distractor-aware 记忆</td></tr>
+      <tr><td><b>干扰项(distractor)显式建模</b></td><td>❌ 无</td><td>❌ 无</td><td>❌ 无</td><td>✅ 核心机制</td></tr>
+      <tr><td><b>与控制耦合</b></td><td>✅(track 模式下身份驱动 z_ex)</td><td>❌ 仅输出 id</td><td>❌ 仅输出 id</td><td>❌ 仅输出框(harness 外接匹配)</td></tr>
+      <tr><td><b>训练/免训练</b></td><td>reid 头训练;外观特征(DINOv2)免训练</td><td>全免训练</td><td>全免训练(外观特征借用 DINOv2)</td><td>免训练(SAM2.1 预训练权重)</td></tr>
+      <tr><td><b>部署代价</b></td><td>同一进程内</td><td>同一进程内,零依赖</td><td>同一进程内,复用 DINOv2</td><td>独立环境+socket 服务,~百MB 权重</td></tr>
+    </table>
+  </div>
+
+  <!-- 改进建议 -->
+  <div class="sec">
+    <div class="sec-h"><span class="sec-n">E</span><h2 class="sec-t">对 ours 的结构性改进方向(按结构差异倒推)</h2></div>
+    <div class="imp">
+      <p class="it"><span class="dot" style="background:var(--motion)"></span>① 补一个显式运动门控(借鉴 DeepSORT)</p>
+      <p>DeepSORT = 运动+外观联合打分,SR 全场最高(0.211,是 ours 的 2×)。ours 的 reid 目前<b>只有外观、没有运动一致性约束</b>,候选歧义时容易被静止/慢速的同色 look-alike 吸走。最小改动:在 <code>_reid_select</code> 里加一个 <code>_assoc_uv</code> 式的图像位/世界位一致性门控,和外观分数加权融合——同一套 DINOv2 特征已经在算,改动集中在打分融合,不需要新模块。</p>
+    </div>
+    <div class="imp">
+      <p class="it"><span class="dot" style="background:var(--memory)"></span>② 给记忆库加 distractor 抑制(借鉴 DAM4SAM)</p>
+      <p>DAM4SAM 的 id_switches 近零(0.79 vs ours 9.32)本质是"记住谁不是目标"而不仅"记住谁是目标"。ours 的 K-view gallery 只存正样本;可以扩展成同时维护"近期高频误匹配候选"的负样本集,匹配打分时对它们做惩罚——与 gallery 结构对称,改动量可控。但要警惕 DAM4SAM 暴露的反面教训(見 ③)。</p>
+    </div>
+    <div class="imp">
+      <p class="it"><span class="dot" style="background:var(--loss)"></span>③ 警惕"记忆越强,错锁定代价越大"(DAM4SAM 的教训)</p>
+      <p>DAM4SAM 16s 粘滞长错窗证明:单纯加强时序记忆的"自我确认"会让错误更难恢复,不是免费午餐。①②的改动必须配合<b>可验证的退出机制</b>(如 conf_tau 置信度门控/reanchor 触发),否则会把 ours 现有的 3.2s 中位错跟时长做差,而不是做好。</p>
+    </div>
+    <div class="imp">
+      <p class="it"><span class="dot" style="background:var(--ctrl)"></span>④ ours 独有的"身份→控制"耦合是差异化优势,应保留并强化</p>
+      <p>A/B/C 三个外部方法都只到"识别"为止,不参与控制;ours 的 track 模式把 committed 身份接回 z_ex(唯一做到这一点的)。下一步的杠杆不在于让识别本身更像 DAM4SAM,而在于让"识别置信度"更好地调制"何时信任身份去驱动飞控"——即 ①③ 的门控设计应该直接服务于 <code>conf_tau</code>/<code>_track</code> 路径,而不是只优化 tid 本身的准确率(SR 地板证明单独提升识别准确率边际收益已很低)。</p>
+    </div>
+  </div>
+
+  <p class="foot">数据与代码来源:<code>rollout/policy.py</code>(<code>_reid_select</code>/<code>_assoc_select</code>/<code>_dam4sam_select</code>,均为真实推理路径,非示意);指标为 19ep 同种子(91000-19)、Town05、live CARLA 评测(<code>continuous_metrics.py</code>),见 <code>acot_note/baseline_compare_906.md</code> §进展快照与图1。DAM4SAM 环境配方见该文件附录。</p>
+</div>
+</body>
+</html>
