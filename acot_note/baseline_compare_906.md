@@ -43,6 +43,12 @@
 
 > 语言重锚不帮反略差(0.363→0.225);oracle 重锚有效(→0.741)→ 机制有 headroom 但**语言仲裁不可靠**(collapse 时单帧语言在 look-alike 中挑错,同天花板)。
 
+**图 2b · 时序语言重锚"抢救"(甲的翻盘尝试,17ep 配对)**:甲**彻底证伪**。
+
+![reanchor 抢救](figs/fig_reanchor_rescue.png)
+
+> 时序 EMA **部分降噪**(单帧 0.225→时序 0.291,证明"病根=单帧太吵"的诊断对)**但仍低于无重锚基线(0.363,虚线)**→ 语言即便时序积分仍是太弱的仲裁。oracle 0.741 证明**机制有大 headroom → 杠杆是更强的重锚信号(运动共识,见"可借鉴设计排序"①),不是语言**。
+
 **图 3 · 架构结构对比**(Ours vs OC-SORT/ByteTrack vs DeepSORT vs DAM4SAM,基于 `policy.py` 真实接入代码)。源 `acot_note/architecture_compare_baselines.html`。
 
 ![架构对比](figs/architecture_compare_baselines.png)

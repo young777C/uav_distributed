@@ -60,3 +60,26 @@ fig2.text(0.5, 0.01, "Language re-anchor does NOT help (0.363→0.225, worse); o
 fig2.tight_layout(rect=[0, 0.05, 1, 0.94])
 fig2.savefig("acot_note/figs/fig_reanchor.png", bbox_inches="tight")
 print("wrote fig_reanchor.png")
+
+# ---- Figure C: reanchor rescue (temporal language re-anchor, 17ep paired) — 甲 falsified even w/ rescue ----
+rarms = ["reid_deploy\n(no re-anchor)", "single-frame\nlang re-anchor", "temporal\nlang re-anchor", "oracle\nre-anchor (bound)"]
+rcol = ["#4C72B0", "#DD8452", "#C56A2E", "#55A868"]   # deploy=blue baseline, lang=orange, oracle=green
+rcf = [0.363, 0.225, 0.291, 0.741]
+rmw = [11.2, 12.6, 9.3, 3.6]
+fig3, ax3 = plt.subplots(1, 2, figsize=(9.0, 4.1))
+for ax, (title, vals, fmt) in zip(ax3, [("Correct-tracking fraction  (↑ better)", rcf, "%.3f"),
+                                        ("Longest wrong-track, median s  (↓ better)", rmw, "%.1f")]):
+    bars = ax.bar(np.arange(4), vals, color=rcol, width=0.66, edgecolor="white", linewidth=0.8)
+    ax.set_title(title); ax.set_xticks(np.arange(4)); ax.set_xticklabels(rarms, fontsize=7.6); ax.margins(y=0.2)
+    for b, v in zip(bars, vals):
+        ax.text(b.get_x()+b.get_width()/2, v, fmt % v, ha="center", va="bottom", fontsize=8.5)
+# reference line = no-reanchor baseline (the bar temporal-lang must beat but doesn't)
+ax3[0].axhline(0.363, color="#4C72B0", ls="--", lw=1, alpha=0.6)
+fig3.suptitle("Temporal-EMA language re-anchor RESCUE (17ep paired) — Plan-A thoroughly falsified", fontsize=10.5)
+fig3.text(0.5, 0.01, "Temporal EMA PARTIALLY de-noises the language vote (single-frame 0.225 → temporal 0.291, confirms 'single-frame too noisy') "
+                     "BUT stays below the no-re-anchor baseline (0.363, dashed) → language is too weak an arbiter even temporally-integrated. "
+                     "Oracle 0.741 = the re-anchor MECHANISM has headroom → the lever is a STRONGER signal (motion-consensus), not language.",
+          ha="center", fontsize=7.0, wrap=True)
+fig3.tight_layout(rect=(0, 0.06, 1, 0.94))
+fig3.savefig("acot_note/figs/fig_reanchor_rescue.png", bbox_inches="tight")
+print("wrote fig_reanchor_rescue.png")
