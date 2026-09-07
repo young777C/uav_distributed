@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="zh"><head><meta charset="utf-8">
+<title>ACoT-UAV-Track · 最新架构(reid+temporal+运动共识+共识门控)</title>
+<style>
+ :root{--ink:#1c2430;--muted:#6b7688;--line:#8a94a3;
+   --frozen-fill:#eef1f5;--frozen-stroke:#c6cedb;--id-panel:#f4f8ff;--id-stroke:#cddcf4;
+   --new-fill:#ffe6e0;--new-stroke:#d9534f;--new-ink:#8a2620;
+   --where-fill:#e6f6f0;--where-stroke:#9fd6c4;--env-fill:#f0ecfb;}
+ html,body{margin:0;background:#fbfbfd;color:var(--ink);font-family:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;}
+ .wrap{max-width:1240px;margin:0 auto;padding:20px;}
+ h1{font-size:19px;margin:0 0 2px;} .sub{color:var(--muted);font-size:13px;margin:0 0 8px;}
+ .legend{display:flex;gap:15px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin:6px 0;}
+ .sw{width:13px;height:13px;border-radius:3px;border:1.5px solid #999;display:inline-block;vertical-align:-2px;margin-right:5px;}
+ .nt{font-size:12.5px;font-weight:600;fill:var(--ink);} .ns{font-size:11px;fill:var(--muted);}
+ .newt{font-size:12.5px;font-weight:700;fill:var(--new-ink);} .edgelbl{font-size:10.5px;fill:var(--muted);}
+ .lane{font-size:12px;font-weight:700;letter-spacing:.04em;}
+ .cap{font-size:12.5px;color:#455;background:#fff5f3;border:1px solid #f0c9c2;border-radius:8px;padding:10px 14px;margin-top:14px;line-height:1.55;}
+ .cap b{color:#1c2430;}
+</style></head><body><div class="wrap">
+ <h1>ACoT-UAV-Track · 最新可部署架构</h1>
+ <p class="sub">reid + 时序EMA + <b style="color:#8a2620">★运动共识(borrow#1)</b> + <b style="color:#8a2620">★共识门控(borrow#2)</b> —— 诊断驱动的借鉴升级,纯推理</p>
+ <div class="legend">
+  <span><span class="sw" style="background:var(--frozen-fill);border-color:var(--frozen-stroke)"></span>冻结主干 ❄</span>
+  <span><span class="sw" style="background:var(--id-panel);border-color:var(--id-stroke)"></span>WHICH 身份路径</span>
+  <span><span class="sw" style="background:var(--new-fill);border-color:var(--new-stroke)"></span>★ 本轮借鉴升级(#1/#2)</span>
+  <span><span class="sw" style="background:var(--where-fill);border-color:var(--where-stroke)"></span>WHERE 控制先验</span>
+  <span><span class="sw" style="background:var(--env-fill);border-color:#c7bdea"></span>环境闭环</span>
+ </div>
+
+<svg viewBox="0 0 1240 1070" width="100%" role="img" aria-label="最新架构流程图">
+ <defs>
+  <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8a94a3"/></marker>
+  <marker id="aN" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#d9534f"/></marker>
+ </defs>
+
+ <!-- WHICH lane panel -->
+ <rect x="662" y="92" width="500" height="700" rx="14" fill="var(--id-panel)" stroke="var(--id-stroke)" stroke-width="1.5"/>
+ <text x="678" y="116" class="lane" fill="#3f6fb0">WHICH · 身份(reid + 时序 + 运动共识)</text>
+ <text x="66" y="116" class="lane" fill="#5a6577">冻结感知主干</text>
+ <text x="66" y="820" class="lane" fill="#2f8a6e">WHERE · HOW · 闭环</text>
+
+ <!-- edges -->
+ <g fill="none" stroke="var(--line)" stroke-width="2" marker-end="url(#a)">
+  <path d="M135,168 C 190,168 205,168 235,168"/>
+  <path d="M135,235 C 205,235 215,190 235,182"/>
+  <path d="M360,198 C 360,224 360,236 360,262"/>
+  <path d="M760,166 C 830,152 900,142 900,152"/>
+  <path d="M900,202 C 900,224 900,236 900,262"/>
+  <path d="M900,322 C 900,342 900,352 900,372"/>          <!-- gallery -> motion fuse -->
+  <path d="M900,452 C 900,472 900,482 900,502"/>          <!-- fuse -> EMA -->
+  <path d="M900,566 C 900,586 900,596 900,616"/>          <!-- EMA -> commit -->
+  <path d="M900,676 C 900,696 900,706 900,726"/>          <!-- commit -> consensus gate -->
+  <path d="M300,198 C 300,470 250,600 220,872"/>          <!-- vlm_ctx -> DiT -->
+  <path d="M360,316 C 360,600 320,720 300,872"/>          <!-- z_im -> DiT -->
+  <path d="M600,95 C 640,320 560,660 420,900"/>           <!-- proprio -> DiT -->
+  <path d="M520,795 C 460,812 430,845 415,872"/>          <!-- z_ex -> DiT -->
+  <path d="M280,938 C 280,958 280,966 280,984"/>
+  <path d="M420,1008 C 445,1008 452,1008 476,1008"/>
+ </g>
+ <!-- committed -> z_ex + CV-motion feedback : accent -->
+ <g fill="none" stroke="var(--new-stroke)" stroke-width="2.2" marker-end="url(#aN)">
+  <path d="M820,758 C 700,782 660,790 636,790"/>          <!-- consensus gate -> z_ex(committed) -->
+  <path d="M1000,412 C 1120,412 1130,240 1130,180 C 1130,150 1000,120 636,760" stroke-dasharray="5 4"/>  <!-- committed CV feeds motion predict (loop) -->
+ </g>
+ <text x="1075" y="300" class="edgelbl" fill="#8a2620" transform="rotate(90 1075 300)">committed CV → 运动预测</text>
+ <!-- closed loop -->
+ <g fill="none" stroke="#a99cd6" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#a)">
+  <path d="M560,1030 C 560,1058 60,1060 40,760 C 30,430 40,130 58,72 C 60,60 62,58 66,54"/>
+ </g>
+ <text x="120" y="1055" class="edgelbl" fill="#8a7fc0">闭环:新帧回到感知(10Hz)</text>
+
+ <!-- edge labels -->
+ <text x="905" y="252" class="edgelbl">每候选外观向量</text>
+ <text x="905" y="362" class="edgelbl">外观匹配分</text>
+ <text x="908" y="492" class="edgelbl">融合分</text>
+ <text x="905" y="606" class="edgelbl">时序积分→argmax</text>
+ <text x="905" y="716" class="edgelbl">committed 身份</text>
+ <text x="648" y="778" class="edgelbl" fill="var(--new-ink)">CV外推→z_ex</text>
+ <text x="150" y="380" class="edgelbl">vlm_ctx</text>
+ <text x="300" y="700" class="edgelbl">z_im</text>
+ <text x="600" y="500" class="edgelbl">proprio</text>
+
+ <!-- INPUT nodes -->
+ <rect x="10" y="142" width="125" height="52" rx="9" fill="#fff" stroke="var(--frozen-stroke)" stroke-width="1.5"/><text x="72" y="164" text-anchor="middle" class="nt">RGB 512²</text><text x="72" y="182" text-anchor="middle" class="ns">UAV 相机</text>
+ <rect x="10" y="210" width="125" height="50" rx="9" fill="#fff" stroke="var(--frozen-stroke)" stroke-width="1.5"/><text x="72" y="231" text-anchor="middle" class="nt">语言指令</text><text x="72" y="248" text-anchor="middle" class="ns">neutral</text>
+ <rect x="700" y="60" width="185" height="52" rx="9" fill="#fff" stroke="var(--frozen-stroke)" stroke-width="1.5"/><text x="792" y="82" text-anchor="middle" class="nt">CandidateSet</text><text x="792" y="100" text-anchor="middle" class="ns">目标+干扰车框 · 稳定 actor idx · u/v/depth</text>
+ <rect x="520" y="44" width="160" height="50" rx="9" fill="#fff" stroke="var(--frozen-stroke)" stroke-width="1.5"/><text x="600" y="65" text-anchor="middle" class="nt">Proprio 5D</text><text x="600" y="82" text-anchor="middle" class="ns">cam_z·pitch·vel×3</text>
+
+ <!-- backbone -->
+ <rect x="235" y="140" width="250" height="58" rx="10" fill="var(--frozen-fill)" stroke="var(--frozen-stroke)" stroke-width="1.5"/><text x="360" y="165" text-anchor="middle" class="nt">Qwen3-VL-4B ❄</text><text x="360" y="184" text-anchor="middle" class="ns">→ vlm_ctx + 逐层 layers</text>
+ <rect x="235" y="262" width="250" height="54" rx="10" fill="var(--frozen-fill)" stroke="var(--frozen-stroke)" stroke-width="1.5"/><text x="360" y="284" text-anchor="middle" class="nt">IAR ❄ → z_im</text><text x="360" y="302" text-anchor="middle" class="ns">隐式先验(track 不用 EAR)</text>
+
+ <!-- WHICH nodes -->
+ <rect x="800" y="152" width="200" height="50" rx="10" fill="var(--frozen-fill)" stroke="var(--frozen-stroke)" stroke-width="1.5"/><text x="900" y="173" text-anchor="middle" class="nt">crop → DINOv2 ❄</text><text x="900" y="190" text-anchor="middle" class="ns">实例判别外观特征</text>
+ <rect x="800" y="262" width="200" height="60" rx="10" fill="#fff" stroke="var(--id-stroke)" stroke-width="1.5"/><text x="900" y="285" text-anchor="middle" class="nt">K-view gallery(K=2)</text><text x="900" y="303" text-anchor="middle" class="ns">多视角模板 · top-m 余弦</text>
+ <!-- NEW motion consensus -->
+ <rect x="792" y="372" width="216" height="80" rx="11" fill="var(--new-fill)" stroke="var(--new-stroke)" stroke-width="2.4"/><text x="806" y="392" fill="var(--new-stroke)" font-size="15">★</text><text x="900" y="393" text-anchor="middle" class="newt">运动共识融合(borrow#1)</text><text x="900" y="411" text-anchor="middle" class="ns">分 = 外观余弦 + RMOT·运动一致性</text><text x="900" y="427" text-anchor="middle" class="ns">运动=−‖候选位−CV预测位‖/gate</text><text x="900" y="443" text-anchor="middle" class="ns">空间不一致 look-alike 赢不了外观</text>
+ <rect x="800" y="502" width="200" height="64" rx="10" fill="#fff" stroke="var(--id-stroke)" stroke-width="1.5"/><text x="900" y="525" text-anchor="middle" class="nt">时序 EMA(per-actor)</text><text x="900" y="543" text-anchor="middle" class="ns">融合分跨帧积分(reid_tavg)</text><text x="900" y="559" text-anchor="middle" class="ns">→ argmax(≠单帧)</text>
+ <rect x="800" y="616" width="200" height="56" rx="10" fill="#fff" stroke="var(--id-stroke)" stroke-width="1.5"/><text x="900" y="638" text-anchor="middle" class="nt">K 帧滞回提交</text><text x="900" y="656" text-anchor="middle" class="ns">→ committed 身份</text>
+ <!-- NEW consensus gate -->
+ <rect x="792" y="726" width="216" height="66" rx="11" fill="var(--new-fill)" stroke="var(--new-stroke)" stroke-width="2.4"/><text x="806" y="746" fill="var(--new-stroke)" font-size="15">★</text><text x="900" y="747" text-anchor="middle" class="newt">共识门控(borrow#2)</text><text x="900" y="765" text-anchor="middle" class="ns">commit-fly 须 margin≥τ 且 运动一致</text><text x="900" y="781" text-anchor="middle" class="ns">外观/运动分歧 → 保持+搜索</text>
+
+ <!-- WHERE / HOW -->
+ <rect x="520" y="736" width="180" height="54" rx="10" fill="var(--where-fill)" stroke="var(--where-stroke)" stroke-width="1.5"/><text x="610" y="758" text-anchor="middle" class="nt">WHERE:CV 外推</text><text x="610" y="776" text-anchor="middle" class="ns">committed 目标 → z_ex</text>
+ <rect x="140" y="872" width="280" height="66" rx="11" fill="var(--frozen-fill)" stroke="var(--frozen-stroke)" stroke-width="1.5"/><text x="280" y="895" text-anchor="middle" class="nt">DiT ❄ · 32层 flow-matching</text><text x="280" y="913" text-anchor="middle" class="ns">{z_ex,z_im,vlm_ctx,proprio}</text><text x="280" y="930" text-anchor="middle" class="ns">→ (dx,dy,dz,dyaw)+search</text>
+ <rect x="140" y="984" width="280" height="46" rx="10" fill="#fff" stroke="var(--frozen-stroke)" stroke-width="1.5"/><text x="280" y="1006" text-anchor="middle" class="nt">action×scale → drone.step</text><text x="280" y="1022" text-anchor="middle" class="ns">pos+=Δ · yaw+=Δyaw</text>
+ <rect x="476" y="984" width="170" height="46" rx="10" fill="var(--env-fill)" stroke="#c7bdea" stroke-width="1.5"/><text x="561" y="1006" text-anchor="middle" class="nt">CARLA 环境</text><text x="561" y="1022" text-anchor="middle" class="ns">→ 新帧(闭环)</text>
+</svg>
+
+ <div class="cap">
+  <b>本轮升级(高亮红,诊断驱动的借鉴)</b>:外部 baseline 对比发现 DeepSORT(运动+外观)SR 最高 → 倒推我们纯外观缺运动约束。<br>
+  <b>★borrow#1 运动共识</b>:reid 分数融合"候选与 CV 预测目标位的一致性"(RMOT 权重)→ 空间不一致的同色 look-alike 赢不了外观 → <b>SR 0.105→0.211(2×)、正确跟踪 0.74→0.84、最长错跟中位 3.0→1.8s</b>(RMOT 扫描稳健,甜点≈0.3,SR 0.263)。<br>
+  <b>★borrow#2 共识门控</b>:commit-fly 只在"外观 margin 够 且 运动一致"时信任身份驱动飞控,分歧时保持+搜索(强化 ours 独有的"身份→控制"耦合)。评测中。<br>
+  <b>诚实</b>:我们非 SOTA(assoc-deepsort SR、DAM4SAM 正确率各有胜出),但**诊断有预测力、诊断驱动的系统是最佳均衡可部署 WHICH**;SR 上界仍受 0.58 场景地板。
+ </div>
+</div></body></html>

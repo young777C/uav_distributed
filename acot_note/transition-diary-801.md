@@ -337,6 +337,33 @@ EAR 每一格都被 CV 碾压 **2-6×** → **反应式网络连"匀速外推"�
 
 ---
 
+## 十、外部 baseline 对照 → 诊断驱动的借鉴升级(2026-09-05 → 09-07)
+
+> 一句话:把外部方法接进**同一闭环只换 WHICH**,发现我们**非 SOTA**但"外观/时序关联是杠杆"被独立证实;据此做**可借鉴设计排序**,借 DeepSORT 的运动共识(#1)使 **SR 翻倍**、系统升为最佳均衡;语言兜底重锚(甲)彻底证伪。
+
+### 10.1 实验记录(逐步)
+**① 定稿内部证据(20ep 同批次)**:主阶梯 l1_xattn→l5_temporal(正确跟踪 0.251→0.738、最长错跟中位 9.7→3.0s)+ 负结果 BC/RL 均失败 + H0(0.579 vs 0.715)+ 客观指标方法学(latch-SR 饱和)。见 §九 + `paper_data_inventory.md`。
+
+**② 外部 baseline(接同一闭环,只换 `tid_head`)—— 诚实:我们非 SOTA。** `assoc`(DeepSORT/OC-SORT)+ `DAM4SAM`(CVPR'25 SOTA,独立 env+socket 桥)。19ep 同种子:track_correct_frac l5 0.738 / assoc-deepsort 0.750 / **DAM4SAM 0.941**;SR l5 0.105 / **assoc-deepsort 0.211** / DAM4SAM 0.105。**assoc-deepsort SR 更高、DAM4SAM 正确率更高(但 16s 粘滞)** → 我们非最优;**但所有外观/关联法(0.67-0.94)≫ 单帧 xattn(0.25)→ WHICH-not-WHERE + "外观/时序关联是杠杆"被外部方法独立证实**(=真贡献)。iKUN/JointNLT 零样本域差,转 future work。
+
+**③ 语言兜底重锚(甲)彻底证伪。** 全可部署 GT-free gallery(committed)身份大崩(0.715→0.363);语言重锚**不帮反差**(→0.225);时序 EMA 抢救**部分降噪但仍跨不过基线**(→0.291<0.363);**oracle 重锚 0.741** 证明**机制有 headroom,但语言(即便时序积分)是太弱的仲裁**——再次坐实单帧语言天花板。
+
+**④ 借鉴设计排序 → borrow#1 运动共识 → SR 翻倍。** 排序原则=**攻真正瓶颈(级联/何时信任身份)非识别精度**(全迭代反复证明单纯提识别不移 SR)。#1=借 DeepSORT(唯一 SR 更高的外部法)把运动做成第二共识信号融进 reid。实现+单测→ **SR 0.105→0.211(2×)**、正确跟踪 0.738→0.835、q_reacq 0.471→0.635、最长错跟中位 3.0→1.8s——多指标一致改善(真信号)。**RMOT 扫描确认稳健**(0.3/0.5/0.7 全优于 l5,correct_frac 单调↑)+ 定甜点 **RMOT≈0.3(SR 0.263)**;RMOT=0.7 过约束(连续最优却 SR 掉,长丢失 CV 陈旧→伤重捕获,又一 latch 钝化实例)。**完整系统(reid+temporal+motion)现为最佳均衡**:追平 assoc-deepsort SR、正确率/错跟更优、远胜 DAM4SAM 的 SR/错跟。
+
+**⑤ borrow#2 共识置信度调制控制(进行中)**:commit-fly 门在 margin 上增"被选候选须运动一致"→ 拦截"外观骗过但空间离谱"的 commit-fly。实现+单测过,20ep 评测中。
+
+### 10.2 模型设计升级(落到 `policy.py`)
+- **★borrow#1 运动共识**(`--reid-motion` RMOT):reid 分数 = 外观余弦 + RMOT·运动一致性(CV 图像位预测软门),EMA 前融合 → 空间不一致的 look-alike 赢不了外观。补上 ours 纯外观的弱点(DeepSORT 有、我们没有)。
+- **★borrow#2 共识门控**(`--conf-consensus`):`_track` commit-fly 门 = margin≥conf_tau **且** 被选候选运动一致 → 外观/运动分歧时保持+搜索(强化"身份→控制"耦合,ours 独有)。
+- 最新完整 WHICH:crop-DINOv2 + K-view gallery + ★运动共识融合 + 时序 EMA + K帧滞回 + ★共识门控 → committed 身份 → z_ex → DiT。架构图 `acot_note/architecture_latest.html`。
+
+### 10.3 踩过的坑
+- **外部集成**:DAM4SAM 官方 cu121 撞驱动470→改 cu118+torch2.1+SAM2;numpy 必须<2(opencv-python 5.0 会拉回2.x→只留 headless4.10);vot 精确版 0.7.1/trax4.0.2;PIL 非 ndarray。独立容器+socket 桥(复用 bridge.py)。
+- **CARLA 崩**:up 2 天+重负载后模拟器进程挂(端口关)→ 交接/评测加"崩则自动重启"守卫;单 CARLA 严格串行,交接前查 `pgrep run_rollout`=FREE。
+- **诚实纪律**:外部 baseline 胜我们的指标(assoc SR、DAM4SAM 正确率)如实报、不写 SOTA;RL/DAM4SAM 的 latch@5s"好"是近零跟踪假象须点破;单点强结果(RMOT0.5)必须邻域扫描确认非幸运数;bash `local a=$1 b=${a}` 在 set -u 下报未绑定→拆开。
+
+---
+
 ## 附:关键证据与产物索引
 
 | 项 | 位置 |
