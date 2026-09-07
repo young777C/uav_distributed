@@ -29,6 +29,22 @@
 
 ---
 
+## 结果对比图(2026-09-06,真实数据)
+
+**图 1 · 外部 WHICH-module 对比**(19ep 同种子同配置,只换身份机制)。生成脚本 `acot_note/figs/make_baseline_figs.py`。
+
+![外部 baseline 对比](figs/fig_external_baselines.png)
+
+> 诚实读:我们的 reid/temporal **非最优**——assoc-deepsort SR 更高、DAM4SAM 正确率 0.94+id-switches 近零(但 16s 粘滞长错窗)。**但所有外观/关联法(0.67-0.94)≫ 单帧语言 xattn(0.25)→ WHICH 瓶颈 + "外观/时序关联是杠杆"被外部方法独立证实**。latch-SR 无分辨力再获坐实(DAM4SAM 0.94 正确却 SR 0.105)。
+
+**图 2 · reanchor(paper2 Plan-A/甲)**(17ep 同种子配对):语言兜底重锚**证伪**。
+
+![reanchor 对比](figs/fig_reanchor.png)
+
+> 语言重锚不帮反略差(0.363→0.225);oracle 重锚有效(→0.741)→ 机制有 headroom 但**语言仲裁不可靠**(collapse 时单帧语言在 look-alike 中挑错,同天花板)。
+
+---
+
 ## 1. ⚠️ 诚实警示(引用核验)
 
 2026 年 UAV 预印本**须逐篇二次核验存在性/代码**;memory 已核出 **CosFly-VLA 是 fabricated → 禁用**。搜索摘要模型可能 confabulate,**未经核验不写进论文、不作 baseline**。
