@@ -62,10 +62,25 @@
 ## 7. 度量方法学(可复用贡献)
 - `carla_uav_tracking/rollout/continuous_metrics.py`:latch-SR(90s 内任意≥2s 错窗→永久失败,SR≈(1−q)^N)饱和无分辨力的实证(§4 l3→l5 SR 0.105 不动而连续指标在动;§5 时序身份更好却 SR 0)→ 主张报客观连续量(正确跟踪占比↔IDF1、id_switches↔IDSW、track 时长、重捕获率&延迟、最长错跟时长、latch@Ts),SR 仅作保守操作点。
 
-## 8. 外部 baseline(⏳ 评测中,~4h 后可用)
-- 接入同一闭环、只换 WHICH:`assoc`(DeepSORT/OC-SORT 时序关联,motion/deepsort 两模式)+ `dam4sam`(DAM4SAM CVPR'25 SOTA distractor-aware SAM2 记忆,独立容器+socket 桥)。
-- 源(生成中):`eval_out/paper_ext_{assoc_motion,assoc_deepsort,dam4sam}.json`;进度 `acot_note/baseline_compare_906.md`。
-- iKUN/JointNLT → future work(零样本域差、边际低;JointNLT 已 de-risk)。
+## 8. 外部 baseline(✅ 完成 20ep,同种子同配置,只换 WHICH)—— **诚实:我们非 SOTA**
+| 指标 | l4 reid+conf | **l5 reid+temporal** | assoc_motion | assoc_deepsort | dam4sam(SOTA) |
+|---|---|---|---|---|---|
+| 正确跟踪帧占比 | 0.671 | 0.738 | 0.755 | 0.750 | **0.941** |
+| SR (latch) | 0.105 | 0.105 | 0.053 | **0.211** | 0.105 |
+| id_switches | 14.1 | 9.32 | 13.4 | 11.9 | **0.79** |
+| 最长错跟(均值,s) | 3.78 | 3.18 | 2.69 | 3.20 | **16.32** |
+| latch@5s | 0.842 | 0.895 | 0.947 | 0.789 | 0.421 |
+
+**诚实读法(严禁写成"我们最强")**:① assoc_deepsort SR 0.211 > 我们 0.105、DAM4SAM 正确率 0.941/id_sw 0.79 在各自轴上**胜过**我们;② 但 DAM4SAM 粘滞(错窗 16s、latch@5s 0.42 最差)→ SR 仍 0.105,我们时序 reID **轻量均衡**(错窗仅 3.2s);③ **所有外观/关联法(0.67-0.94)远超单帧 xattn(0.251)→ WHICH-not-WHERE + "外观/时序关联是杠杆"被外部方法独立证实**(=真贡献);④ latch-SR 无分辨力再获坐实。**叙事定位**:贡献=任务+诊断+发现+方法学,**非"最佳跟踪器"**;外部 baseline = **独立佐证方向 + 揭示 trade-off 空间**。源 `eval_out/paper_ext_*.json`。
+- iKUN/JointNLT → future work(零样本域差,JointNLT 已 de-risk)。
+
+## 8b. reanchor(paper2 甲,17ep 配对)—— 语言兜底重锚**证伪**
+| 指标 | reid_deploy(GT-free) | reanchor_lang | reanchor_oracle(上界) |
+|---|---|---|---|
+| 正确跟踪帧占比 | 0.363 | **0.225** | 0.741 |
+| 最长错跟(中位,s) | 11.2 | 12.6 | 3.6 |
+- GT-gallery 拐杖大:GT种子 0.715 → 可部署 committed 0.363(去拐杖身份崩)。
+- **语言重锚不帮反略差**(0.363→0.225);oracle 重锚大幅有效(→0.741)→ 机制有 headroom 但**语言仲裁不可靠**(collapse 时单帧语言仍挑错车,同天花板)。源 `eval_out/{reid_deploy,reanchor_lang,reanchor_oracle}.json`。
 
 ## 9. 架构 / 图(dataviz)
 - `acot_note/reid_temporal_architecture.html`(当前系统)、`reid_dinov2_gallery_pipeline.html`、`three_arm_zex_injection.html`、`data_pipeline.html`、`vlm_fusion.html`。
