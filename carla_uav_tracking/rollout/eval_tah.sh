@@ -7,8 +7,9 @@ REPO=/nvidia/hque/code/cyhe/uav-acot-track; DATA=/nvidia/hque/data/carla_data
 HF=${HF_CACHE:-$HOME/.cache/huggingface}; NET=cyh-carla-net; CONFIG=train/config_v5.yaml
 EPISODES=${EPISODES:-20}; SEED_BASE=${SEED_BASE:-91000}; STEPS=${STEPS:-900}
 TOWN=${TOWN:-Town05}; S2=${S2_PERIOD:-6}; GPU=${GPU:-2}; GSEED=${GSEED:-gt}; CONF=${CONF:-0.5}
+TAH_CKPT=${TAH_CKPT:-runs/tah_rel.pt}; OUT_NAME=${OUT_NAME:-paper_ext_tah_${GSEED}}
 [ "$GPU" = "all" ] && GPUFLAG="--gpus all" || GPUFLAG="--gpus device=$GPU"
-OUT=/workspace/rollout/eval_out/paper_ext_tah_${GSEED}.json
+OUT=/workspace/rollout/eval_out/${OUT_NAME}.json
 docker rm -f acot-policy-server >/dev/null 2>&1 || true
 docker run -d $GPUFLAG --network "$NET" --name acot-policy-server --shm-size=16g \
   -e NVIDIA_DRIVER_CAPABILITIES=compute,utility \
@@ -16,7 +17,7 @@ docker run -d $GPUFLAG --network "$NET" --name acot-policy-server --shm-size=16g
   acot-uav-train:cu118 bash -c "pip install -q timm==1.0.29 2>/dev/null; \
     python carla_uav_tracking/rollout/policy_server.py --config '$CONFIG' \
     --ckpt runs/stage2_v5/stage2_best.pt --language-mode neutral --s2-period '$S2' \
-    --ex-source track --tid-head tah --tah-ckpt runs/tah_rel.pt --gallery-seed '$GSEED' \
+    --ex-source track --tid-head tah --tah-ckpt '$TAH_CKPT' --gallery-seed '$GSEED' \
     --conf-tau '$CONF' --port 5555" >/dev/null
 for _ in $(seq 1 120); do
   docker logs acot-policy-server 2>&1 | grep -q "listening" && break

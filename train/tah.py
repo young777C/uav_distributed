@@ -83,3 +83,60 @@ class TAHRel(nn.Module):
         m["vel"] = (npos - m["pos"]) if m["pos"] is not None else torch.zeros(2, device=target_feat.device)
         m["pos"] = npos
         return m
+
+
+class TAHRelM(nn.Module):
+    """TAHRel + LEARNED motion-consensus (path-A upgrade, distills borrow#1). TAHRel already had a raw
+    relative-displacement feature but (a) fed the MLP only unbounded relp_x/relp_y — not a well-scaled
+    distance/gated consensus — and (b) used a noisy single-step velocity. This adds the two things
+    borrow#1's hand-tuned motion gate supplies, but LEARNED: an explicit gate-normalized soft motion
+    score msoft = exp(−‖relp‖/gate) (bounded 0–1, learned radius) + the raw distance ‖relp‖, and an EMA
+    velocity (learned decay) robust across losses. Targets the ONE metric TAHRel loses (q_reacq / re-
+    acquisition), where DeepSORT & borrow#1 win via an explicit motion prior. 7 vehicle-invariant
+    features; ~4.7K params (still cannot overfit). Same step/update signature → train & deploy unchanged."""
+    def __init__(self, d_feat=384):
+        super().__init__()
+        self.gate = nn.Parameter(torch.tensor(-1.0))          # appearance-memory EMA gate (sigmoid)
+        self.vbeta = nn.Parameter(torch.tensor(0.0))          # EMA velocity decay (sigmoid)
+        self.mgate = nn.Parameter(torch.tensor(-2.3))         # soft motion-gate radius (softplus, img-frac)
+        self.mlp = nn.Sequential(nn.Linear(7, 64), nn.GELU(), nn.Linear(64, 64), nn.GELU(), nn.Linear(64, 1))
+
+    def reset(self, device):
+        return {"app": None, "pos": None, "vel": None}
+
+    def step(self, feat, pos, mem):
+        """feat:(n,384) L2-normed; pos:(n,3)=[u/W,v/H,depth]; mem dict. Returns logits:(n,), conf, None."""
+        n = feat.shape[0]; dev = feat.device
+        if mem["app"] is None:                                # cold start: no target memory yet
+            cos = torch.zeros(n, device=dev); relp = torch.zeros(n, 2, device=dev)
+            rank = torch.zeros(n, device=dev); dmot = torch.zeros(n, device=dev); msoft = torch.zeros(n, device=dev)
+        else:
+            cos = feat @ mem["app"]                           # relative appearance (vehicle-agnostic cosine)
+            pred = mem["pos"] + (mem["vel"] if mem["vel"] is not None else torch.zeros(2, device=dev))
+            relp = pos[:, :2] - pred[None]                    # relative motion (candidate vs CV-predicted target)
+            rank = torch.softmax(cos * 5.0, dim=0)            # relative-to-neighbors (star-topology, GNN-style)
+            dmot = relp.norm(dim=-1)                          # distance from CV prediction
+            gate = F.softplus(self.mgate) + 1e-3
+            msoft = torch.exp(-dmot / gate)                   # borrow#1-style bounded soft motion consensus (learned radius)
+        x = torch.stack([cos, relp[:, 0], relp[:, 1], pos[:, 2], rank, dmot, msoft], dim=-1)  # (n,7) all invariant
+        logits = self.mlp(x).squeeze(-1)
+        srt = torch.sort(logits, descending=True).values
+        conf = torch.sigmoid(srt[0] - srt[1]) if n >= 2 else torch.tensor(1.0, device=dev)
+        return logits, conf, None
+
+    def update(self, mem, target_feat, target_pos):
+        g = torch.sigmoid(self.gate); m = dict(mem)
+        if m["app"] is None:
+            m["app"] = target_feat.clone()
+        else:
+            a = (1 - g) * m["app"] + g * target_feat
+            m["app"] = a / (a.norm() + 1e-8)
+        npos = target_pos[:2]
+        step_v = (npos - m["pos"]) if m["pos"] is not None else torch.zeros(2, device=target_feat.device)
+        if m["vel"] is None:
+            m["vel"] = step_v
+        else:
+            b = torch.sigmoid(self.vbeta)
+            m["vel"] = (1 - b) * m["vel"] + b * step_v        # EMA velocity — robust across losses
+        m["pos"] = npos
+        return m

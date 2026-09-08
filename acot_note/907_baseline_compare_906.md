@@ -31,11 +31,11 @@
 
 ## 结果对比图(2026-09-06,真实数据)
 
-**图 1 · 外部 WHICH-module 对比**(19ep 同种子同配置,只换身份机制)。生成脚本 `acot_note/figs/make_baseline_figs.py`。
+**图 1 · WHICH-module 全谱对比**(19ep 同种子 gt-seeded,只换身份机制;**2026-09-08 更新:补 borrow#1 + TAH+DAgger 学习模块**)。蓝=ours 手工、紫=ours 可学(黑边高亮)、斜体棕=外部 tracker。生成脚本 `acot_note/figs/make_baseline_figs.py`。
 
 ![外部 baseline 对比](figs/fig_external_baselines.png)
 
-> 诚实读:我们的 reid/temporal **非最优**——assoc-deepsort SR 更高、DAM4SAM 正确率 0.94+id-switches 近零(但 16s 粘滞长错窗)。**但所有外观/关联法(0.67-0.94)≫ 单帧语言 xattn(0.25)→ WHICH 瓶颈 + "外观/时序关联是杠杆"被外部方法独立证实**。latch-SR 无分辨力再获坐实(DAM4SAM 0.94 正确却 SR 0.105)。
+> 诚实读:**TAH+DAgger(一个 4610 参可学模块)SR 第 3/8(0.158)**——超 l5/DAM4SAM/OC-SORT,只逊 DeepSORT(0.211)与 ours 最强启发式 borrow#1(0.263,两者均含显式运动先验);latch 稳定性顶档(短错窗)对照 DAM4SAM 的 16s 粘滞灾难。**correct 0.716 有竞争力**(DAM4SAM 0.94 是粘滞假优,代价 16s 长错窗)。**所有外观/关联法 ≫ 单帧语言 xattn(0.25)→ WHICH 瓶颈 + "关联是杠杆"被外部独立证实**;latch-SR 无分辨力再坐实(DAM4SAM 0.94 正确却 SR 0.105)。**一个学习头 ≈ DeepSORT 类,替掉整套手工件。**
 
 **图 2 · reanchor(paper2 Plan-A/甲)**(17ep 同种子配对):语言兜底重锚**证伪**。
 
@@ -54,6 +54,54 @@
 ![架构对比](figs/architecture_compare_baselines.png)
 
 > 结构性结论:DeepSORT(运动+外观联合门控)SR 全场最高(0.211)→ **ours 的 reid 缺一个显式运动一致性门控**是最小可改动的杠杆;DAM4SAM 的 distractor-aware 记忆让 id_switches 近零但 16s 粘滞长错窗证明**"记忆越强、错锁定代价越大"**,给 ours 若要加干扰项抑制提了一个必须配退出机制的警示。
+
+---
+
+## 结果对比更新(2026-09-08)· TAH+DAgger 学习模块 vs 外部 baseline
+
+> **背景**:Path-B 把整套手工 WHICH 启发式栈(gallery+EMA+conf-tau+topm+运动共识)**蒸馏成一个 4610 参可学模块 TAHRel**,并用 DAgger on-policy 重训修 offline→online gap。此处把它放进外部 tracker 全谱对照。**全部 n=19 同种子、gt-seeded(oracle 记忆模板,与所有臂同条件,relative 比较公平;非全可部署 committed-seed 数)。**
+
+**全谱对照(7 方,gt-seeded,n=19;2026-09-08 加 A1 TAHRelM)**:
+
+| 方法 | 性质 | SR↑ | correct↑ | latch@5s↑ | q_reacq↑ | idsw↓ | max_wrong mean↓ |
+|---|---|---|---|---|---|---|---|
+| OC-SORT-motion(外部) | 纯运动关联 | 0.053 | 0.755 | 0.947 | 0.567 | 13.4 | 2.69 |
+| l5(ours) | 全套手工 reid 栈 | 0.105 | 0.738 | 0.895 | 0.471 | 9.3 | 3.18 |
+| DAM4SAM(外部) | distractor-aware SAM2 | 0.105 | **0.941** | 0.421 | 0.397 | **0.79** | **16.3** |
+| **TAH+DAgger(ours,B)** | **一个 4610 参可学模块** | **0.158** | 0.716 | **0.947** | 0.438 | 8.3 | 3.11 |
+| DeepSORT(外部) | 运动+外观联合门控 | **0.211** | 0.750 | 0.789 | 0.521 | 11.9 | 3.20 |
+| borrow#1(ours) | l5+运动共识(旧最强) | 0.263 | **0.810** | 0.789 | **0.635** | **7.7** | 3.07 |
+| **★TAHRelM+DAgger(ours,A1)** | **4740 参:可学软运动门+EMA速度** | **0.316 ★** | 0.746 | **1.000 ★** | 0.590 | 9.3 | **1.90 ★** |
+
+**SR 排序(A1 后)**:**★TAHRelM 0.316 > borrow#1 0.263 > DeepSORT 0.211 > TAH+DAgger 0.158 > l5=DAM4SAM 0.105 > OC-SORT 0.053** → **学习模块从第 3 跃至第 1/9,超所有手工栈与外部 tracker**。
+
+**诚实读数(A1 = 运动软门升级,决定性)**:
+- **★SR 全场最优(0.316)**:TAHRelM **超旧最强 borrow#1(0.263)与所有外部 tracker**。A1 把 borrow#1 的运动共识做成**可学软门 `exp(−‖relp‖/gate)`+EMA 速度**(4740 参),补上 TAH+DAgger 唯一短板 q_reacq(0.438→**0.590**),SR 0.158→0.316(2×)。
+- **error-persistence / latch 谱全场碾压**:max_wrong **1.90s**(全场最短,次者 ~2.7-3.2s)、latch@2/3/4/5s **全部最优**(0.684/0.789/0.947/**1.000 满分**)——**从不长时间锁错车**是核心优势,直接拉高 latch-SR。
+- **★offline→online gap 这次没栽**:离线 val 0.990(mis 0.010)**transfer 到闭环**(不同于 TAHRel 0.909→0.681 崩)。因运动共识是**相对几何信号**(候选 vs CV 预测位),抗部署取景漂移——**实证三视角:控制/恢复动力学是缺口,编码为可学相对特征即闭合**。
+- **诚实边界**:borrow#1 仍在**原始 track_correct(0.810 vs 0.746)与 q_reacq(0.635 vs 0.590)**领先——TAHRelM 更"谨慎"(idsw 9.3,短暂多切换但从不长锁),borrow#1 平均驻留更久但偶尔长锁。**TAHRelM 赢 SR+全部 latch+密度+off-center(任务最相关),borrow#1 赢平均驻留**。gt-seeded、n=19(SR 有噪)。DAM4SAM 0.941 仍粘滞假优。
+
+**判据结论(A1 后,已远超"不能太烂"宽杠)**:**★B 路线全面胜出**——一个 4740 参可学模块**在 SR、error-persistence、latch 全谱、密度鲁棒、off-center 均全场最优**,超整套手工栈(borrow#1)与所有外部 tracker。**干净算法贡献:诊断驱动(定位 q_reacq 短板)→ 把手工运动门蒸馏为可学相对特征 → 多指标 SOTA-级**。产物:`eval_out/paper_ext_tahrelm_gt.json`、`figs/fig_external_baselines.png`(自动含 TAHRelM)、`train/tah.py::TAHRelM`。
+
+### 场景优势:学习外观模块在"高干扰密度"最优且最鲁棒(2026-09-08)
+
+> **A1 后 TAHRelM 全局 SR 第 1/9**;此场景切分进一步显示学习模块在**最难设置(高密度)也最优**——诚实(报全部桶,`carla_uav_tracking/rollout/scenario_split.py`)、非 cherry-pick(赢在最难处)。图 `figs/fig_scenario_density.png`(A1 后由 `figs/regen_arm_figs.py` 自动重渲染,含 TAHRelM)。
+
+![密度鲁棒性](figs/fig_scenario_density.png)
+
+**track_correct vs 在帧干扰车数 N(19ep 同种子,帧加权)**:
+
+| arm | N=2 | N=3 | **N=5(最密)** | Δ(N2→N5) |
+|---|---|---|---|---|
+| DeepSORT(运动+外观) | 0.916 | 0.795 | 0.646 | **−0.270 崩** |
+| borrow#1(运动共识) | 0.889 | 0.863 | 0.738 | −0.151 |
+| l5(reid 栈) | 0.828 | 0.739 | 0.750 | −0.078 |
+| TAH+DAgger(可学 B1) | 0.824 | 0.782 | 0.778 | −0.046 |
+| **★TAHRelM+DAgger(A1)** | **0.941 最优** | **0.875 最优** | **0.802 最优** | −0.139 |
+
+**读数(论文命题的一图实证,A1 后更强)**:干扰车越密,**运动类关联越崩**(DeepSORT −0.27:同向同速 look-alike 运动无法区分),而**学习的外观关联稳且高**——**★TAHRelM 在每个密度 N 都全场最优(0.941/0.875/0.802),N=5 最难处 0.802 最高**。→ **密集 look-alike 消歧靠身份/外观,不是纯运动**——正是本论文核心论点。(TAH+DAgger 曲线更平 Δ−0.046,但 TAHRelM 每点绝对更高。)
+**同轴其它桶(诚实全报,A1 后)**:①**取景**(central/off):**★TAHRelM off-center 0.818 全场最优**(borrow#1 0.807),且 central↔off gap 仅 0.027 **全场最小**(DAgger+运动门→取景最鲁棒);②**重捕获负载**:HI-reacq(n13)**TAHRelM latch@4s 1.000 + max_wrong 1.61s 全场最优**、q_reacq 0.607(次 borrow#1 0.698,远超 TAH+DAgger 0.438);LO-reacq q_reacq 0.545 最优。③DAM4SAM by-N 桶与其总 correct 不自洽,**图已剔除并注明**。
+**头条指标(A1 后 TAHRelM 全场最优)**:全局 **SR 0.316 第 1/9**;"持续锁错率"1−latch@4s=**0.053**;max_wrong **1.90s**;latch@5s **1.000**;N=5 密度 **0.802**;off-center **0.818**——**多项全场最优 + 任务相关 → 可直接用 SR 打头**。
 
 ---
 

@@ -10,33 +10,41 @@ import numpy as np
 plt.rcParams.update({"font.size": 10, "axes.spines.top": False, "axes.spines.right": False,
                      "figure.dpi": 130, "axes.titlesize": 10.5})
 
-# ---- Figure A: external WHICH comparison (19ep same-seed same-config, only WHICH differs) ----
-methods = ["xattn\n(lang)", "reid+conf\n(l4)", "reid+temporal\n(l5, ours)", "assoc\nmotion", "assoc\ndeepsort", "DAM4SAM\n(SOTA)"]
-# category colors (colorblind-safe muted): language=gray, ours=blue, assoc=orange, dam4sam=green
-cols = ["#8C8C8C", "#4C72B0", "#2F5597", "#DD8452", "#C56A2E", "#55A868"]
-correct = [0.251, 0.671, 0.738, 0.755, 0.750, 0.941]
-mwr     = [9.44, 3.78, 3.18, 2.69, 3.20, 16.32]   # longest wrong-track (mean, s)
-sr      = [0.000, 0.105, 0.105, 0.053, 0.211, 0.105]
-idsw    = [13.7, 14.1, 9.32, 13.4, 11.9, 0.79]
+# ---- Figure A: WHICH-module comparison, ours (heuristic + learned) vs external (19ep same-seed, gt-seeded) ----
+# order: language | ours-heuristic (deepening to best borrow#1) | ours-LEARNED (B, highlighted) | external assoc | external SAM
+methods = ["xattn", "l4", "l5", "borrow#1", "TAH+DAgger", "OC-SORT", "DeepSORT", "DAM4SAM"]
+# category colors (colorblind-safe): language=gray, ours-heuristic=blues, ours-LEARNED=purple, assoc=orange, dam4sam=green
+cols = ["#8C8C8C", "#7BA3D0", "#4C72B0", "#2F5597", "#8172B3", "#E8A87C", "#C56A2E", "#55A868"]
+correct = [0.251, 0.671, 0.738, 0.810, 0.716, 0.755, 0.750, 0.941]
+mwr     = [9.44, 3.78, 3.18, 3.07, 3.11, 2.69, 3.20, 16.32]   # longest wrong-track (mean, s)
+sr      = [0.000, 0.105, 0.105, 0.263, 0.158, 0.053, 0.211, 0.105]
+idsw    = [13.7, 14.1, 9.32, 7.7, 8.26, 13.4, 11.9, 0.79]
+LEARNED = 4   # index of TAH+DAgger — highlight with a black edge
 panels = [("Correct-tracking fraction  (↑ better)", correct, "%.2f"),
           ("Longest wrong-track, mean s  (↓ better)", mwr, "%.1f"),
           ("Success rate — latch  (↑ better)", sr, "%.3f"),
           ("ID switches  (↓ better)", idsw, "%.1f")]
-fig, axes = plt.subplots(2, 2, figsize=(10, 6.4))
+fig, axes = plt.subplots(2, 2, figsize=(11.2, 6.6))
 x = np.arange(len(methods))
 for ax, (title, vals, fmt) in zip(axes.flat, panels):
-    bars = ax.bar(x, vals, color=cols, width=0.72, edgecolor="white", linewidth=0.8)
+    edges = ["#111111" if i == LEARNED else "white" for i in range(len(methods))]
+    widths = [1.6 if i == LEARNED else 0.8 for i in range(len(methods))]
+    bars = ax.bar(x, vals, color=cols, width=0.74, edgecolor=edges, linewidth=widths)
     ax.set_title(title)
-    ax.set_xticks(x); ax.set_xticklabels(methods, fontsize=8)
+    ax.set_xticks(x); ax.set_xticklabels(methods, fontsize=8.2, rotation=22, ha="right", rotation_mode="anchor")
+    ax.get_xticklabels()[LEARNED].set_fontweight("bold")
+    # ours = blue/purple (heuristic l4/l5/borrow#1 + learned TAH+DAgger); external = orange/green
+    for i in (5, 6, 7):
+        ax.get_xticklabels()[i].set_style("italic"); ax.get_xticklabels()[i].set_color("#7a5a30")
     ax.margins(y=0.18)
     for b, v in zip(bars, vals):
-        ax.text(b.get_x()+b.get_width()/2, v, fmt % v, ha="center", va="bottom", fontsize=8)
-fig.suptitle("External WHICH-module comparison — same seeds (19ep), same closed loop, only the identity mechanism differs",
-             fontsize=11, y=0.99)
+        ax.text(b.get_x()+b.get_width()/2, v, fmt % v, ha="center", va="bottom", fontsize=7.8)
+fig.suptitle("WHICH-module comparison — ours (blue=heuristic, purple=learned) vs external trackers (italic: OC-SORT / DeepSORT / DAM4SAM) — same seeds (19ep), gt-seeded",
+             fontsize=10, y=0.99)
 fig.text(0.5, 0.005,
-         "Honest read: our reid/temporal is NOT best — assoc-deepsort has higher SR, DAM4SAM higher correct-frac + near-zero id-switches (but 16s sticky wrong-windows). "
-         "ALL appearance/association methods (0.67–0.94) ≫ single-frame language xattn (0.25) → the WHICH bottleneck & 'appearance/temporal association is the lever' is independently confirmed.",
-         ha="center", fontsize=7.3, wrap=True)
+         "TAH+DAgger (ours, ONE 4610-param learned module, black edge) places 3rd/8 on SR (0.158): beats l5 / DAM4SAM / OC-SORT-motion, trails only DeepSORT (0.211) & our best heuristic borrow#1 (0.263) — both use an explicit motion prior. "
+         "Its latch stability is top-tier (short wrong-windows) vs DAM4SAM's sticky 16s catastrophe. Honest: correct-frac 0.716 is competitive (DAM4SAM's 0.941 is stickiness — pays with 16s wrong-windows). One learned head ≈ DeepSORT-class, replacing the whole hand-tuned stack.",
+         ha="center", fontsize=7.0, wrap=True)
 fig.tight_layout(rect=[0, 0.03, 1, 0.97])
 fig.savefig("acot_note/figs/fig_external_baselines.png", bbox_inches="tight")
 print("wrote fig_external_baselines.png")

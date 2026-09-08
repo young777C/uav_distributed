@@ -105,7 +105,7 @@ def main():
                          "loss only; needs run_rollout --predict-road) | track (Plan A: seed from "
                          "tid-COMMITTED candidate → grounding drives control). no-WM baseline = cv_gated.")
     ap.add_argument("--commit-k", type=int, default=5, help="track: hysteresis frames to switch committed target")
-    ap.add_argument("--tid-head", default="xattn", choices=["xattn", "attrbind", "reid", "oracle", "assoc", "dam4sam"],
+    ap.add_argument("--tid-head", default="xattn", choices=["xattn", "attrbind", "reid", "oracle", "assoc", "dam4sam", "tah"],
                     help="xattn=language grounding (default) | attrbind=CLIP-style head (needs --tid-ckpt) "
                          "| reid=temporal appearance-memory re-ID (match the tracked instance, not the "
                          "language; reframe test — no ckpt, falls back to xattn before a template exists)")
@@ -127,12 +127,33 @@ def main():
     ap.add_argument("--reid-tavg", type=float, default=0.0,
                     help="temporal re-ID: per-actor EMA decay of the reid match score (0=off=single-frame "
                          "argmax; e.g. 0.7 = integrate evidence over ~3 ticks → robust to off-center frames)")
+    ap.add_argument("--conf-consensus", type=float, default=0.0,
+                    help="borrow#2: consensus-gated control — commit-fly only if the pick is ALSO motion-"
+                         "consistent (dist < conf_consensus·gate), i.e. appearance AND motion agree; on "
+                         "disagreement hold+search. 0=off. Needs --reid-motion>0.")
+    ap.add_argument("--reid-motion", type=float, default=0.0,
+                    help="borrow#1 (DeepSORT): motion-consensus weight fused into the reid score (0=off=pure "
+                         "appearance). >0 softly penalizes candidates far from the CV-predicted target image "
+                         "position → spatially-inconsistent look-alikes can't win on appearance alone.")
+    ap.add_argument("--reid-motion-gate-px", type=float, default=160.0, help="borrow#1 motion soft-gate radius (px)")
+    ap.add_argument("--gallery-seed", default="gt", choices=["gt", "committed"],
+                    help="reid gallery template source: gt=legacy oracle-seeded (per-frame GT target crop) | "
+                         "committed=DEPLOYABLE GT-free (store the believed-target crop; language at cold-start)")
+    ap.add_argument("--reanchor", default="off", choices=["off", "lang", "oracle"],
+                    help="deployable language re-anchor (paper2 甲): on sustained reid collapse, re-pick via "
+                         "language + reset gallery. off | lang | oracle (GT re-anchor = headroom upper bound)")
+    ap.add_argument("--reanchor-patience", type=int, default=5,
+                    help="consecutive low-margin (<conf-tau) S2 ticks before a re-anchor fires (rate-limit)")
+    ap.add_argument("--reanchor-tavg", type=float, default=0.0,
+                    help="TEMPORAL language re-anchor: per-actor EMA decay of the language logit so re-anchor "
+                         "commits the temporally-integrated language vote (0=off=single-frame; e.g. 0.5)")
     ap.add_argument("--assoc-mode", default="deepsort", choices=["motion", "deepsort"],
                     help="external baseline (--tid-head assoc): motion (OC-SORT-like CV image-space) | "
                          "deepsort (motion gate + crop-DINOv2 appearance) tracking-by-detection association")
     ap.add_argument("--assoc-gate-px", type=float, default=160.0, help="assoc motion gate radius (px)")
     ap.add_argument("--assoc-lambda", type=float, default=1.0, help="assoc appearance weight vs motion")
     ap.add_argument("--dam4sam-host", default="dam4sam-svc", help="external baseline (--tid-head dam4sam) service host")
+    ap.add_argument("--tah-ckpt", default="runs/tah_rel.pt", help="path-B: TAHRel learned association ckpt")
     ap.add_argument("--dam4sam-port", type=int, default=5601, help="DAM4SAM service port")
     ap.add_argument("--port", type=int, default=5555)
     a = ap.parse_args()
@@ -145,9 +166,12 @@ def main():
                     tid_head=a.tid_head, tid_ckpt=tck,
                     reid_feature=a.reid_feature, reid_bank=a.reid_bank, reid_topm=a.reid_topm,
                     conf_tau=a.conf_tau, frame_gain=a.frame_gain, warmup_oracle_s=a.warmup_oracle_s,
-                    reid_tavg=a.reid_tavg, assoc_mode=a.assoc_mode,
+                    conf_consensus=a.conf_consensus,
+                    reid_tavg=a.reid_tavg, reid_motion=a.reid_motion, reid_motion_gate_px=a.reid_motion_gate_px,
+                    gallery_seed=a.gallery_seed, reanchor=a.reanchor,
+                    reanchor_patience=a.reanchor_patience, reanchor_tavg=a.reanchor_tavg, assoc_mode=a.assoc_mode,
                     assoc_gate_px=a.assoc_gate_px, assoc_lambda=a.assoc_lambda,
-                    dam4sam_host=a.dam4sam_host, dam4sam_port=a.dam4sam_port)
+                    dam4sam_host=a.dam4sam_host, dam4sam_port=a.dam4sam_port, tah_ckpt=a.tah_ckpt)
     print(f"[policy-server] loaded policy (language_mode={a.language_mode}, "
           f"s2_period={a.s2_period}, ablate={a.ablate}, ex_source={a.ex_source}, commit_k={a.commit_k}, "
           f"tid_head={a.tid_head})", flush=True)

@@ -59,6 +59,7 @@ def main():
     ap.add_argument("--lr", type=float, default=3e-4)
     ap.add_argument("--val-frac", type=float, default=0.15)
     ap.add_argument("--rel", action="store_true", help="Tier-1: use TAHRel (relative/vehicle-invariant features)")
+    ap.add_argument("--motion", action="store_true", help="path-A: use TAHRelM (TAHRel + learned motion-consensus + EMA vel)")
     ap.add_argument("--aug", action="store_true", help="Tier-2: candidate-permutation + feature-noise + pos-jitter")
     ap.add_argument("--fnoise", type=float, default=0.05)
     ap.add_argument("--pjit", type=float, default=0.02)
@@ -66,14 +67,18 @@ def main():
     ap.add_argument("--device", default="cuda:0")
     a = ap.parse_args()
     import torch
-    from train.tah import TAH, TAHRel
+    from train.tah import TAH, TAHRel, TAHRelM
     data = torch.load(a.cache, weights_only=False)
     eps = data["episodes"]
     nval = max(1, int(len(eps) * a.val_frac))
     val, tr = eps[:nval], eps[nval:]
+    arch = "relm" if a.motion else ("rel" if a.rel else "abs")
     print(f"[tah] {len(tr)} train / {len(val)} val episodes; d_feat={data['d_feat']}; "
-          f"rel={a.rel} aug={a.aug} (fnoise={a.fnoise} pjit={a.pjit})", flush=True)
-    model = (TAHRel(d_feat=data["d_feat"]) if a.rel else TAH(d_feat=data["d_feat"])).to(a.device)
+          f"arch={arch} aug={a.aug} (fnoise={a.fnoise} pjit={a.pjit})", flush=True)
+    rel = a.rel or a.motion   # both TAHRel/TAHRelM use the relative update path in run_epoch
+    a.rel = rel
+    model = (TAHRelM(d_feat=data["d_feat"]) if a.motion else
+             TAHRel(d_feat=data["d_feat"]) if a.rel else TAH(d_feat=data["d_feat"])).to(a.device)
     print(f"[tah] params: {sum(p.numel() for p in model.parameters())}", flush=True)
     opt = torch.optim.AdamW(model.parameters(), lr=a.lr, weight_decay=a.wd)
     fn, pj, pm = (a.fnoise, a.pjit, True) if a.aug else (0.0, 0.0, False)
@@ -83,7 +88,7 @@ def main():
         with torch.no_grad():
             vl, va = run_epoch(model, val, opt, a.device, train=False, rel=a.rel)
         if va > best:
-            best = va; torch.save({"model": model.state_dict(), "d_feat": data["d_feat"]}, a.out)
+            best = va; torch.save({"model": model.state_dict(), "d_feat": data["d_feat"], "arch": arch}, a.out)
         print(f"[tah] ep{ep+1}/{a.epochs} train_loss={tl:.3f} train_acc={ta:.3f} | "
               f"val_acc={va:.3f} (mis={1-va:.3f}) best={best:.3f}", flush=True)
     print(f"[tah] done. best val_acc={best:.3f} (mis_follow={1-best:.3f}) → {a.out}", flush=True)

@@ -97,10 +97,13 @@ class Policy:
                  ex_source: str = "ear", commit_k: int = 5,
                  tid_head: str = "xattn", tid_ckpt: str | None = None,
                  reid_feature: str = "vlmpool", reid_bank: int = 1, reid_topm: int = 1,
-                 conf_tau: float = 0.0, frame_gain: float = 0.0, warmup_oracle_s: float = 0.0,
-                 reid_tavg: float = 0.0, assoc_mode: str = "deepsort",
+                 conf_tau: float = 0.0, conf_consensus: float = 0.0, frame_gain: float = 0.0, warmup_oracle_s: float = 0.0,
+                 reid_tavg: float = 0.0, reid_motion: float = 0.0, reid_motion_gate_px: float = 160.0,
+                 gallery_seed: str = "gt", reanchor: str = "off",
+                 reanchor_patience: int = 5, reanchor_tavg: float = 0.0, assoc_mode: str = "deepsort",
                  assoc_gate_px: float = 160.0, assoc_lambda: float = 1.0,
-                 dam4sam_host: str = "dam4sam-svc", dam4sam_port: int = 5601):
+                 dam4sam_host: str = "dam4sam-svc", dam4sam_port: int = 5601,
+                 tah_ckpt: str = "runs/tah_rel.pt"):
         self.device = device
         self.cfg = cfg
         self.vlm = vlm                              # OnlineVLM (owns the frozen backbone + language mode)
@@ -120,9 +123,20 @@ class Policy:
         self._track = (ex_source == "track")                   # Plan A: grounding drives control
         self.commit_k = int(commit_k)                          # hysteresis frames to switch target
         self.conf_tau = float(conf_tau)                        # ①: min pick-margin to commit-fly (track)
+        self.conf_consensus = float(conf_consensus)            # borrow#2: also require the pick's motion-consistency
+                                                               # (dist < conf_consensus·gate) to commit-fly (0=off)
         self.frame_gain = float(frame_gain)                    # ②: yaw-centering gain on committed target
         self.warmup_oracle_s = float(warmup_oracle_s)          # diag: first N s use oracle id (est. tracking)
         self.reid_tavg = float(reid_tavg)                      # temporal re-ID: per-actor EMA of match score
+        self.reid_motion = float(reid_motion)                  # borrow#1: motion-consensus weight fused into reid score (0=off)
+        self.reid_motion_gate_px = float(reid_motion_gate_px)  # borrow#1: motion soft-gate radius (px)
+        # deployable identity (paper2): gallery_seed 'gt'=legacy oracle-seeded template |
+        # 'committed'=GT-free (store the believed-target crop). reanchor 'off'|'lang'=language re-anchor
+        # on sustained collapse |'oracle'=GT re-anchor (headroom bound). See memory acot-uav-reid-reframe.
+        self.gallery_seed = gallery_seed
+        self.reanchor = reanchor
+        self.reanchor_patience = int(reanchor_patience)        # consecutive low-margin S2 ticks before re-anchor fires
+        self.reanchor_tavg = float(reanchor_tavg)              # temporal language re-anchor: per-actor EMA of language logit (0=single-frame)
         self.fps = int(cfg.get("fps", 10))
         wp = cfg["waypoint"]
         self.estimator = TargetStateEstimator(wp["offsets_s"], wp["scale"], cfg.get("fps", 10))
@@ -131,6 +145,9 @@ class Policy:
         # target color/make) from the closed-loop distribution → retrain the tid on the
         # frames the policy actually visits (oracle label = GT true_idx, free).
         self._dagger_dir = os.environ.get("DAGGER_DIR")
+        # path-B DAgger: log DEPLOYMENT-distribution TAH inputs (crop-DINOv2 feat + pos + GT id) to retrain
+        # TAHRel on-policy (fixes the offline→online distribution shift). Set TAH_DAGGER_DIR to collect.
+        self._tahdag_dir = os.environ.get("TAH_DAGGER_DIR"); self._tahdag_buf = []; self._tahdag_ep = 0
         self._dagger_ep = 0
         self._dagger_buf = []
 
@@ -145,13 +162,23 @@ class Policy:
         self.reid_feature = reid_feature; self.reid_bank = int(reid_bank); self.reid_topm = int(reid_topm)
         self._dino = None
         _need_dino = (tid_head == "reid" and reid_feature == "dinov2") or \
-                     (tid_head == "assoc" and assoc_mode == "deepsort")
+                     (tid_head == "assoc" and assoc_mode == "deepsort") or (tid_head == "tah")
         if _need_dino:
             from train.reid_resolution_probe import _load_dino
             self._dino = _load_dino("vit_small_patch14_dinov2.lvd142m", device)
             print(f"[policy] DINOv2 crop features loaded (tid_head={tid_head})", flush=True)
         # external-baseline: DeepSORT/OC-SORT-style tracking-by-detection association
         self.assoc_mode = assoc_mode; self.assoc_gate_px = float(assoc_gate_px); self.assoc_lambda = float(assoc_lambda)
+        # path-B: TAHRel learned association head (replaces the heuristic WHICH stack)
+        self._tah = None
+        if tid_head == "tah":
+            from train.tah import TAHRel, TAHRelM
+            tck = torch.load(tah_ckpt, map_location=device, weights_only=False)
+            _cls = TAHRelM if tck.get("arch") == "relm" else TAHRel   # path-A motion-augmented vs base
+            self._tah = _cls(d_feat=tck.get("d_feat", 384)).to(device).eval()
+            self._tah.load_state_dict(tck["model"])
+            print(f"[policy] {_cls.__name__} loaded ({sum(p.numel() for p in self._tah.parameters())} params) from {tah_ckpt}", flush=True)
+        self._tah_mem = None
         # external-baseline: DAM4SAM (SOTA distractor-aware SAM2 memory), served over a socket bridge
         self._dam4sam_sock = None
         if tid_head == "dam4sam":
@@ -175,6 +202,8 @@ class Policy:
 
     def reset(self):
         """Clear slow-stream caches + reseed the candidate shuffle for a new episode."""
+        if getattr(self, "reanchor", "off") != "off" and getattr(self, "_reanchor_events", 0):
+            print(f"[reanchor] episode fired {self._reanchor_events} re-anchors", flush=True)
         self._rng = np.random.default_rng(self._shuffle_seed)
         self._z_ex = self._z_im = self._vlm_ctx = self._ctx_mask = None
         self._tid_logits = np.zeros(0, np.float32)
@@ -184,15 +213,24 @@ class Policy:
         self._chal = None; self._chal_n = 0
         self._reid_bank = []            # reid: K-view diversity gallery of the tracked target
         self._reid_score = {}           # temporal re-ID: actor_idx -> EMA of gallery-match score
+        self._reid_mvu = None           # borrow#1: last target image pos (2,) for motion consensus
+        self._reid_mvel = None          # borrow#1: target image-space velocity (2,)
+        self._reid_mscore = None        # borrow#2: stashed per-candidate motion score for the consensus gate
+        self._tah_mem = self._tah.reset(self.device) if getattr(self, "_tah", None) is not None else None  # path-B TAHRel memory
+        self._lang_score = {}           # temporal language re-anchor: actor_idx -> EMA of language logit
         self._assoc_uv = None           # assoc baseline: last GT-target image pos (2,)
         self._assoc_vel = None          # assoc baseline: image-space velocity (2,)
         self._assoc_feat = None         # assoc baseline: appearance template (EMA, C,)
         self._dam4sam_inited = False     # dam4sam baseline: has the tracker been init'd this episode
         self._pred_conf = 0.0           # ①: current pick top1−top2 margin
         self._frame_cw = None           # ②: committed target world pos to keep centered
+        self._reid_fn = None            # deployable: stashed normalized crop feats (for re-anchor re-seed)
+        self._lowconf_run = 0           # deployable re-anchor: consecutive low-margin S2 ticks
+        self._reanchor_events = 0       # deployable re-anchor: fired-count this episode (diagnostic)
         self.estimator.reset()
         self._dagger_flush()            # DAgger: flush the finished episode's frames, start fresh
         self._dagger_buf = []
+        self._tahdag_flush()            # path-B DAgger: flush deployment-distribution TAH frames
 
     def _dagger_flush(self):
         """Write the finished episode's collected frames to DAGGER_DIR (one .npz/episode)."""
@@ -210,7 +248,19 @@ class Policy:
         print(f"[dagger] wrote {out}  ({len(feats)} frames)", flush=True)
         self._dagger_ep += 1
 
-    def _reid_select(self, cset, rgb):
+    def _tahdag_flush(self):
+        """path-B DAgger: write the finished episode's deployment-distribution TAH frames (one .pt/ep,
+        same schema as train/tah_cache.py so tah_train can consume it directly)."""
+        if not self._tahdag_dir or not getattr(self, "_tahdag_buf", None):
+            return
+        import torch as _t
+        os.makedirs(self._tahdag_dir, exist_ok=True)
+        out = os.path.join(self._tahdag_dir, f"tahdag_ep{self._tahdag_ep:04d}.pt")
+        _t.save({"episodes": [self._tahdag_buf], "d_feat": 384}, out)
+        print(f"[tahdag] wrote {out}  ({len(self._tahdag_buf)} frames)", flush=True)
+        self._tahdag_ep += 1; self._tahdag_buf = []
+
+    def _reid_select(self, cset, rgb, store_slot=None):
         """Temporal appearance-memory re-ID (reframe → offline milestone: crop-DINOv2 feature +
         K-view gallery breaks the 0.5 wall without resolution). Returns (N,) match scores to the
         stored target gallery, or None if empty.
@@ -227,9 +277,36 @@ class Policy:
             feats = cset.feats.astype(np.float64)
         fn = feats / (np.linalg.norm(feats, axis=1, keepdims=True) + 1e-8)
         logits = bank_score(self._reid_bank, fn, self.reid_topm) if self._reid_bank else None
-        if cset.true_idx is not None and cset.true_idx >= 0:                   # store this view (future only)
-            bank_update(self._reid_bank, fn[cset.true_idx], self.reid_bank, 0.9)
+        self._reid_fn = fn                                                    # stash for deployable re-anchor re-seed
+        # gallery update source: 'committed'=deployable (store the believed-target crop passed as store_slot;
+        # GT never touches the template) | 'gt'=legacy oracle-seeded (store the GT target view, future only).
+        ss = store_slot if self.gallery_seed == "committed" else \
+             (cset.true_idx if (cset.true_idx is not None and cset.true_idx >= 0) else None)
+        if ss is not None and 0 <= ss < len(fn):
+            bank_update(self._reid_bank, fn[ss], self.reid_bank, 0.9)
         return logits
+
+    def _reid_motion_score(self, cset):
+        """borrow#1 (DeepSORT): SOFT motion-consistency score to FUSE into the reid appearance score
+        (pre-EMA). Predicts the target's next image position (constant velocity) from past state and
+        softly penalizes candidates far from it → a look-alike spatially inconsistent with the track
+        can't win on appearance alone (fixes ours' pure-appearance weakness; DeepSORT had the highest
+        external SR). Returns (N,) ~[-∞,0] (0=at prediction), zeros if no prior. State NOT updated here."""
+        cands = cset.cands
+        if self._reid_mvu is None:
+            return np.zeros(len(cands), np.float64)
+        pred = self._reid_mvu + (self._reid_mvel if self._reid_mvel is not None else 0.0)
+        uv = np.array([[c.u, c.v] for c in cands], np.float64)
+        return -np.linalg.norm(uv - pred[None], axis=1) / self.reid_motion_gate_px
+
+    def _reid_motion_update(self, cset, slot):
+        """Update motion state from the seeding slot's image pos (SELECT used PAST state; same
+        GT/committed privilege as the gallery). None/loss → hold + keep predicting with velocity."""
+        if slot is None or not (0 <= slot < len(cset.cands)):
+            return
+        c = cset.cands[slot]; nuv = np.array([c.u, c.v], np.float64)
+        self._reid_mvel = (nuv - self._reid_mvu) if self._reid_mvu is not None else np.zeros(2)
+        self._reid_mvu = nuv
 
     def _assoc_select(self, cset, rgb):
         """EXTERNAL BASELINE: DeepSORT/OC-SORT-style tracking-by-detection association.
@@ -318,6 +395,16 @@ class Policy:
             if self._chal_n >= self.commit_k:
                 self._committed_idx = sel; self._chal = None; self._chal_n = 0
 
+    def _committed_slot(self, cset):
+        """Candidate slot of the currently committed identity this frame (None if not visible / uncommitted).
+        Deployable gallery seeds its template from THIS crop — the identity we believe, never GT."""
+        if self._committed_idx is None or cset is None:
+            return None
+        for s, c in enumerate(cset.cands):
+            if int(c.idx) == int(self._committed_idx):
+                return s
+        return None
+
     def _committed_world(self, tpos, dstates):
         """World position of the committed identity (GT position; the IDENTITY is tid's)."""
         if self._committed_idx is None:
@@ -375,14 +462,38 @@ class Policy:
                     logits = self.tid(cf, self._vlm_ctx, self._ctx_mask, cmask)[0]         # (N,)
                 self._tid_logits = logits.float().cpu().numpy()
                 self._pred_slot = int(logits.argmax().item())
+                lang_slot = self._pred_slot   # language grounding pick — saved before any reid override
+                lang_logits = self._tid_logits.copy()   # full language logits — for TEMPORAL language re-anchor
+                rl = None                     # reid match scores (None = no gallery yet / non-reid head)
+                # TEMPORAL language re-anchor: single-frame language picks wrong at re-appearance (H0 ceiling) →
+                # accumulate per-actor EMA of the language logit so the re-anchor commits the temporally-integrated
+                # language vote, not one noisy frame (mirrors reid_tavg, which fixed single-frame reid).
+                if self.reanchor == "lang" and self.reanchor_tavg > 0:
+                    a = self.reanchor_tavg
+                    for s, c in enumerate(cset.cands):
+                        prev = self._lang_score.get(c.idx, float(lang_logits[s]))
+                        self._lang_score[c.idx] = a * prev + (1 - a) * float(lang_logits[s])
                 # reid override (reframe test): temporal appearance-memory re-ID instead of
                 # per-frame language grounding — select the candidate matching the STORED target
                 # appearance (built while tracking), not the language description. Tests whether
                 # the WHICH wall is the single-frame paradigm. Falls back to tid before a template
                 # exists (cold start). See memory acot-uav-reid-reframe.
                 if self.tid_head == "reid":
-                    rl = self._reid_select(cset, obs.rgb)
+                    # deployable gallery: store the crop of the identity we currently BELIEVE is the
+                    # target (prior-frame commitment; language pick at cold-start), never GT (GT-free WHICH).
+                    store_slot = None
+                    if self.gallery_seed == "committed":
+                        store_slot = lang_slot if self._committed_idx is None \
+                                     else self._committed_slot(cset)
+                    rl = self._reid_select(cset, obs.rgb, store_slot)
                     if rl is not None:
+                        if self.reid_motion > 0:                      # borrow#1: fuse motion consensus into rl (pre-EMA)
+                            ms = self._reid_motion_score(cset)
+                            self._reid_mscore = ms                    # borrow#2: stash for the consensus commit-fly gate
+                            rl = rl + self.reid_motion * ms
+                            mslot = store_slot if self.gallery_seed == "committed" else \
+                                    (cset.true_idx if (cset.true_idx is not None and cset.true_idx >= 0) else None)
+                            self._reid_motion_update(cset, mslot)
                         self._tid_logits = rl
                         self._pred_slot = int(rl.argmax())
                         # TEMPORAL re-ID: the gallery template is temporal but the QUERY is single-frame
@@ -414,6 +525,30 @@ class Policy:
                     dl = self._dam4sam_select(cset, obs.rgb)
                     self._tid_logits = dl
                     self._pred_slot = int(dl.argmax()) if float(dl.max()) > -1e8 else -1
+                if self.tid_head == "tah":                            # path-B: learned TAHRel association
+                    from train.reid_resolution_probe import _dino_feats
+                    Wi, Hi = self.image_cfg["width"], self.image_cfg["height"]
+                    fe = _dino_feats(self._tah_dino if hasattr(self, "_tah_dino") else self._dino,
+                                     obs.rgb, cset.cands, Wi, Hi, 224, 1.3, self.device).astype(np.float64)
+                    fe = fe / (np.linalg.norm(fe, axis=1, keepdims=True) + 1e-8)
+                    feat = torch.tensor(fe, dtype=torch.float32, device=self.device)
+                    pos = torch.tensor(np.array([[c.u / Wi, c.v / Hi, c.depth / 100.0] for c in cset.cands], np.float32),
+                                       device=self.device)
+                    with torch.no_grad():
+                        logits, conf, _ = self._tah.step(feat, pos, self._tah_mem)
+                    self._tid_logits = logits.float().cpu().numpy()
+                    self._pred_slot = int(logits.argmax())
+                    self._pred_conf = float(conf)
+                    # memory update: gt=oracle-seeded (comparable to reid gallery gt) | committed=deployable
+                    us = (cset.true_idx if self.gallery_seed != "committed" else self._pred_slot)
+                    if us is not None and 0 <= us < feat.shape[0]:
+                        with torch.no_grad():
+                            self._tah_mem = self._tah.update(self._tah_mem, feat[us], pos[us])
+                    if self._tahdag_dir:                             # path-B DAgger: log deployment-dist frame
+                        self._tahdag_buf.append({"feat": fe.astype(np.float16),
+                                                 "pos": pos.cpu().numpy(),
+                                                 "aidx": np.array([c.idx for c in cset.cands], np.int16),
+                                                 "tidx": int(cset.true_idx)})
                 # oracle-identity diagnostic: always pick the TRUE target (isolates the control/WHERE
                 # ceiling — if identity were perfect, can deployable control keep the target in frame?).
                 if self.tid_head == "oracle":
@@ -435,6 +570,37 @@ class Policy:
                 # pick confidence = top1−top2 margin (used to gate commit-fly in track mode).
                 tl = self._tid_logits
                 self._pred_conf = float(np.sort(tl)[-1] - np.sort(tl)[-2]) if tl.size >= 2 else 1.0
+                # ★ DEPLOYABLE LANGUAGE RE-ANCHOR (paper2 甲): appearance re-ID drifts onto a look-alike and
+                # cannot recover on its own (its own drifted gallery keeps confirming the wrong car). When the
+                # pick collapses for `reanchor_patience` consecutive ticks (or there is no gallery match), fall
+                # back to the drift-free LANGUAGE description for ONE shot: re-pick, reset+re-seed the gallery
+                # from that crop, force-commit. Language earns its keep here (not per-frame). 'oracle'=GT bound.
+                if self.reanchor != "off" and self.tid_head == "reid" and len(cset.cands) > 0:
+                    low = self._pred_conf < self.conf_tau
+                    self._lowconf_run = (self._lowconf_run + 1) if low else 0
+                    fire = (rl is None) or (self._lowconf_run >= self.reanchor_patience)
+                    if fire and self._reid_fn is not None:
+                        if self.reanchor == "lang":
+                            if self.reanchor_tavg > 0:          # temporally-integrated language pick (visible cands)
+                                ra, bv = lang_slot, -1e9
+                                for s, c in enumerate(cset.cands):
+                                    v = self._lang_score.get(c.idx, -1e9)
+                                    if v > bv:
+                                        bv, ra = v, int(s)
+                            else:
+                                ra = lang_slot                  # single-frame language pick
+                        else:
+                            ra = int(cset.true_idx) if (cset.true_idx is not None and cset.true_idx >= 0) else -1
+                        if ra is not None and 0 <= ra < len(cset.cands):
+                            from train.reid_resolution_probe import bank_update
+                            self._pred_slot = int(ra)
+                            self._reid_bank = []                                 # drop the drifted gallery
+                            bank_update(self._reid_bank, self._reid_fn[ra], self.reid_bank, 0.9)  # re-seed from re-anchor pick
+                            self._reid_score = {}                                # clear stale temporal EMA
+                            self._committed_idx = int(cset.cands[ra].idx)        # force commit to re-anchored id
+                            self._pred_conf = 1.0                                # high-confidence assertion → control commits
+                            self._lowconf_run = 0
+                            self._reanchor_events += 1
             else:
                 self._tid_logits, self._pred_slot = np.zeros(0, np.float32), -1
                 self._pred_conf = 0.0
@@ -455,6 +621,12 @@ class Policy:
                     # commitment and DON'T re-anchor control to it — keep dead-reckoning the last
                     # CONFIDENT trajectory (CV) instead of flying toward an uncertain look-alike.
                     confident = self._pred_conf >= self.conf_tau
+                    # borrow#2: CONSENSUS gate — commit-fly only if the pick is ALSO motion-consistent
+                    # (appearance AND motion agree). ms[slot]=-dist/gate; require dist<conf_consensus·gate.
+                    # On disagreement (a look-alike wins appearance but is spatially off-track) → hold+search.
+                    if confident and self.conf_consensus > 0 and self._reid_mscore is not None \
+                       and 0 <= self._pred_slot < len(self._reid_mscore):
+                        confident = float(self._reid_mscore[self._pred_slot]) > -self.conf_consensus
                     if confident:
                         self._update_commit(cset)
                     cw = self._committed_world(tpos, dstates)

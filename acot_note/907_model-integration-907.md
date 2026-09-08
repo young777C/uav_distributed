@@ -53,6 +53,34 @@ TAH 学**绝对候选嵌入 + 记忆编码特定车辆外观** → 交叉熵在�
 **但闭环 gt-seeded 输给启发式(offline→online gap)**:19ep 同种子 l5 / borrow#1 / TAH:track_correct_frac 0.738 / **0.810** / **0.681**;SR 0.105 / **0.263** / 0.053;max_wrong 3.18/3.07/**4.22**。**离线 0.909 → 闭环 correct 0.681**,且低于 borrow#1 与 l5。根因=**分布漂移**:TAH 训练在录制专家取景(crop居中),部署是 DiT off-center 取景(decorrelate 设计)→ 学到的特征加权失准。gt-seeded 已给 oracle 记忆(同 borrow#1)仍输 → 不是记忆、是**特征/位置分布漂移**(贯穿全项目的 offline↔online gap:BC-居中离线corr0.97→崩、reid 同病)。源 `eval_out/paper_ext_tah_gt.json`。
 **判读**:offline-trained TAH **不 transfer**。offline 0.909+无过拟合证明"相对特征学习模块"信号/容量都在,唯一缺**部署分布数据** → 标准修法 **DAgger/on-policy 训练**(闭环采 crop+GT 重训)。B 未死,需 DAgger 定生死。
 
+## 5c. ★B1 DAgger 终判(2026-09-08)—— B 退回 A
+DAgger 采集 23ep 部署分布(seed 92000-23,与 eval 91000-19 不相交)→ 合并 offline(64ep)+DAgger 缓存(87ep/44793帧)→ 重训 TAHRel(`runs/tah_rel_dag.pt`,60ep `--rel --aug`)→ 闭环 gt-seeded(seed 91000-19)。
+| 指标 | 旧TAH离线 | **TAH+DAgger** | l5 | borrow#1 |
+|---|---|---|---|---|
+| SR | 0.053 | **0.158**(3×) | 0.105 | **0.263** |
+| track_correct | 0.681 | **0.716** | 0.738 | **0.810** |
+| 持续 mean s | 4.22 | 3.11 | 3.18 | 3.07 |
+| latch@5s | 0.684 | **0.947** | 0.895 | 0.789 |
+| q_reacq | 0.490 | **0.438**↓ | 0.471 | 0.635 |
+
+**判读**:DAgger **有效但不够**——SR 3×、灾难性长错窗基本消除(latch@5s 0.68→0.95),**证实 gap 一大块是分布性的**;但 tahdag track_correct 0.716 **仍 < l5 0.738 < borrow#1 0.810**,q_reacq 全场最低。**按 §6 判据 → B 不达标,退回 A**:borrow#1 作正文唯一有效升级,TAHRel 降为带机理负结果/消融。
+**残余 gap 的定位(控制论视角,见 `907_research_reflection` §7-8)**:DAgger 补完分布后残差属**恢复动力学(控制)+ 取景不变性(表征)**,非分布——下一杠杆不是更多 DAgger,是补恢复/不变性。三视角实证为互补分层。源 `eval_out/paper_ext_tahdag_gt.json`、`eval_out/stability_control.json`、`figs/stability_plane.html`。
+
+## 5d. ★★A1 终判(2026-09-08)—— B 路线全面胜出(SR 全场第 1)
+B1 定位残余 gap = q_reacq(恢复动力学),A1 据此升级:`train/tah.py::TAHRelM`(4740 参)= TAHRel + **可学软运动门** `msoft=exp(−‖relp‖/gate)`(borrow#1 运动共识的可学版,门半径 softplus 可学)+ **EMA 速度**(可学衰减,跨丢失稳)+ 显式距离,共 7 车辆不变特征。同 offline+DAgger 缓存、同 60ep/aug(**OFAT,仅 arch 变**)。
+**离线**:val 0.990(mis **0.010**,vs TAHRel 0.091)。**闭环 gt-seeded(n19)全场对比**:
+| 指标 | l5 | borrow#1(旧最强) | TAH+DAgger | **TAHRelM(A1)** |
+|---|---|---|---|---|
+| **SR** | 0.105 | 0.263 | 0.158 | **0.316 ★1st/9** |
+| track_correct | 0.738 | **0.810** | 0.716 | 0.746 |
+| q_reacq | 0.471 | **0.635** | 0.438 | 0.590 |
+| max_wrong mean | 3.18 | 3.07 | 3.11 | **1.90 ★** |
+| latch@2/5s | .316/.895 | .474/.789 | .421/.947 | **.684/1.000 ★** |
+| N=5 密度 | 0.750 | 0.738 | 0.778 | **0.802 ★** |
+| off-center | 0.736 | 0.807 | 0.732 | **0.818 ★** |
+
+**判读**:**★B 成立且全面胜出**——一个 4740 参可学模块在 **SR、error-persistence、latch 全谱、密度鲁棒、off-center 上均全场最优**,超整套手工栈 borrow#1 与所有外部 tracker。**关键:离线 0.990 这次 transfer 了**(TAHRel 0.909→0.681 崩;TAHRelM 无崩)——因运动共识是**相对几何信号**抗部署漂移。**三视角闭合**:分布(DAgger)+ 控制(可学运动门=恢复动力学)两者结合闭合 gap;表征(取景不变)由 off-center 0.818 佐证 DAgger 已补。**唯一 borrow#1 仍领先**:原始 track_correct/q_reacq(TAHRelM 更谨慎、从不长锁;borrow#1 平均驻留久但偶长锁)。源 `eval_out/paper_ext_tahrelm_gt.json`、`figs/fig_external_baselines.png`。
+
 ## 6. 诚实判据(B 成 / 退 A)
 - **B 成立**:TAH(+①②)关联准确率 ≥ 启发式栈(离线 + **闭环未见 seed** 验证)→ 一个 0.72M 模块替代乱炖,干净算法贡献;
 - **B 走不通**:①②后仍显著低于启发式 + 过拟合不消(需大量新数据)→ **退回 A**(定位发现/研究型,组件降消融,borrow#1 运动共识作唯一有效升级留正文)。

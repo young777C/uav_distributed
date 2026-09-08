@@ -1,0 +1,77 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Closed-loop stability plane — ACoT-UAV identity↔control feedback</title>
+<style>
+  body{background:#fff;color:#1a2230;font:14px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;margin:24px;max-width:960px}
+  h1{font-size:19px;margin:0 0 2px} .sub{color:#5b6675;margin:0 0 16px;font-size:13px}
+  .cap{color:#5b6675;font-size:12.5px;margin-top:10px} b{color:#0b1220}
+  svg text{font-family:inherit}
+</style>
+<h1>闭环稳定性平面:身份→控制反馈回路的阻尼</h1>
+<p class="sub">同一批闭环日志(n=19 同种子)的控制论读法 · x=误差持续/整定时间(越左越好)· y=重捕获恢复率(越上越好)· 点色=SR(latch,深=高)· "好角"=左上</p>
+<svg id="c" width="920" height="600" role="img"></svg>
+<p class="cap" id="cap"></p>
+<script>
+// arm: [label, persist_mean(x, s), q_reacq(y), SR, role, regime]
+// regime: spine=欠→甜点阻尼主轴, over=过阻尼, learn=学习分支
+const D=[
+ ["xattn",        9.44,0.448,0.000,"欠阻尼·语言grounding","spine"],
+ ["reid",         4.20,0.651,0.105,"外观re-ID·无门","spine"],
+ ["+conf门",       3.78,0.607,0.105,"+置信门(阻尼)","spine"],
+ ["+EMA",         3.18,0.471,0.105,"+时序EMA滤波","spine"],
+ ["borrow#1",     3.07,0.635,0.263,"+运动共识·甜点阻尼","spine"],
+ ["borrow#1@.7",  2.48,0.549,0.105,"运动门过紧·过约束","over"],
+ ["borrow#2",     3.54,0.604,0.053,"+共识门·过阻尼→崩","over"],
+ ["TAH",          4.22,0.490,0.053,"学习关联·离线训","learn"],
+ ["TAH+DAgger",   3.11,0.438,0.158,"学习关联·on-policy(B1)","learn"],
+];
+const W=920,H=600,L=78,R=40,T=48,B=70, pw=W-L-R, ph=H-T-B;
+const xdom=[2.0,10.0], ydom=[0.40,0.68];
+const sx=v=>L+(v-xdom[0])/(xdom[1]-xdom[0])*pw;
+const sy=v=>T+ph-(v-ydom[0])/(ydom[1]-ydom[0])*ph;
+// SR sequential ramp (light->dark blue), validated-family steps
+const ramp=["#cfe0f3","#93b7e0","#4f86c6","#2b5d9e","#123a6b"];
+const srcol=s=>ramp[Math.min(4,Math.floor(s/0.06))];
+const NS="http://www.w3.org/2000/svg";
+const svg=document.getElementById("c");
+const el=(t,a)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;};
+// grid + axes
+for(let gx=2;gx<=10;gx+=1){svg.append(el("line",{x1:sx(gx),y1:T,x2:sx(gx),y2:T+ph,stroke:"#eef1f5"}));
+  svg.append(Object.assign(el("text",{x:sx(gx),y:T+ph+18,"text-anchor":"middle",fill:"#8a94a3","font-size":11}),{textContent:gx+"s"}));}
+for(let gy=0.40;gy<=0.68;gy+=0.04){svg.append(el("line",{x1:L,y1:sy(gy),x2:L+pw,y2:sy(gy),stroke:"#eef1f5"}));
+  svg.append(Object.assign(el("text",{x:L-10,y:sy(gy)+4,"text-anchor":"end",fill:"#8a94a3","font-size":11}),{textContent:gy.toFixed(2)}));}
+svg.append(el("line",{x1:L,y1:T,x2:L,y2:T+ph,stroke:"#c2cad6"}));
+svg.append(el("line",{x1:L,y1:T+ph,x2:L+pw,y2:T+ph,stroke:"#c2cad6"}));
+svg.append(Object.assign(el("text",{x:L+pw/2,y:H-14,"text-anchor":"middle",fill:"#5b6675","font-size":12.5}),{textContent:"误差持续 / 整定时间  max_wrong_run_s (mean, s)  ←越左越好"}));
+const yl=el("text",{x:18,y:T+ph/2,"text-anchor":"middle",fill:"#5b6675","font-size":12.5,transform:`rotate(-90 18 ${T+ph/2})`});yl.textContent="重捕获恢复率  q_reacq  ↑越上越好";svg.append(yl);
+// "good corner" tint (low persistence, high recovery)
+svg.append(el("rect",{x:L,y:T,width:sx(3.4)-L,height:sy(0.58)-T,fill:"#e8f3ec",opacity:0.6}));
+svg.append(Object.assign(el("text",{x:L+8,y:T+16,fill:"#2f7d4f","font-size":11.5,"font-weight":600}),{textContent:"好角:快整定 + 高恢复"}));
+// damping spine (dashed connector through the tuning trajectory)
+const spine=D.filter(d=>d[5]==="spine");
+let path="M"+spine.map(d=>sx(d[1])+" "+sy(d[2])).join(" L");
+svg.append(el("path",{d:path,fill:"none",stroke:"#9aa7b8","stroke-width":1.6,"stroke-dasharray":"5 4"}));
+// DAgger effect vector (TAH -> TAH+DAgger)
+const a=D.find(d=>d[0]==="TAH"),b=D.find(d=>d[0]==="TAH+DAgger");
+const defs=el("defs"); const mk=el("marker",{id:"ar",markerWidth:8,markerHeight:8,refX:6,refY:3,orient:"auto"});
+mk.append(el("path",{d:"M0,0 L6,3 L0,6 Z",fill:"#c0552b"})); defs.append(mk); svg.append(defs);
+svg.append(el("line",{x1:sx(a[1]),y1:sy(a[2]),x2:sx(b[1]),y2:sy(b[2]),stroke:"#c0552b","stroke-width":1.8,"marker-end":"url(#ar)"}));
+svg.append(Object.assign(el("text",{x:(sx(a[1])+sx(b[1]))/2-6,y:(sy(a[2])+sy(b[2]))/2-8,fill:"#c0552b","font-size":10.5,"font-style":"italic","text-anchor":"end"}),{textContent:"DAgger:左移(压尾)但下移(恢复↓)"}));
+// points + labels
+for(const d of D){const[lab,x,y,sr,role,reg]=d;const cx=sx(x),cy=sy(y);
+  const star=lab==="borrow#1";
+  svg.append(el("circle",{cx,cy,r:star?9:6.5,fill:srcol(sr),stroke:star?"#111":"#fff","stroke-width":star?2:1.5}));
+  const rt=reg==="learn"?"#c0552b":reg==="over"?"#8a5b2b":"#0b1220";
+  // per-label offsets to avoid collisions
+  const anchor = (lab==="borrow#2")? "end" : "start";
+  const dx = (lab==="borrow#2")? -11 : 10;
+  const dy = (lab==="borrow#1")? -14 : (lab==="reid")? -10 : (lab==="+EMA")? -12 : (lab==="borrow#2")? 16 : 4;
+  const t=el("text",{x:cx+dx,y:cy+dy,fill:rt,"font-size":11.5,"font-weight":star?700:600,"text-anchor":anchor});
+  t.textContent=lab; svg.append(t);
+  const t2=el("text",{x:cx+dx,y:cy+dy+13,fill:"#8a94a3","font-size":9.5,"text-anchor":anchor});t2.textContent="SR "+sr.toFixed(3);svg.append(t2);
+}
+document.getElementById("cap").innerHTML=
+ "<b>读法</b>:灰虚线=调参主轴(欠阻尼 xattn→加门/共识→<b>甜点 borrow#1</b>),阻尼一路把点推向左上好角。"+
+ "<b>过阻尼</b>(borrow#1@.7 门过紧、borrow#2 共识门)牺牲恢复率、SR 掉回。<b>学习分支</b>:DAgger 沿橙箭把 TAH 左移(压住灾难性长错窗,latch@5s 0.68→0.95)"+
+ "却下移(q 0.49→0.44)——只补了分布/尾部阻尼,未补恢复动力学,落在 borrow#1 好角下方 → <b>残余 gap 属控制(恢复)+表征,非分布</b>。";
+</script>
