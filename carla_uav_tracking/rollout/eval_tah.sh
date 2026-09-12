@@ -8,6 +8,7 @@ HF=${HF_CACHE:-$HOME/.cache/huggingface}; NET=cyh-carla-net; CONFIG=train/config
 EPISODES=${EPISODES:-20}; SEED_BASE=${SEED_BASE:-91000}; STEPS=${STEPS:-900}
 TOWN=${TOWN:-Town05}; S2=${S2_PERIOD:-6}; GPU=${GPU:-2}; GSEED=${GSEED:-gt}; CONF=${CONF:-0.5}
 TAH_CKPT=${TAH_CKPT:-runs/tah_rel.pt}; OUT_NAME=${OUT_NAME:-paper_ext_tah_${GSEED}}
+REANCHOR=${REANCHOR:-off}; RPAT=${RPAT:-5}   # deployable: lang cold-start is automatic in committed; reanchor=lang adds drift re-pick
 [ "$GPU" = "all" ] && GPUFLAG="--gpus all" || GPUFLAG="--gpus device=$GPU"
 OUT=/workspace/rollout/eval_out/${OUT_NAME}.json
 docker rm -f acot-policy-server >/dev/null 2>&1 || true
@@ -18,6 +19,7 @@ docker run -d $GPUFLAG --network "$NET" --name acot-policy-server --shm-size=16g
     python carla_uav_tracking/rollout/policy_server.py --config '$CONFIG' \
     --ckpt runs/stage2_v5/stage2_best.pt --language-mode neutral --s2-period '$S2' \
     --ex-source track --tid-head tah --tah-ckpt '$TAH_CKPT' --gallery-seed '$GSEED' \
+    --reanchor '$REANCHOR' --reanchor-patience '$RPAT' \
     --conf-tau '$CONF' --port 5555" >/dev/null
 for _ in $(seq 1 120); do
   docker logs acot-policy-server 2>&1 | grep -q "listening" && break

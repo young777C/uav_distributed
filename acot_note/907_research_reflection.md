@@ -123,7 +123,9 @@
 
 **★最关键的验证:offline→online gap 这次没栽**——TAHRelM 离线 0.990 **transfer 到闭环**(对比 TAHRel 0.909→0.681 崩)。根因:运动共识是**相对几何信号**(候选 vs CV 预测位),**天然抗部署取景漂移**;而 TAHRel 输给 gap 是因它更依赖会漂移的外观加权。→ **贯穿全项目的头号敌人(offline→online)在"用相对/不变信号 + on-policy 数据"下被制服**,这是比某个 SR 数更硬的方法学收获。
 
-**B 路线终局**:一个 4740 参可学模块**在 SR、error-persistence、latch 全谱、密度鲁棒、off-center 上均全场最优**,超整套手工栈与所有外部 tracker。**从"kitchen sink 工程"到"诊断驱动的可学模块"**:①oracle/稳定性探针定位真瓶颈(WHICH→恢复动力学);②把手工启发式(gallery/EMA/运动门)逐步蒸馏为**车辆不变的可学相对特征**;③on-policy(DAgger)+ 相对信号制服 offline→online。**这才是"体现洞见的算法贡献",而非在 benchmark 上堆技巧。**
+**B 路线阶段结论(oracle-memory 关联质量)**:gt-seeded 下,一个 4740 参可学模块在 SR、error-persistence、latch 全谱、密度、off-center 均全场最优。**从"kitchen sink 工程"到"诊断驱动的可学模块"**:①oracle/稳定性探针定位真瓶颈;②把手工启发式蒸馏为**车辆不变的可学相对特征**;③相对信号制服 offline→online 的**训练分布**部分。
+
+**★★但 deployable 复评揭示更深一层(committed-seed,2026-09-11)——诚实修正**:去掉 oracle 记忆(gt-seeded=记忆每帧用 GT crop),改 committed(记忆从认定目标更新)后 **TAHRelM 崩**:SR 0.316→**0**、track_correct 0.746→**0.146**、max_wrong 1.90→**18.66s**,且**< deployable reid 0.363**。→ **gt-seeded 数是"给定理想记忆的关联质量上界",不是 deployable SR**。**这是"offline→online"的第三层**:不止训练分布(DAgger 已补)、不止恢复动力学(运动门已补),还有 **memory-seeding 层**——deployable 冷启动无语言引导(锁 candidate 0)+ 自监督记忆自我强化错锁。**教训再次坐实"闭环/deployable 定生死"**:oracle-memory 的漂亮数会掩盖 memory-init/drift 的致命缺口。**修正此前"B 全面胜出 deployable"的过度声称**;deployable 需 committed + 语言冷启动 + reanchor(进行中)。
 
 ## 十、一句话
 **这项研究最大的收获不是某个模型,而是一套"如何诚实地定位并验证一个具身任务的真瓶颈"的方法**:用 oracle 探针定位杠杆、用闭环/on-policy 证伪离线幻觉、用客观指标穿透饱和判据、用负结果排除歧路、并在"加法变乱炖"时及时转向"提炼一个体现洞见的可学模块"。

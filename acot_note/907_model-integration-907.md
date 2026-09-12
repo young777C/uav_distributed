@@ -1,12 +1,43 @@
 # 模型整合(路线 B)· Model Integration — TAH 时序关联头
 
-> 2026-09-07 · 目标:把"大乱炖"的启发式 WHICH 栈**收成一个可学习模块 TAH**,变工程管线为干净算法贡献。配套 memory `acot-uav-paper-writing-kickoff`、`acot-uav-reid-reframe`;架构图 `architecture_tah.html`;数据清单 `paper_data_inventory.md`;外部对照 `baseline_compare_906.md`。
+> 2026-09-07→09-11 · 目标:把"大乱炖"的启发式 WHICH 栈**收成一个可学习模块 TAH**,变工程管线为干净算法贡献。**权威系统梳理见 §0.5 实验账本**(B0→B0.1→B1→A1→deployable)。配套 memory `acot-uav-paper-writing-kickoff`、`acot-uav-reid-reframe`;架构图 `architecture_tah.html`;外部对照 `907_baseline_compare_906.md`。
 
 ---
 
 ## 0. 动机(为什么走 B)
 当前系统 WHICH 堆了 crop-DINOv2 + K-view gallery + top-m + 时序EMA + 运动共识融合(borrow#1)+ 共识门控(borrow#2)+ conf-tau + K滞回……**大多免训练手工启发式,每个修一个失效**。读起来像**在 benchmark 上调参堆技巧的工程建模论文,不是干净 AI/算法贡献**(kitchen sink 反模式)。且实测**borrow#2 共识门反害**(SR 0.263→0.053,过度保守)——**"继续堆组件边际转负"印证该停止加法**。
 → **路线 B**:一个学习模块替代整个启发式栈。
+
+---
+
+## 0.5 ★B 路线完整实验账本(systematic,截至 2026-09-11)
+
+> 本节是 B 路线所有实验的权威系统梳理(设置→结果→结论)。细节见 §1-9 + §5c/5d。**所有闭环 n=19 同种子(91000-19,除 reid_deploy n=17);gt-seeded=记忆每帧用 GT crop(oracle,所有对比臂同条件);committed=记忆从模型认定目标更新(GT-free,deployable)。**
+
+| # | 实验 | 设置/关键改动 | 参数 | 离线 val | 闭环关键结果 | 结论 |
+|---|---|---|---|---|---|---|
+| **B0** | TAH v1 | 绝对候选嵌入 + GRU 记忆(注意力关联) | 724,737 | train 0.759 ≫ **val 0.521**(mis 0.479) | — | **过拟合**(开集 64ep 车池窄,绝对嵌入记住训练车);诊断=需车辆不变特征 |
+| **B0.1** | TAHRel | **相对/车辆不变特征**[cos(候选,记忆)⊕相对位置⊕rank]+增广(置换/噪声/抖动) | **4,610** | train 0.905≈**val 0.909**(gap→0) | gt-seeded correct **0.681**、SR 0.053 | 过拟合**彻底解决**(离线碾压启发式);**但闭环<启发式=offline→online gap**(训练在专家取景、部署 off-center) |
+| **B1** | TAHRel+**DAgger** | on-policy 重训:采集部署分布 23ep(seed 92000-23,与 eval 不相交)+离线 64ep 混合(87ep/44793帧,60ep) | 4,610 | — | gt-seeded SR 0.053→**0.158**、correct 0.681→0.716、latch@5s 0.68→0.95、mean持续 4.22→3.11 | **DAgger 补分布见效**(SR 3×、尾部阻尼);**仍<borrow#1(0.810/0.263)**;残余 gap 定位=**q_reacq(0.438,全场最低)** |
+| — | 控制论 framing | 复用日志,**0 新 rollout** | — | — | max_wrong/q_reacq/idsw=闭环稳定性观测量 | offline→online=**有最优阻尼的正反馈回路**;一句话解释 borrow#1(甜点阻尼)vs borrow#2(过阻尼→崩) |
+| — | 场景切分 | mis_by_N / central-off / reacq 桶,复用日志 | — | — | TAH+DAgger N=5 密度 0.778(最优)、Δ−0.046(最稳) | **学习外观关联在高干扰密度最优/最鲁棒**(运动类 DeepSORT 崩−0.27)→ 论文命题实证 |
+| **A1** | TAHRelM+DAgger | **+可学软运动门** `msoft=exp(−‖relp‖/gate)`(borrow#1 运动共识的可学版,门半径可学)**+ EMA 速度**;7 特征;**OFAT(仅 arch 变 vs B1)** | **4,740** | **val 0.990**(mis 0.010) | **gt-seeded SR 0.316(1st/9)**、correct 0.746、max_wrong **1.90s**、latch@2/3/4/5s 全最优(.68/.79/.95/**1.00**)、N=5 **0.802**、off-center **0.818**、q_reacq 0.438→**0.590** | **oracle-memory 关联质量全场最优**(超手工栈 borrow#1 + 所有外部 tracker DeepSORT/DAM4SAM/OC-SORT);**离线 0.990 transfer**(运动共识=相对几何信号抗部署漂移) |
+| **A1-dep** | TAHRelM committed(裸) | 去 oracle 记忆,GT-free,无语言 | 4,740 | — | SR 0.316→**0**、correct 0.746→**0.146**、max_wrong→**18.66s**、latch@5s→0.105 | **★SR 0.316 依赖 oracle 记忆种子**;deployable 崩(冷启动锁 candidate 0 + 记忆自我强化错锁);**< deployable reid 0.363** |
+| **A1-dep2** | +语言冷启动+reanchor | committed + mem 空时用 lang_slot 冷启动 + reanchor=lang(low-conf streak→重置记忆+语言重选) | 4,740 | — | SR 0、correct 0.146→**0.263**、max_wrong 18.66→**13.30s**、latch@5s 0.105→**0.211** | **语言冷启动救初锁(~2×)但不充分**;**残余=confident drift**(自信跟错车,low-conf reanchor 抓不住);**仍< reid_deploy 0.363** |
+
+### 分层结论(offline→online 的三层,逐层攻克)
+1. **过拟合层(开集泛化)** ✅ 解决:相对/车辆不变特征(B0→B0.1),val 0.521→0.909,gap→0,4610 参。
+2. **训练分布层(covariate shift)** ✅ 部分解决:DAgger on-policy(B1),SR 0.053→0.158;残余定位=恢复动力学。
+3. **恢复动力学层(控制)** ✅ 解决(oracle-memory 下):可学软运动门+EMA(A1),q_reacq 0.438→0.590、gt-seeded SR→0.316 全场最优。
+4. **memory-seeding 层(deployable)** ❌ **未解决**:gt-seeded 是上界;committed 崩(A1-dep);语言冷启动救 ~2×(A1-dep2)但 **confident drift 未解**,仍<deployable reid。
+
+### 当前定论(诚实)
+- ✅ **B 路线核心目标达成**:把手工 WHICH 栈(gallery+EMA+运动门+共识门+conf-tau+滞回)蒸馏为**一个 4740 参可学模块**,**oracle-memory 下关联质量全场最优**(超手工栈 + 所有外部 tracker)。干净算法贡献:诊断驱动 → 车辆不变可学相对特征 → 可学运动门。
+- ❌ **未达成 deployable**:**SR 0.316 是 oracle-memory(gt-seeded)关联质量上界,非 deployable SR**。deployable(committed)SR=0;语言冷启动救 ~2×(correct→0.263)但 confident drift 未解,仍 < deployable reid(0.363)。
+- **论文措辞铁律**:SR 0.316 必须标注 **gt-seeded / oracle-memory**(对比公平——所有臂同 gt-seeded);deployable 崩溃作**已刻画的开放问题/局限 + future work**,勿当 deployable SOTA。
+- **下一杠杆(deployable)**:抓 confident drift 的漂移检测——**周期性语言复核**(每 K 秒用语言重验当前锁的车,不看置信度)或**记忆-语言锚点散度检测**,而非 low-conf reanchor。
+
+---
 
 ## 1. TAH 设计(一个模块 = 原 5 个启发式)
 `train/tah.py`,**0.72M 参数(724,737)**,唯一可训练;Qwen(4B)/DINOv2(vit-s 22M)/IAR/DiT 全冻结复用。
@@ -79,7 +110,9 @@ B1 定位残余 gap = q_reacq(恢复动力学),A1 据此升级:`train/tah.py::TA
 | N=5 密度 | 0.750 | 0.738 | 0.778 | **0.802 ★** |
 | off-center | 0.736 | 0.807 | 0.732 | **0.818 ★** |
 
-**判读**:**★B 成立且全面胜出**——一个 4740 参可学模块在 **SR、error-persistence、latch 全谱、密度鲁棒、off-center 上均全场最优**,超整套手工栈 borrow#1 与所有外部 tracker。**关键:离线 0.990 这次 transfer 了**(TAHRel 0.909→0.681 崩;TAHRelM 无崩)——因运动共识是**相对几何信号**抗部署漂移。**三视角闭合**:分布(DAgger)+ 控制(可学运动门=恢复动力学)两者结合闭合 gap;表征(取景不变)由 off-center 0.818 佐证 DAgger 已补。**唯一 borrow#1 仍领先**:原始 track_correct/q_reacq(TAHRelM 更谨慎、从不长锁;borrow#1 平均驻留久但偶长锁)。源 `eval_out/paper_ext_tahrelm_gt.json`、`figs/fig_external_baselines.png`。
+**判读(oracle-memory 设定)**:在 gt-seeded 下 **TAHRelM 关联质量全场最优**——4740 参在 SR、error-persistence、latch 全谱、密度、off-center 均最优,超 borrow#1 与所有外部 tracker;离线 0.990 在此设定 transfer(TAHRel 0.909→0.681 崩;TAHRelM 无崩,因运动共识=相对几何信号)。**三视角闭合**:分布(DAgger)+控制(可学运动门)+表征(off-center 0.818)。
+
+**★★deployable 复评修正(committed-seed,2026-09-11)**:去 oracle 记忆后 **TAHRelM 崩**:SR 0.316→**0.000**、track_correct 0.746→**0.146**、max_wrong 1.90→**18.66s**、latch@5s→**0.105**;且 **< deployable reid 0.363**。机理=**冷启动无语言引导(锁 candidate 0)+ 记忆自我强化错锁**。→ **gt-seeded 数是"oracle 记忆下的关联质量上界",非 deployable SR**;修正"全面胜出 deployable"的过度声称。deployable 需 **committed + 语言冷启动 + reanchor**(进行中)。源 `eval_out/paper_ext_tahrelm_{gt,committed}.json`。
 
 ## 6. 诚实判据(B 成 / 退 A)
 - **B 成立**:TAH(+①②)关联准确率 ≥ 启发式栈(离线 + **闭环未见 seed** 验证)→ 一个 0.72M 模块替代乱炖,干净算法贡献;

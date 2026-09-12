@@ -81,7 +81,25 @@
 - **★offline→online gap 这次没栽**:离线 val 0.990(mis 0.010)**transfer 到闭环**(不同于 TAHRel 0.909→0.681 崩)。因运动共识是**相对几何信号**(候选 vs CV 预测位),抗部署取景漂移——**实证三视角:控制/恢复动力学是缺口,编码为可学相对特征即闭合**。
 - **诚实边界**:borrow#1 仍在**原始 track_correct(0.810 vs 0.746)与 q_reacq(0.635 vs 0.590)**领先——TAHRelM 更"谨慎"(idsw 9.3,短暂多切换但从不长锁),borrow#1 平均驻留更久但偶尔长锁。**TAHRelM 赢 SR+全部 latch+密度+off-center(任务最相关),borrow#1 赢平均驻留**。gt-seeded、n=19(SR 有噪)。DAM4SAM 0.941 仍粘滞假优。
 
-**判据结论(A1 后,已远超"不能太烂"宽杠)**:**★B 路线全面胜出**——一个 4740 参可学模块**在 SR、error-persistence、latch 全谱、密度鲁棒、off-center 均全场最优**,超整套手工栈(borrow#1)与所有外部 tracker。**干净算法贡献:诊断驱动(定位 q_reacq 短板)→ 把手工运动门蒸馏为可学相对特征 → 多指标 SOTA-级**。产物:`eval_out/paper_ext_tahrelm_gt.json`、`figs/fig_external_baselines.png`(自动含 TAHRelM)、`train/tah.py::TAHRelM`。
+**判据结论(A1,措辞已按 deployable 复评修正)**:**在 oracle-memory(gt-seeded)设定下,TAHRelM 关联质量全场最优**——4740 参可学模块在 SR、error-persistence、latch 全谱、密度、off-center 均最优,超手工栈与所有外部 tracker。**但这是"给定理想记忆的关联质量",非 deployable SR**(所有对比臂同为 gt-seeded,比较公平;见下"deployable 复评")。**干净算法贡献:诊断驱动(定位 q_reacq)→ 把手工运动门蒸馏为可学相对特征 → oracle-memory 下多指标最优**。产物:`eval_out/paper_ext_tahrelm_gt.json`、`figs/fig_external_baselines.png`、`train/tah.py::TAHRelM`。
+
+**★★deployable 复评(committed-seed,GT-free,2026-09-11)—— CRITICAL 诚实修正**:去掉 oracle 记忆(记忆从**认定**目标更新,非 GT 每帧)后 **TAHRelM 崩溃**:
+
+| 指标 | gt-seeded(oracle 记忆) | committed(裸,无 lang) | **deploy(committed+lang冷启动+reanchor)** |
+|---|---|---|---|
+| SR | 0.316 | 0.000 | **0.000** |
+| track_correct | 0.746 | 0.146 | **0.263** |
+| max_wrong(mean) | 1.90s | 18.66s | **13.30s** |
+| latch@5s | 1.000 | 0.105 | **0.211** |
+| q_reacq | 0.590 | 0.306 | 0.310 |
+
+**机理 + 两步修复的成效(2026-09-11)**:
+- **裸 committed 崩**:①冷启动无语言引导(mem=None→mlp(zeros)常量→锁 candidate 0);②记忆从错误认定目标更新→**自我强化错锁**→18.66s 灾难。
+- **加语言冷启动 + reanchor(policy.py tah 分支已实现)**:track_correct 0.146→**0.263**、latch@5s 0.105→**0.211**(~2×)——**语言冷启动救了初锁**;**但 SR 仍 0、max_wrong 仍 13.3s**。
+- **残余根因 = confident drift(自信漂移)**:自监督记忆漂到 look-alike 后**高置信**跟错车 ~13s;reanchor 触发于**低置信**(conf<0.6)→ 自信错锁时不触发 → 漂移那关没过。0.146→0.263 的改善几乎全来自冷启动,reanchor 近乎无效。
+- **仍 < deployable reid 基线**:reid_deploy 0.363 vs deploy 0.235(n=17 配对)。
+
+→ **定论:SR 0.316 是 oracle-memory(gt-seeded)关联质量上界,NOT deployable**(deployable SR=0,且低于 deployable reid)。语言冷启动必要但不充分;**下一杠杆 = 抓 confident drift 的漂移检测**(周期性语言复核,不看置信度;或 记忆-语言锚点散度),而非 low-conf reanchor。**修正此前"B 全面胜出 deployable"的过度声称**。源 `eval_out/paper_ext_tahrelm_{gt,committed,deploy}.json`。
 
 ### 场景优势:学习外观模块在"高干扰密度"最优且最鲁棒(2026-09-08)
 

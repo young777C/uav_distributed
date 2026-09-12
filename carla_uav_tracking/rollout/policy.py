@@ -539,7 +539,22 @@ class Policy:
                     self._tid_logits = logits.float().cpu().numpy()
                     self._pred_slot = int(logits.argmax())
                     self._pred_conf = float(conf)
-                    # memory update: gt=oracle-seeded (comparable to reid gallery gt) | committed=deployable
+                    if self.gallery_seed == "committed":
+                        # DEPLOYABLE (GT-free): the tah memory is empty at cold-start → its logits are
+                        # meaningless (mlp of zeros → const) → LANGUAGE grounds the initial lock. Then a
+                        # language RE-ANCHOR on a sustained low-margin (ambiguous / drifting) streak: reset
+                        # the drifted memory + re-pick via language (mirrors the reid deployable path).
+                        # gt-seeded skips both (oracle memory every frame). See eval_out/paper_ext_tahrelm_committed.
+                        cold = (self._tah_mem is None) or (self._tah_mem.get("app") is None)
+                        if cold:
+                            self._pred_slot = lang_slot                       # language cold-start
+                        elif self.reanchor == "lang":
+                            self._lowconf_run = self._lowconf_run + 1 if float(conf) < 0.60 else 0
+                            if self._lowconf_run >= self.reanchor_patience:
+                                self._tah_mem = self._tah.reset(self.device)  # drop the drifted memory
+                                self._pred_slot = lang_slot                   # re-anchor via language
+                                self._lowconf_run = 0; self._reanchor_events += 1
+                    # memory update source: gt=oracle GT every frame | committed=believed target (lang at cold-start)
                     us = (cset.true_idx if self.gallery_seed != "committed" else self._pred_slot)
                     if us is not None and 0 <= us < feat.shape[0]:
                         with torch.no_grad():
