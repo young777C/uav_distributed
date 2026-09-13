@@ -364,6 +364,32 @@ EAR 每一格都被 CV 碾压 **2-6×** → **反应式网络连"匀速外推"�
 
 ---
 
+## 十一、路线 B:把启发式 WHICH 栈蒸馏成一个可学模块 → TAHRelM(2026-09-07 → 09-11)
+
+> 动机:§十的借鉴升级(borrow#1 运动共识、borrow#2 共识门)让 WHICH 变"大乱炖"(gallery+EMA+运动门+共识门+conf-tau+滞回,多为手工启发式)。**停止加法,转"提炼一个体现洞见的可学模块"**。权威系统账本见 `907_model-integration-907.md §0.5`;外部对照 `907_baseline_compare_906.md`。
+
+### 11.1 实验记录(逐步,offline→online 四层逐层攻克)
+- **B0 TAH v1**(绝对嵌入 724K):离线 train 0.759≫**val 0.521** → **过拟合**(开集车池窄,嵌入记住训练车)。
+- **B0.1 TAHRel**(相对/车辆不变特征 [cos⊕相对位置⊕rank]+增广,**4610 参**):离线 **val 0.909**(gap→0)**过拟合解决**;但闭环 gt-seeded correct **0.681 < 启发式** = **offline→online gap**。
+- **B1 +DAgger**(on-policy 采部署分布 23ep 混合重训):gt-seeded SR 0.053→**0.158**、correct→0.716、latch@5s 0.68→0.95;**仍<borrow#1**;残余定位=**q_reacq 0.438**。
+- **控制论 framing**(0 新 rollout):把 max_wrong/q_reacq/idsw 读作**闭环稳定性**;offline→online=**有最优阻尼的正反馈回路**(解释 borrow#1 甜点 vs borrow#2 过阻尼)。
+- **场景切分**(复用日志):TAH+DAgger **N=5 高密度 0.778 最优/最鲁棒** → 学习外观在密集 look-alike 上赢(运动类崩),论文命题实证。
+- **A1 TAHRelM**(+可学软运动门 `exp(−‖relp‖/gate)`+EMA 速度,**4740 参**,OFAT):离线 **0.990**;**gt-seeded SR 0.316(1st/9)**、max_wrong 1.90s、latch 全优、N=5 0.802、off-center 0.818、q_reacq→0.590 → **oracle-memory 关联质量全场最优**(超手工栈 + 所有外部 tracker);离线 transfer(运动共识=相对几何信号)。
+- **★deployable 复评**(committed-seed,GT-free):**SR 0.316→0**、correct 0.746→0.146;+语言冷启动+reanchor 救 ~2×(correct→0.263、latch@5s→0.211)**但 confident drift 未解**、仍<reid_deploy 0.363。
+
+### 11.2 模型设计落点(`train/tah.py`、`policy.py`)
+- `train/tah.py`:`TAH`(v1 绝对)→ `TAHRel`(相对特征)→ **`TAHRelM`**(+可学软运动门+EMA 速度,7 车辆不变特征,4740 参)。
+- `train/tah_train.py`:`--rel`/`--motion` + 增广;`--motion` 存 `arch:relm`。
+- `policy.py` tah 分支:按 ckpt `arch` 选类;committed 加**语言冷启动**(mem 空→lang_slot)+ **reanchor=lang**。
+- 数据驱动三图重渲染 `acot_note/figs/regen_arm_figs.py`;稳定性/场景工具 `rollout/{control_stability,scenario_split}.py`。
+
+### 11.3 定论 + 踩过的坑
+- **✅ B 核心目标达成**:手工 WHICH 栈蒸馏为**一个 4740 参可学模块,oracle-memory 下关联质量全场最优** = 干净算法贡献(诊断驱动→车辆不变可学相对特征→可学运动门)。
+- **❌ deployable 未达成**:**SR 0.316 是 oracle-memory 上界,非 deployable**;第四层 memory-seeding 未解(confident drift)。**论文措辞铁律:SR 0.316 标 gt-seeded;deployable 崩作已刻画开放问题+future work**。
+- **坑**:①离线漂亮≠闭环(TAHRel 0.909→0.681;须闭环/on-policy 定生死);②gt-seeded 掩盖 memory-init/drift 致命缺口(须 committed 复评);③镜像 `acot-uav-train:cu118` 被 prune(见 memory `acot-uav-train-image-prune`);④push 用 `~/.ssh/id_ed25519`(=young777C)。
+
+---
+
 ## 附:关键证据与产物索引
 
 | 项 | 位置 |
