@@ -114,6 +114,14 @@ B1 定位残余 gap = q_reacq(恢复动力学),A1 据此升级:`train/tah.py::TA
 
 **★★deployable 复评修正(committed-seed,2026-09-11)**:去 oracle 记忆后 **TAHRelM 崩**:SR 0.316→**0.000**、track_correct 0.746→**0.146**、max_wrong 1.90→**18.66s**、latch@5s→**0.105**;且 **< deployable reid 0.363**。机理=**冷启动无语言引导(锁 candidate 0)+ 记忆自我强化错锁**。→ **gt-seeded 数是"oracle 记忆下的关联质量上界",非 deployable SR**;修正"全面胜出 deployable"的过度声称。deployable 需 **committed + 语言冷启动 + reanchor**(进行中)。源 `eval_out/paper_ext_tahrelm_{gt,committed}.json`。
 
+## 5e. ★confident-drift = deployable 杠杆(2026-09-13→15)
+deployable 崩溃的元凶定位为 **confident drift**:自监督记忆漂到 look-alike 后**高置信**跟错车 ~13s;置信度分不清"自信对/自信错",low-conf reanchor 抓不住。逐级验证:
+- **committed 裸**:SR 0 / correct 0.146 / max_wrong 18.66s。
+- **+语言冷启动+reanchor=lang**(`policy.py` tah 分支):correct 0.146→**0.263**、latch@5s→0.211(~2×)——**语言冷启动救初锁**,但 reanchor=lang 近乎无效(confident 错锁不触发),SR 仍 0。
+- **★oracle 漂移检测上界**(`reanchor=oracle`,GT 检测 pred≠true 持续→重置记忆+锚回 GT):correct 0.146→**0.721**、max_wrong 18.66→**1.88s**、latch@5s→**1.000**、q_reacq→0.565(**≈gt-seeded**)!→ **confident-drift 检测确是 deployable 杠杆**,完美检测几乎全恢复;唯 SR 0.105 受**检测延迟**限(patience=3→~1.8s 错窗;缩小→逼近 gt 0.316)。
+- **GT-free 冻结模板检测器**(`reanchor=anchor`,已实现):冻结初帧目标外观(drift-immune)→检测漂移记忆与冻结锚持续分歧→纠正。**代码就绪、语法通过;闭环 eval pending CARLA infra**(宿主机 GPU 驱动全局 Vulkan wedge,需 root gpu-reset/reboot,见 memory `acot-uav-harness`)。
+源 `eval_out/paper_ext_tahrelm_{committed,deploy,oracledrift}.json`。**结论:deployable 阻塞已诊断+上界证明+GT-free 检测器就绪,只差一次闭环 eval。**
+
 ## 6. 诚实判据(B 成 / 退 A)
 - **B 成立**:TAH(+①②)关联准确率 ≥ 启发式栈(离线 + **闭环未见 seed** 验证)→ 一个 0.72M 模块替代乱炖,干净算法贡献;
 - **B 走不通**:①②后仍显著低于启发式 + 过拟合不消(需大量新数据)→ **退回 A**(定位发现/研究型,组件降消融,borrow#1 运动共识作唯一有效升级留正文)。

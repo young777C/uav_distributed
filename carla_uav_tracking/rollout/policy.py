@@ -217,6 +217,7 @@ class Policy:
         self._reid_mvel = None          # borrow#1: target image-space velocity (2,)
         self._reid_mscore = None        # borrow#2: stashed per-candidate motion score for the consensus gate
         self._tah_mem = self._tah.reset(self.device) if getattr(self, "_tah", None) is not None else None  # path-B TAHRel memory
+        self._tah_anchor = None         # confident-drift: FROZEN initial target appearance (drift-immune anchor)
         self._lang_score = {}           # temporal language re-anchor: actor_idx -> EMA of language logit
         self._assoc_uv = None           # assoc baseline: last GT-target image pos (2,)
         self._assoc_vel = None          # assoc baseline: image-space velocity (2,)
@@ -548,12 +549,38 @@ class Policy:
                         cold = (self._tah_mem is None) or (self._tah_mem.get("app") is None)
                         if cold:
                             self._pred_slot = lang_slot                       # language cold-start
+                            if self.reanchor == "anchor" and self._tah_anchor is None:
+                                self._tah_anchor = feat[lang_slot].clone()    # freeze initial target appearance
+                        elif self.reanchor == "anchor":
+                            # GT-FREE confident-drift detector: the running memory can drift to a look-alike;
+                            # the FROZEN initial anchor can't. Detect drift when the anchor's best-match
+                            # candidate persistently disagrees with the running-memory pick → reset memory +
+                            # re-anchor to the anchor's match. Approximates the GT-drift upper bound w/o labels.
+                            if self._tah_anchor is not None:
+                                apick = int((feat @ self._tah_anchor).argmax())
+                                self._lowconf_run = self._lowconf_run + 1 if apick != self._pred_slot else 0
+                                if self._lowconf_run >= self.reanchor_patience:
+                                    self._tah_mem = self._tah.reset(self.device)
+                                    self._pred_slot = apick
+                                    self._lowconf_run = 0; self._reanchor_events += 1
                         elif self.reanchor == "lang":
                             self._lowconf_run = self._lowconf_run + 1 if float(conf) < 0.60 else 0
                             if self._lowconf_run >= self.reanchor_patience:
                                 self._tah_mem = self._tah.reset(self.device)  # drop the drifted memory
                                 self._pred_slot = lang_slot                   # re-anchor via language
                                 self._lowconf_run = 0; self._reanchor_events += 1
+                        elif self.reanchor == "oracle":
+                            # ★confident-drift UPPER BOUND: perfect (GT) drift detection. conf-gate reanchor
+                            # can't catch a CONFIDENTLY-wrong lock (high margin) → detect drift by GT instead
+                            # (pred != true target for a sustained streak) → reset the drifted memory + re-anchor
+                            # to the true target. Measures whether drift-detection is the deployable lever at all.
+                            gt = cset.true_idx
+                            if gt is not None and gt >= 0:
+                                self._lowconf_run = self._lowconf_run + 1 if self._pred_slot != gt else 0
+                                if self._lowconf_run >= self.reanchor_patience:
+                                    self._tah_mem = self._tah.reset(self.device)
+                                    self._pred_slot = gt                      # re-anchor to the true target
+                                    self._lowconf_run = 0; self._reanchor_events += 1
                     # memory update source: gt=oracle GT every frame | committed=believed target (lang at cold-start)
                     us = (cset.true_idx if self.gallery_seed != "committed" else self._pred_slot)
                     if us is not None and 0 <= us < feat.shape[0]:

@@ -139,9 +139,10 @@ def main():
     ap.add_argument("--gallery-seed", default="gt", choices=["gt", "committed"],
                     help="reid gallery template source: gt=legacy oracle-seeded (per-frame GT target crop) | "
                          "committed=DEPLOYABLE GT-free (store the believed-target crop; language at cold-start)")
-    ap.add_argument("--reanchor", default="off", choices=["off", "lang", "oracle"],
-                    help="deployable language re-anchor (paper2 甲): on sustained reid collapse, re-pick via "
-                         "language + reset gallery. off | lang | oracle (GT re-anchor = headroom upper bound)")
+    ap.add_argument("--reanchor", default="off", choices=["off", "lang", "oracle", "anchor"],
+                    help="deployable re-anchor: on sustained collapse, re-pick + reset memory/gallery. off | "
+                         "lang (language re-pick) | oracle (GT re-anchor = upper bound) | anchor (tah GT-free "
+                         "confident-drift: frozen initial-appearance anchor disagrees with drifted memory)")
     ap.add_argument("--reanchor-patience", type=int, default=5,
                     help="consecutive low-margin (<conf-tau) S2 ticks before a re-anchor fires (rate-limit)")
     ap.add_argument("--reanchor-tavg", type=float, default=0.0,
