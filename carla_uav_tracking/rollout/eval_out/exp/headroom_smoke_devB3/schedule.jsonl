@@ -1,0 +1,5 @@
+{"event": "plan", "seed": 10182, "block": 5, "n_units": 2, "order": [["u1_r0", [93060, 93061]], ["sticky_r0", [93060, 93061]]], "t": 1792382451.064238}
+{"event": "start", "arm": "u1_r0", "seeds": [93060, 93061], "worker": "w0", "carla_port": 2060, "gpu": 1, "tm_base": 9700, "svc_slot": null, "t": 1792382451.0646334}
+{"event": "start", "arm": "sticky_r0", "seeds": [93060, 93061], "worker": "w1", "carla_port": 2070, "gpu": 2, "tm_base": 9730, "svc_slot": null, "t": 1792382451.0648882}
+{"event": "end", "arm": "u1_r0", "worker": "w0", "requeued": [], "t": 1792382874.1474786}
+{"event": "end", "arm": "sticky_r0", "worker": "w1", "requeued": [], "t": 1792383114.1426318}

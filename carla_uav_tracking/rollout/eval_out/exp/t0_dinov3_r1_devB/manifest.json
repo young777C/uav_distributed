@@ -1,0 +1,84 @@
+{
+ "git_commit": "e18e427a2e95b4f56df753bad9a0f4acfaf31049",
+ "git_dirty_diff_sha256": "38e36e7fa1a423c5044ffc81e4faf4bd175121aa1ba884dfc387d2bfbeaf4cb7",
+ "git_dirty_files": 530,
+ "host": "dcs-20-04",
+ "python": "3.12.8",
+ "time": 1791341242.9226298,
+ "time_iso": "2026-10-06T22:47:22-0400",
+ "image": {
+  "name": "acot-uav-train:cu118-acot",
+  "id": "sha256:08dcad02975f6aecadbdf091199d3c341178207ee8c25b804676c0f695bd9869"
+ },
+ "runtime": "acot",
+ "files": {
+  "ours_v2off_r1": {
+   "train/config_v5.yaml": "08fc471b2d489a216b73fba7aad83005f8bf22e5b12a562c9a79b0daf35c17eb",
+   "runs/stage2_v5/stage2_best.pt": "6465f91555798adeeef5af3213a463d88d99843d3714d354a73d56e93bdcc257",
+   "carla_uav_tracking/config/default.yaml": "b0f0c9a14f61fd8062b4c7cbdd6c9363fdff014b945224419f250b73d76d1e65",
+   "carla_uav_tracking/config/scenarios/mvp.yaml": "7af419e3ff5f0d25a0b42c7989ec410a1f359154aa353bdbb71917c57b793e8f",
+   "carla_uav_tracking/rollout/eval_out/opening_attr_cls.pt": "a5df3c4bc04c5915f285020f0ac312f02d2db30b69c9ee23f37c51584dbf0b9c",
+   "carla_uav_tracking/rollout/eval_out/opening_attr_ft.pt": "f315fb55d0cf57657246c4d482f08f39858d7d59909d8d547338f536aa0b78dc",
+   "runs/tah_1006/tah_relm_v2off_s0.pt": "de04c2d11659dd08859d55731f70d12aa34f47b82e8b9ced8de155d715a2e5d2"
+  },
+  "ours_v3off_r1": {
+   "train/config_v5.yaml": "08fc471b2d489a216b73fba7aad83005f8bf22e5b12a562c9a79b0daf35c17eb",
+   "runs/stage2_v5/stage2_best.pt": "6465f91555798adeeef5af3213a463d88d99843d3714d354a73d56e93bdcc257",
+   "carla_uav_tracking/config/default.yaml": "b0f0c9a14f61fd8062b4c7cbdd6c9363fdff014b945224419f250b73d76d1e65",
+   "carla_uav_tracking/config/scenarios/mvp.yaml": "7af419e3ff5f0d25a0b42c7989ec410a1f359154aa353bdbb71917c57b793e8f",
+   "carla_uav_tracking/rollout/eval_out/opening_attr_cls.pt": "a5df3c4bc04c5915f285020f0ac312f02d2db30b69c9ee23f37c51584dbf0b9c",
+   "carla_uav_tracking/rollout/eval_out/opening_attr_ft.pt": "f315fb55d0cf57657246c4d482f08f39858d7d59909d8d547338f536aa0b78dc",
+   "runs/tah_1006/tah_relm_v3off_s0.pt": "894fe8441f87e08c897fc367b62a7d64b26f3148db2381bb17c7521e22d6590b"
+  }
+ },
+ "workers": [
+  {
+   "id": "w0",
+   "carla_port": 2050,
+   "adapter": 6,
+   "gpu": 1,
+   "tm_base": 9700
+  },
+  {
+   "id": "w1",
+   "carla_port": 2060,
+   "adapter": 7,
+   "gpu": 2,
+   "tm_base": 9760
+  },
+  {
+   "id": "w2",
+   "carla_port": 2070,
+   "adapter": 0,
+   "gpu": 4,
+   "tm_base": 9820
+  },
+  {
+   "id": "w3",
+   "carla_port": 2080,
+   "adapter": 3,
+   "gpu": 5,
+   "tm_base": 9850
+  },
+  {
+   "id": "w4",
+   "carla_port": 2090,
+   "adapter": 5,
+   "gpu": 7,
+   "tm_base": 9880
+  }
+ ],
+ "argv": {
+  "cmd": "eval",
+  "experiment": "acot/configs/experiments/t0_dinov3_r1_devB.yaml",
+  "arms": null,
+  "seeds": null,
+  "dry_run": false,
+  "allow_test": false,
+  "workers": 5,
+  "carla_ports": "2050,2060,2070,2080,2090",
+  "gpus": "1,2,4,5,7",
+  "overrides": [],
+  "fn": "<function cmd_eval at 0x7f90b42f4d60>"
+ }
+}

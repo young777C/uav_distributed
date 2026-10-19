@@ -51,6 +51,40 @@
 **吃掉的启发式**:K-gallery+时序EMA = **GRU 记忆**;运动共识 = **位置作输入特征模型自学权重**;共识门 = **学习 conf 输出**。**零手工旋钮**(RMOT/conf-tau/gate-px 全消)。
 **训练**(`train/tah_train.py`):监督关联,episode 序列 BPTT,GT 身份 teacher-force 记忆更新;off-screen 帧持记忆+跳损失。学的是**身份关联**(信号可学,DINOv2 已证 look-alike 可分)——非失败的 BC/RL 控制。
 
+## 1.5 ★完整实现:数据流 + 每模块(2026-10-01,对照代码)
+
+> 架构图 `acot_note/figs/fig_architecture_legacy_tahrelm.{png,pdf,svg}`(当时的 fig_architecture,仅 TAHRelM;2026-10-04 标为 legacy)。全部主干冻结(`runs/stage2_v5/stage2_best.pt`),唯一可训练 = TAHRelM(`runs/tah_relm_dag.pt`,4740 参)。入口 `policy.py::act`(`:428`)= 双速率:S2 慢流(每 s2_period 帧跑 VLM/IAR/身份)+ S1 快流(每帧跑 DiT 动作)。
+
+### WHICH/WHERE/HOW 主脊(一行)
+```
+RGB + CandidateSet ─► crop-DINOv2 ─► TAHRelM(WHICH:身份 pred_slot)
+        └─► committed 目标 ─► GT世界位 CV外推 ─► z_ex(WHERE)
+                                              └─► DiT (+ z_im, vlm_ctx, proprio) ─► action(HOW)
+```
+**注意**:TAHRelM 输出的是**身份**(非 DiT 输入);身份经 WHERE 转换成 z_ex 才进 DiT;DiT 的动作还同时依赖 z_im/vlm_ctx/proprio。
+
+### ① RGB+language → Qwen3-VL(`online_vlm.py:72`,冻结,单前向)
+`encode`:语言中性化 → Qwen 一次 forward 取**第 24 层**隐藏态(语言在内部跨模态融进视觉)→ `grid_last(Gh,Gw,2560)` → pool `vlm_ctx(256,2560)`。**无生成/无 CoT**,纯语言条件化特征 encoder。`grid_last` 另供 `build_candidates` 按框池化(xattn tid)。
+
+### ② Qwen layers → IAR → z_im(`iar.py:35`)
+**8 个可学 query** 对 VLM 层特征做 cross-attention(`_LayerQuery`:ctx 2560→64→256 作 K/V)→ 跨层平均 + 残差 MLP → **z_im(B,8,256)** 隐式动作先验;`occ/maneuver` 辅助头仅训练用。
+
+### ③ {z_ex,z_im,vlm_ctx,proprio} → DiT → action(`dit.py:55`+`stage2.py:50`)
+DiT = 32 层 transformer，**flow-matching 去噪**动作 chunk(H=16,action_dim=5)。采样 `action_sample`:`x=randn; for steps: x += dt·DiT(x,t,…)`。DiT.forward:动作 token 嵌入 + `pos` + `sinusoidal_time(t)` + `proprio`(投到 d 加到每 token);**三路交错 cross-attn**(`cross_attn_schedule`):i%4==3→vlm_ctx(每4层)、i%2==0→z_ex(~每2)、else→z_im(~每2);每块 self-attn→cross-attn→FFN→`out`→v_hat。策略取 `a0[:4]×a_scale`+`search_mode`。
+**z_ex 来源**:一般 stage2 由 EAR(`ear.py` flow-matching waypoints)；**track 模式覆盖为 committed 目标 CV 外推**(`policy.py:682`)。
+
+### ④ ★TAHRelM(WHICH,唯一可学,4740 参,`train/tah.py:88`)
+每候选 [crop-DINOv2 外观 feat(384,L2归一) ⊕ pos(u/W,v/H,depth/100)] vs 记忆 `{app,pos,vel}`：
+- **7 车辆不变特征**：`cos(feat,app)`、`relp_xy=pos−(pos_mem+vel_mem)`、`depth`、`rank=softmax(5·cos)`、`dmot=‖relp‖`、`msoft=exp(−dmot/softplus(mgate))`（可学软运动门）→ **MLP 7·64·64·1** → logits → argmax=pred_slot；`conf=σ(top1−top2)`。
+- **记忆更新**：外观 `app←norm((1−σ(gate))·app+σ(gate)·feat)`（可学门 EMA）；速度 `vel←(1−σ(vbeta))·vel+σ(vbeta)·Δpos`（可学衰减 EMA）。
+- **可学参数**：`gate, vbeta, mgate` + MLP = 4740。**全相对特征→车辆不变→泛化未见车**。
+
+### ⑤ WHICH→WHERE→控制(`policy.py:656-700`)
+pred_slot →（置信门①+K 滞回）→ `_update_commit` → committed 身份 → `_committed_world`（该车 GT 世界位）→ `estimator.predict_wp(cv)` → **z_ex**。deployable：记忆 seed=committed+语言冷启动，confident-drift 用 `reanchor=anchor` GT-free 检测(`policy.py:558-583`)。
+
+### 关键张量/维度
+`vlm_ctx(256,2560)` · `z_im(8,256)` · `z_ex(K,3)` · DINOv2 feat`(n,384)` · DiT d=512/32层/H=16/act=5 · proprio 5D(v5) · TAHRelM 4740 参。源码地图见 `907` 同名小节 / 本文件 §7。
+
 ## 2. 数据 & 训练规模
 - 缓存 `train/tah_cache.py` → `runs/tah_cache.pt`:**64 episodes / 42,637 frames**(mvp_full_v5,离线 crop-DINOv2 + 位置 + GT 身份,时序序列)。
 - 训练:40 epochs,序列 BPTT,GPU 单卡。**参数 0.72M 极小**。

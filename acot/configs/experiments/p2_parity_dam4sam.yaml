@@ -1,0 +1,10 @@
+# P2 acceptance, DAM4SAM head (needs the DAM4SAM service; one client at a time — the replay connects the legacy policy,
+# closes, then the acot one): `python -m acot replay-parity acot/configs/experiments/p2_parity_dam4sam.yaml --record … --gpu G`
+name: p2_parity_dam4sam
+protocol: sim_proxy_v2@1
+seeds: {set: dev2, subset: [[93000, 93000]]}
+arms:
+  ext_dam4sam:      {method: ext_dam4sam, role: baseline}
+  ext_dam4sam_pgif: {method: ext_dam4sam, role: ablation,
+                     override: {filter.mode: filter, filter.filter_kind: tempered, filter.absent_hold: true}}
+  ext_dam4sam_ef:   {method: ext_dam4sam, role: ablation, override: {identity.dam4sam.every_frame: true}}

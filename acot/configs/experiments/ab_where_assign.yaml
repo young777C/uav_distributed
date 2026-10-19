@@ -1,0 +1,18 @@
+# 2026-10-06 · 2×2 factorial on the final model (acot runtime): WHERE while the committed key has no box
+# (ear = current behaviour | cv = constant-velocity extrapolation) × tracker assignment (greedy = current | hungarian).
+# Paired on the same 60 dev2 seeds; each main effect is estimated over both levels of the other factor (120 pairs).
+name: ab_where_assign
+description: absent-time CV extrapolation × Hungarian tracker assignment (factorial, dev2 93000–93059)
+protocol: sim_proxy_v2@1
+seeds: {set: dev2, subset: [[93000, 93059]], expect: 60}
+completeness: {require: allow_skipped, allow_skipped_reasons: ["target stationary"], pairing: intersection}
+retry: {infra_attempts: 2}
+arms:
+  ours:      {method: ours_final, role: main}
+  cv:        {method: ours_absent_cv, role: ablation}
+  hung:      {method: ours_final, ablation: perception, override: {perception.tracker.assign: hungarian}}
+  cv_hung:   {method: ours_absent_cv, ablation: perception, override: {perception.tracker.assign: hungarian}}
+collect: [ticks, trk, gt_access, scenario]
+infra: {runtime: acot}
+comparisons:
+  - {family: ablation, a: ours, b: [cv, hung, cv_hung], metrics: [correct, longC, longW]}

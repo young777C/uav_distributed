@@ -1,0 +1,287 @@
+# Reviewed GT read sites of the policy process (framework §7.3, P1 audit). Key = (kind, file, func, normalised
+# source line); category: privileged | bookkeeping | scoring | logging | collection | diagnostic:<channel>[|<channel>].
+# A deployable arm may only read GT at non-diagnostic sites; an UNKNOWN site fails the seed (ratchet: review and add
+# it here). Generated from a static review of policy.py / candidates.py / policy_server.py (2026-10-04).
+sites:
+- kind: true_idx
+  file: carla_uav_tracking/rollout/policy.py
+  func: _reid_select
+  line: (cset.true_idx if (cset.true_idx is not None and cset.true_idx >= 0) else None)
+  category: diagnostic:gallery_seed_gt
+  note: reid gallery seeded from the GT target
+- kind: true_idx
+  file: carla_uav_tracking/rollout/policy.py
+  func: _assoc_select
+  line: ti = cset.true_idx
+  category: diagnostic:gallery_seed_gt
+  note: association track state from the GT target
+- kind: true_idx
+  file: carla_uav_tracking/rollout/policy.py
+  func: _dam4sam_select
+  line: ti = init_slot if self.gallery_seed == "committed" else cset.true_idx
+  category: diagnostic:gallery_seed_gt
+  note: DAM4SAM initialised from the GT box
+- kind: true_idx
+  file: carla_uav_tracking/rollout/policy.py
+  func: _dam_log
+  line: ti = cset.true_idx if cset.true_idx is not None else -1
+  category: logging
+  note: DAM4SAM abstention diagnosis log
+- kind: gt_idx
+  file: carla_uav_tracking/rollout/policy.py
+  func: _committed_world
+  line: gi = int(getattr(c, "gt_idx", c.idx))
+  category: privileged
+  note: 'where_world_gt_matched_box: world position of the matched box'
+- kind: tpos
+  file: carla_uav_tracking/rollout/policy.py
+  func: _committed_world
+  line: return np.asarray(tpos, np.float64)
+  category: privileged
+  note: where_world_gt_matched_box (target matched)
+- kind: dstates
+  file: carla_uav_tracking/rollout/policy.py
+  func: _committed_world
+  line: ds = np.asarray(dstates)
+  category: privileged
+  note: where_world_gt_matched_box (distractor matched)
+- kind: tpos
+  file: carla_uav_tracking/rollout/policy.py
+  func: _committed_world
+  line: return np.asarray(tpos, np.float64)
+  category: privileged
+  note: where_world_gt_committed_id (deploy_v1)
+- kind: dstates
+  file: carla_uav_tracking/rollout/policy.py
+  func: _committed_world
+  line: ds = np.asarray(dstates)
+  category: privileged
+  note: where_world_gt_committed_id (deploy_v1)
+- kind: vis
+  file: carla_uav_tracking/rollout/policy.py
+  func: act
+  line: t_vis, d_vis = vis
+  category: privileged
+  note: occlusion filter (ray-cast proxy)
+- kind: is_target
+  file: carla_uav_tracking/rollout/policy.py
+  func: act
+  line: if (t_vis if c.is_target else (c.idx < len(d_vis) and d_vis[c.idx]))]
+  category: privileged
+  note: occlusion filter picks the target's / distractor's flag
+- kind: vis[1]
+  file: carla_uav_tracking/rollout/policy.py
+  func: act
+  line: if (t_vis if c.is_target else (c.idx < len(d_vis) and d_vis[c.idx]))]
+  category: privileged
+  note: occlusion filter picks the target's / distractor's flag
+- kind: is_target
+  file: carla_uav_tracking/rollout/policy.py
+  func: act
+  line: true_idx=next((j for j, c in enumerate(cands) if c.is_target), -1),
+  category: bookkeeping
+  note: true_idx of the filtered set
+- kind: gt_idx
+  file: carla_uav_tracking/rollout/policy.py
+  func: act
+  line: '"gt": [int(c.gt_idx) for c in cset.cands],'
+  category: logging
+  note: tracklet log (trk.jsonl)
+- kind: target_attr
+  file: carla_uav_tracking/rollout/policy.py
+  func: act
+  line: 'if obs.target_color not in self._cvoc or obs.target_bp not in self._mvoc:'
+  category: diagnostic:attrbind_gt_attrs
+  note: attrbind head reads the GT attributes
+- kind: target_attr
+  file: carla_uav_tracking/rollout/policy.py
+  func: act
+  line: print(f"[attrbind-attr] <UNK> color='{obs.target_color}' make='{obs.target_bp}'", flush=True)
+  category: diagnostic:attrbind_gt_attrs
+- kind: target_attr
+  file: carla_uav_tracking/rollout/policy.py
+  func: act
+  line: ci = torch.tensor([self._cvoc.get(obs.target_color, self._cvoc["<unk>"])], device=self.device)
+  category: diagnostic:attrbind_gt_attrs
+- kind: target_attr
+  file: carla_uav_tracking/rollout/policy.py
+  func: act
+  line: mi = torch.tensor([self._mvoc.get(obs.target_bp, self._mvoc["<unk>"])], device=self.device)
+  category: diagnostic:attrbind_gt_attrs
+- kind: target_attr
+  file: carla_uav_tracking/rollout/policy.py
+  func: act
+  line: target_color=str(getattr(obs, "target_color", "")), target_bp=str(getattr(obs, "target_bp", "")),
+  category: collection
+  note: opening snapshot labels
+- kind: is_target
+  file: carla_uav_tracking/rollout/policy.py
+  func: act
+  line: is_target=np.array([bool(c.is_target) for c in cset.cands]),
+  category: collection
+  note: opening snapshot labels
+- kind: gt_idx
+  file: carla_uav_tracking/rollout/policy.py
+  func: act
+  line: gt_idx=np.array([int(getattr(c, "gt_idx", c.idx)) for c in cset.cands], np.int32),
+  category: collection
+  note: opening snapshot labels
+- kind: true_idx
+  file: carla_uav_tracking/rollout/policy.py
+  func: act
+  line: (cset.true_idx if (cset.true_idx is not None and cset.true_idx >= 0) else None)
+  category: diagnostic:gallery_seed_gt
+  note: reid motion state from the GT target
+- kind: true_idx
+  file: carla_uav_tracking/rollout/policy.py
+  func: act
+  line: if self.event_override and getattr(obs, "retarget_event", False) and cset.true_idx is not None \
+  category: diagnostic:event_override
+  note: scripted retarget override
+- kind: true_idx
+  file: carla_uav_tracking/rollout/policy.py
+  func: act
+  line: 'and cset.true_idx >= 0:'
+  category: diagnostic:event_override
+- kind: true_idx
+  file: carla_uav_tracking/rollout/policy.py
+  func: act
+  line: self._pred_slot = cset.true_idx
+  category: diagnostic:event_override
+- kind: true_idx
+  file: carla_uav_tracking/rollout/policy.py
+  func: act
+  line: self._asd.override(int(cset.cands[cset.true_idx].idx), t=int(obs.step))
+  category: diagnostic:event_override
+- kind: true_idx
+  file: carla_uav_tracking/rollout/policy.py
+  func: act
+  line: gt = cset.true_idx
+  category: diagnostic:reanchor_oracle
+  note: GT drift detection
+- kind: true_idx
+  file: carla_uav_tracking/rollout/policy.py
+  func: act
+  line: us = (cset.true_idx if self.gallery_seed != "committed" else self._pred_slot)
+  category: diagnostic:gallery_seed_gt
+  note: TAH memory updated with the GT target
+- kind: true_idx
+  file: carla_uav_tracking/rollout/policy.py
+  func: act
+  line: '"tidx": int(cset.true_idx)})'
+  category: collection
+  note: TAH DAgger label
+- kind: true_idx
+  file: carla_uav_tracking/rollout/policy.py
+  func: act
+  line: 'if cset.true_idx is not None and cset.true_idx >= 0:'
+  category: diagnostic:oracle_head
+- kind: true_idx
+  file: carla_uav_tracking/rollout/policy.py
+  func: act
+  line: self._tid_logits[cset.true_idx] = 1.0
+  category: diagnostic:oracle_head
+- kind: true_idx
+  file: carla_uav_tracking/rollout/policy.py
+  func: act
+  line: self._pred_slot = int(cset.true_idx)
+  category: diagnostic:oracle_head
+- kind: true_idx
+  file: carla_uav_tracking/rollout/policy.py
+  func: act
+  line: 'if cset.true_idx is not None and cset.true_idx >= 0:'
+  category: diagnostic:warmup_oracle
+- kind: true_idx
+  file: carla_uav_tracking/rollout/policy.py
+  func: act
+  line: self._tid_logits[cset.true_idx] = 1.0
+  category: diagnostic:warmup_oracle
+- kind: true_idx
+  file: carla_uav_tracking/rollout/policy.py
+  func: act
+  line: self._pred_slot = int(cset.true_idx)
+  category: diagnostic:warmup_oracle
+- kind: true_idx
+  file: carla_uav_tracking/rollout/policy.py
+  func: act
+  line: ra = int(cset.true_idx) if (cset.true_idx is not None and cset.true_idx >= 0) else -1
+  category: diagnostic:reanchor_oracle
+  note: reid oracle re-anchor
+- kind: true_idx
+  file: carla_uav_tracking/rollout/policy.py
+  func: act
+  line: (lang_slot, lconf, "lang")], true_slot=cset.true_idx, t=int(obs.step))
+  category: logging
+  note: ASD tick log (true_slot)
+- kind: true_idx
+  file: carla_uav_tracking/rollout/policy.py
+  func: act
+  line: _orc_abs = os.environ.get("ORACLE_ABSENT", "0") in ("1", "2") and (cset.true_idx is None or cset.true_idx < 0)
+  category: diagnostic:oracle_absent_abstain|oracle_absent_hygiene
+  note: ORACLE_ABSENT
+- kind: true_idx
+  file: carla_uav_tracking/rollout/policy.py
+  func: act
+  line: true_slot=cset.true_idx, t=int(obs.step))
+  category: logging
+  note: ASD tick log (true_slot)
+- kind: true_idx
+  file: carla_uav_tracking/rollout/policy.py
+  func: act
+  line: 'if self._dagger_dir is not None and cset is not None and cset.true_idx >= 0:'
+  category: collection
+  note: grounding DAgger label
+- kind: true_idx
+  file: carla_uav_tracking/rollout/policy.py
+  func: act
+  line: self._dagger_buf.append((cset.feats.astype(np.float16), int(cset.true_idx),
+  category: collection
+  note: grounding DAgger label
+- kind: target_attr
+  file: carla_uav_tracking/rollout/policy.py
+  func: act
+  line: obs.target_color, obs.target_bp))
+  category: collection
+  note: grounding DAgger label
+- kind: true_idx
+  file: carla_uav_tracking/rollout/policy.py
+  func: act
+  line: visible = cset is not None and cset.true_idx >= 0
+  category: diagnostic:ex_source_gt
+  note: GT-seeded WHERE prior (ex_source ≠ track)
+- kind: tpos
+  file: carla_uav_tracking/rollout/policy.py
+  func: act
+  line: self.estimator.update(np.asarray(tpos, np.float64), obs.step)
+  category: diagnostic:ex_source_gt
+  note: GT-seeded WHERE prior (ex_source ≠ track)
+- kind: tpos
+  file: carla_uav_tracking/rollout/candidates.py
+  func: build_candidates
+  line: tgt = _mk((float(tpos[0]), float(tpos[1]), float(tpos[2])), True, -1)
+  category: privileged
+  note: cand_box_gt_projection (target box)
+- kind: dstates
+  file: carla_uav_tracking/rollout/candidates.py
+  func: build_candidates
+  line: dstates = np.asarray(dstates)
+  category: privileged
+  note: cand_box_gt_projection (distractor boxes)
+- kind: is_target
+  file: carla_uav_tracking/rollout/candidates.py
+  func: build_candidates
+  line: true_idx = next((i for i, c in enumerate(cands) if c.is_target), -1)
+  category: bookkeeping
+  note: true_idx of the shuffled set
+- kind: is_target
+  file: carla_uav_tracking/rollout/policy_server.py
+  func: _cand_lite
+  line: '"cands": [{"is_target": bool(c.is_target), "idx": int(c.idx), "depth": float(c.depth)}'
+  category: scoring
+  note: → scorer
+- kind: true_idx
+  file: carla_uav_tracking/rollout/policy_server.py
+  func: _cand_lite
+  line: '"true_idx": int(cand_set.true_idx),'
+  category: scoring
+  note: → scorer

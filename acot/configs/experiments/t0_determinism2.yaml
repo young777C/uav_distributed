@@ -1,0 +1,14 @@
+# 1006 CARLA determinism probe 2: t0_determinism under sim_proxy_v2_detprobe@1 (sync setup + reload_world per seed).
+# identical policy RNG) run three times on the same seeds; every act message (RGB, proprio, GT state) is recorded so
+# the first diverging step and component (traffic / physics / rendering / policy) can be located.
+name: t0_determinism2
+protocol: sim_proxy_v2_detprobe@1
+seeds: {set: dev2, subset: [[93060, 93061]], expect: 2}
+completeness: {require: allow_skipped, allow_skipped_reasons: ["target stationary"], pairing: intersection}
+schedule: {block: 1, seed: 10067, max_infra_attempts: 3}
+arms:
+  det_a: {method: ours_final, role: main}
+  det_b: {method: ours_final, role: main}
+  det_c: {method: ours_final, role: main}
+collect: [ticks, gt_access, scenario, record_act]
+infra: {runtime: acot, record_act_ticks: 900}

@@ -1,0 +1,25 @@
+# 1007 optimisation round 1 (user decision 2026-10-07 23:05; 1007_closed_loop_summary.md §4b–4c): configuration-only
+# screen of our method on dev-B under protocol @3, natural opening (= Table 1 setting), single run (repeat 0).
+# Reference: t0_pilot_deploy_devB3 aa_r0a / aa_r0b (ours_final, repeat 0, same protocol and seeds) and the
+# default-parameter baselines of t0_grid_devB. Development only — test seeds untouched.
+#   tau005 / tau02     conf_tau tuning budget equal to the baselines' grid ({0.05, 0.2, 0.5}; 0.5 = ours_final)
+#   noforce            PGIF rewrites go through the K = 5 hysteresis (force_conf = false)
+#   noforce_tau005     both
+#   noabsent_tau005    PGIF without absent-hold + low conf_tau
+#   nopgif_tau005      TAHRelM alone + low conf_tau
+#   reid_pgif          DINOv2 gallery re-ID memory + PGIF (tempered + absent-hold)
+name: opt1_screen_devB3
+protocol: sim_proxy_v2@3
+seeds: {set: dev2, subset: [[93060, 93099]], expect: 40}
+completeness: {require: allow_skipped, allow_skipped_reasons: ["target stationary"], pairing: intersection}
+schedule: {block: 5, seed: 10091, max_infra_attempts: 3}
+arms:
+  tau005:          {method: ours_final, role: ablation, override: {identity.conf_tau: 0.05}}
+  tau02:           {method: ours_final, role: ablation, override: {identity.conf_tau: 0.2}}
+  noforce:         {method: ours_no_force_conf, role: ablation}
+  noforce_tau005:  {method: ours_no_force_conf, role: ablation, override: {identity.conf_tau: 0.05}}
+  noabsent_tau005: {method: ours_no_absent, role: ablation, override: {identity.conf_tau: 0.05}}
+  nopgif_tau005:   {method: ours_no_pgif, role: ablation, override: {identity.conf_tau: 0.05}}
+  reid_pgif:       {method: ext_reid_pgif, role: baseline}
+collect: [ticks, gt_access, scenario]
+infra: {runtime: acot}

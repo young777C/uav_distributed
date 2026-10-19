@@ -1,0 +1,57 @@
+# v6 BASE (acot_note/1003_data-regen-v6-spec.md): replicates the original v5 / mvp.yaml distribution at
+# FOV 90 (what Stage-2 v5 was trained on) + instance-seg per-actor labels. Daytime, no fog (default weather).
+environment:
+  max_duration_seconds: 150
+  towns: ["Town01", "Town02", "Town04", "Town05", "Town10HD"]
+  loss_events:                     # (c) enable deliberate sustained loss → predict-intercept
+    enabled: true
+    per_episode: 2
+    dur_range: [4.5, 6.5]          # >=3s off-frame run after ~1s exit lag → recovery counts
+
+scene:
+  spawn_filter: {max_roof_m: 12.0, min_frac: 0.2}   # v6.1 scope: spawn where surfaces within 40 m are <= 12 m;
+                                   # towns with < 20 % such points (Town10HD) use their lowest-roof 20 %
+  unstick: true                    # v6.1: TM lane change when the target is still for 8 s
+  scene_actors_lane_change: true  # v6.1: target/distractors may overtake a stopped car
+  traffic_lights: {green_s: 6.0, yellow_s: 2.0, red_s: 2.0}   # v6.1: short cycles → fewer long queues
+  ambient:                        # v6.1: 80 cars within 70 m gridlocked the target (stationary 40-100 %)
+    vehicles: 40
+    radius: 90
+    spawn_mode: ring              # v6.1: sample spawn points 30-200 m away (nearest-N packed the target in)
+    ring_m: [30.0, 200.0]
+  scene_actors_ignore_lights: 100.0  # v6: target + distractors run lights/signs (target was still 40-70 % of time)
+  num_distractors: [4, 8]
+  min_similar_distractors: 2
+  distractor_ahead_bias: 0.75
+  target_class_weights:            # spec §4d: all-sedan scene → rich look-alike pool (21 models × 18
+    car: 1.0                        # colours), higher co-visibility; drop sparse moto/bike/scooter
+    motorcycle: 0.0                 # (only 1-3 models each → too few look-alikes) + pedestrians (never targets)
+    bicycle: 0.0
+    scooter: 0.0
+    pedestrian: 0.0
+  similarity_strategy_weights:
+    same_color_diff_shape: 0.40
+    same_shape_diff_color: 0.40
+    distinct: 0.20
+
+target:
+  maneuver:                # OFF — stochastic TM maneuvers only fragment loss into
+                           # sub-second blips AND re-correlate target geometry (round-2
+                           # regressed offscreen+recovery+leak). Sustained loss is created
+                           # deliberately by environment.loss_events (blind-predict window)
+                           # instead. See acot-uav-review-loop / data-fix-spec (c).
+    sudden_stop_prob: 0.0
+    sharp_turn_prob: 0.0
+    acceleration_prob: 0.0
+    u_turn_prob: 0.0
+
+uav:
+  geometry_avoidance: true        # raycast look-ahead: never fly through buildings (kinematic drone)
+
+output:
+  fov: 90.0
+  instance_seg: true
+
+weather:                           # research scope: daytime, no fog (explicit, not inherited)
+  sun_altitude: [15, 70]
+  fog_density: [0, 0]

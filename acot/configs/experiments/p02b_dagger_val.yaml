@@ -1,0 +1,12 @@
+# P0-2 stage B (1012 §6): the same DAgger collection as p02b_dagger_train on the held-out val_dagger_v3 seeds → artefact
+# tah_dagger_v3_val = the epoch-selection set of recipe tah_relm_fast_b (never trained on).
+#   python -m acot prep acot/configs/prep/tah_dagger_v3_val.yaml --gpus G
+name: p02b_dagger_val
+protocol: sim_proxy_v2@3
+seeds: {set: val_dagger_v3, expect: 40}
+completeness: {require: allow_skipped, allow_skipped_reasons: ["target stationary"], pairing: intersection}
+schedule: {block: 5, seed: 10142, max_infra_attempts: 3}
+arms:
+  dag_fa: {method: ours_fast_a, role: main, override: {identity.conf_tau: 0.05}}
+collect: [ticks, tah_dagger, scenario]
+infra: {runtime: acot}

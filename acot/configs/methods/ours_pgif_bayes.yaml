@@ -1,0 +1,4 @@
+# PGIF with the bayes evidence update instead of tempered (filter-kind ablation).
+name: ours_pgif_bayes
+extends: ours_final
+filter: {filter_kind: bayes}

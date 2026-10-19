@@ -1,0 +1,47 @@
+{"event": "plan", "seed": 10093, "block": 5, "n_units": 16, "order": [["inherit_tau005", [93070, 93071, 93072, 93073, 93074]], ["inherit_memw_tau005", [93095, 93096, 93097, 93098, 93099]], ["inherit_tau005", [93085, 93086, 93087, 93088, 93089]], ["inherit_tau005", [93075, 93076, 93077, 93078, 93079]], ["inherit_memw_tau005", [93075, 93076, 93077, 93078, 93079]], ["inherit_tau005", [93090, 93091, 93092, 93093, 93094]], ["inherit_memw_tau005", [93065, 93066, 93067, 93068, 93069]], ["inherit_tau005", [93080, 93081, 93082, 93083, 93084]], ["inherit_memw_tau005", [93085, 93086, 93087, 93088, 93089]], ["inherit_tau005", [93060, 93061, 93062, 93063, 93064]], ["inherit_memw_tau005", [93060, 93061, 93062, 93063, 93064]], ["inherit_memw_tau005", [93080, 93081, 93082, 93083, 93084]], ["inherit_tau005", [93095, 93096, 93097, 93098, 93099]], ["inherit_memw_tau005", [93070, 93071, 93072, 93073, 93074]], ["inherit_memw_tau005", [93090, 93091, 93092, 93093, 93094]], ["inherit_tau005", [93065, 93066, 93067, 93068, 93069]]], "t": 1791512902.7039812}
+{"event": "start", "arm": "inherit_tau005", "seeds": [93070, 93071, 93072, 93073, 93074], "worker": "w0", "carla_port": 2050, "gpu": 1, "tm_base": 9700, "svc_slot": null, "t": 1791512902.7043831}
+{"event": "start", "arm": "inherit_memw_tau005", "seeds": [93095, 93096, 93097, 93098, 93099], "worker": "w1", "carla_port": 2060, "gpu": 2, "tm_base": 9730, "svc_slot": null, "t": 1791512902.7047358}
+{"event": "start", "arm": "inherit_tau005", "seeds": [93085, 93086, 93087, 93088, 93089], "worker": "w2", "carla_port": 2070, "gpu": 4, "tm_base": 9760, "svc_slot": null, "t": 1791512902.7052495}
+{"event": "start", "arm": "inherit_tau005", "seeds": [93075, 93076, 93077, 93078, 93079], "worker": "w3", "carla_port": 2080, "gpu": 5, "tm_base": 9790, "svc_slot": null, "t": 1791512902.7057607}
+{"event": "start", "arm": "inherit_memw_tau005", "seeds": [93075, 93076, 93077, 93078, 93079], "worker": "w4", "carla_port": 2090, "gpu": 7, "tm_base": 9820, "svc_slot": null, "t": 1791512902.7060785}
+{"event": "start", "arm": "inherit_tau005", "seeds": [93090, 93091, 93092, 93093, 93094], "worker": "w5", "carla_port": 2230, "gpu": 3, "tm_base": 9850, "svc_slot": null, "t": 1791512902.7063315}
+{"event": "start", "arm": "inherit_memw_tau005", "seeds": [93065, 93066, 93067, 93068, 93069], "worker": "w6", "carla_port": 2250, "gpu": 6, "tm_base": 9880, "svc_slot": null, "t": 1791512902.7067697}
+{"event": "end", "arm": "inherit_memw_tau005", "worker": "w4", "requeued": [93075], "t": 1791513705.4798367}
+{"event": "start", "arm": "inherit_tau005", "seeds": [93080, 93081, 93082, 93083, 93084], "worker": "w4", "carla_port": 2090, "gpu": 7, "tm_base": 9820, "svc_slot": null, "t": 1791513705.4799197}
+{"event": "end", "arm": "inherit_tau005", "worker": "w3", "requeued": [93075], "t": 1791513746.243301}
+{"event": "start", "arm": "inherit_memw_tau005", "seeds": [93085, 93086, 93087, 93088, 93089], "worker": "w3", "carla_port": 2080, "gpu": 5, "tm_base": 9790, "svc_slot": null, "t": 1791513746.2433767}
+{"event": "end", "arm": "inherit_tau005", "worker": "w2", "requeued": [], "t": 1791513755.6702368}
+{"event": "start", "arm": "inherit_tau005", "seeds": [93060, 93061, 93062, 93063, 93064], "worker": "w2", "carla_port": 2070, "gpu": 4, "tm_base": 9760, "svc_slot": null, "t": 1791513755.6703196}
+{"event": "end", "arm": "inherit_memw_tau005", "worker": "w6", "requeued": [93065], "t": 1791513795.748394}
+{"event": "start", "arm": "inherit_memw_tau005", "seeds": [93060, 93061, 93062, 93063, 93064], "worker": "w6", "carla_port": 2250, "gpu": 6, "tm_base": 9880, "svc_slot": null, "t": 1791513795.7485507}
+{"event": "end", "arm": "inherit_memw_tau005", "worker": "w1", "requeued": [], "t": 1791514065.6652236}
+{"event": "start", "arm": "inherit_memw_tau005", "seeds": [93080, 93081, 93082, 93083, 93084], "worker": "w1", "carla_port": 2060, "gpu": 2, "tm_base": 9730, "svc_slot": null, "t": 1791514065.6653056}
+{"event": "end", "arm": "inherit_tau005", "worker": "w5", "requeued": [], "t": 1791514109.2588246}
+{"event": "start", "arm": "inherit_tau005", "seeds": [93095, 93096, 93097, 93098, 93099], "worker": "w5", "carla_port": 2230, "gpu": 3, "tm_base": 9850, "svc_slot": null, "t": 1791514109.2589307}
+{"event": "end", "arm": "inherit_tau005", "worker": "w0", "requeued": [], "t": 1791514321.825532}
+{"event": "start", "arm": "inherit_memw_tau005", "seeds": [93070, 93071, 93072, 93073, 93074], "worker": "w0", "carla_port": 2050, "gpu": 1, "tm_base": 9700, "svc_slot": null, "t": 1791514321.8256075}
+{"event": "end", "arm": "inherit_memw_tau005", "worker": "w6", "requeued": [], "t": 1791514628.0621717}
+{"event": "start", "arm": "inherit_memw_tau005", "seeds": [93090, 93091, 93092, 93093, 93094], "worker": "w6", "carla_port": 2250, "gpu": 6, "tm_base": 9880, "svc_slot": null, "t": 1791514628.0622518}
+{"event": "end", "arm": "inherit_tau005", "worker": "w2", "requeued": [], "t": 1791514762.6707194}
+{"event": "start", "arm": "inherit_tau005", "seeds": [93065, 93066, 93067, 93068, 93069], "worker": "w2", "carla_port": 2070, "gpu": 4, "tm_base": 9760, "svc_slot": null, "t": 1791514762.6708033}
+{"event": "end", "arm": "inherit_memw_tau005", "worker": "w3", "requeued": [], "t": 1791514923.3702044}
+{"event": "start", "arm": "inherit_memw_tau005", "seeds": [93075], "worker": "w3", "carla_port": 2080, "gpu": 5, "tm_base": 9790, "svc_slot": null, "t": 1791514923.3702822}
+{"event": "end", "arm": "inherit_tau005", "worker": "w5", "requeued": [93099], "t": 1791514956.6961896}
+{"event": "start", "arm": "inherit_tau005", "seeds": [93075], "worker": "w5", "carla_port": 2230, "gpu": 3, "tm_base": 9850, "svc_slot": null, "t": 1791514956.6962771}
+{"event": "end", "arm": "inherit_tau005", "worker": "w4", "requeued": [], "t": 1791515027.942793}
+{"event": "start", "arm": "inherit_memw_tau005", "seeds": [93065], "worker": "w4", "carla_port": 2090, "gpu": 7, "tm_base": 9820, "svc_slot": null, "t": 1791515027.9428756}
+{"event": "end", "arm": "inherit_tau005", "worker": "w5", "requeued": [], "t": 1791515083.7234638}
+{"event": "end", "arm": "inherit_memw_tau005", "worker": "w0", "requeued": [93072], "t": 1791515148.749126}
+{"event": "start", "arm": "inherit_tau005", "seeds": [93099], "worker": "w0", "carla_port": 2050, "gpu": 1, "tm_base": 9700, "svc_slot": null, "t": 1791515148.7492442}
+{"event": "end", "arm": "inherit_memw_tau005", "worker": "w3", "requeued": [], "t": 1791515150.377297}
+{"event": "start", "arm": "inherit_memw_tau005", "seeds": [93072], "worker": "w3", "carla_port": 2080, "gpu": 5, "tm_base": 9790, "svc_slot": null, "t": 1791515150.3773806}
+{"event": "end", "arm": "inherit_memw_tau005", "worker": "w4", "requeued": [], "t": 1791515224.9612641}
+{"event": "end", "arm": "inherit_memw_tau005", "worker": "w3", "requeued": [93072], "t": 1791515287.5832808}
+{"event": "start", "arm": "inherit_memw_tau005", "seeds": [93072], "worker": "w5", "carla_port": 2230, "gpu": 3, "tm_base": 9850, "svc_slot": null, "t": 1791515293.7264993}
+{"event": "end", "arm": "inherit_tau005", "worker": "w0", "requeued": [], "t": 1791515365.7703419}
+{"event": "end", "arm": "inherit_memw_tau005", "worker": "w1", "requeued": [], "t": 1791515408.0006313}
+{"event": "end", "arm": "inherit_memw_tau005", "worker": "w5", "requeued": [], "t": 1791515575.9540958}
+{"event": "end", "arm": "inherit_tau005", "worker": "w2", "requeued": [], "t": 1791516019.8576944}
+{"event": "end", "arm": "inherit_memw_tau005", "worker": "w6", "requeued": [93091], "t": 1791516633.6051319}
+{"event": "start", "arm": "inherit_memw_tau005", "seeds": [93091], "worker": "w4", "carla_port": 2090, "gpu": 7, "tm_base": 9820, "svc_slot": null, "t": 1791516634.9788132}
+{"event": "end", "arm": "inherit_memw_tau005", "worker": "w4", "requeued": [], "t": 1791516802.0824842}

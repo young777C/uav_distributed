@@ -1,0 +1,6 @@
+# Appendix (1016): ext_deepsort at the protocol's decision rate — one tracker step per S2 tick (0.6 s); max_age 30 frames
+# = 1.0 s → 2 ticks.
+name: ext_deepsort_s2
+extends: ext_deepsort
+identity:
+  deepsort: {every_frame: false, max_age: 2}

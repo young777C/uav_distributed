@@ -1,0 +1,16 @@
+# Sim-proxy perception protocol v2, version 2 (1006 §3.1, 2026-10-06): = sim_proxy_v2@1 with the tracker's assignment
+# fixed to HUNGARIAN (numpy solver acot/runtime/lsa.py). Every legacy deploy-v2 run and sim_proxy_v2@1 used greedy
+# assignment (no scipy in the policy image) although TRK_CFG was tuned under Hungarian (1001 §5.5c). Frozen: any change
+# = a new version file. Also: opening hand-over `uniform` (1006 F-c: every identity head re-seeded from the
+# accumulated opening pick at every non-final opening tick, as the TAH memory already was). The 1006 experiments (T0 and test) all reference this version.
+extends: sim_proxy_v2@1
+name: sim_proxy_v2
+version: 2
+aliases: []
+description: sim_proxy_v2@1 + Hungarian tracker + uniform opening hand-over + per-step policy RNG (1006)
+sim:
+  policy_rng: per_step          # 1006 §3.5 common random numbers (repeat salt = arm.repeat)
+perception:
+  tracker: {assign: hungarian}
+frontend:
+  opening: {handoff: uniform}

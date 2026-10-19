@@ -1,0 +1,5 @@
+# LEGACY reproduction of eval_ext_assoc.sh (motion arm): track state seeded from the GT target (--gallery-seed gt).
+name: ext_assoc_motion_legacy
+extends: ext_assoc_motion
+identity: {memory_seed: gt}
+diagnostics: [gallery_seed_gt]

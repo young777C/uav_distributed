@@ -1,0 +1,10 @@
+# P2 L3 smoke (framework §9): the final model on the acot runtime (acot/runtime/server.py reads the resolved config) on
+# the two dev seeds of the P1 smoke (smoke_ours_final, legacy runtime) — same seeds, scenarios, skip set, scorer config,
+# clean GT access; full-episode act recordings for the open-loop parity replay. NOT a results run.
+name: smoke_acot_runtime
+protocol: sim_proxy_v2@1
+seeds: {set: dev, subset: [[91000, 91001]], expect: 2}
+arms:
+  ours: {method: ours_final}
+collect: [ticks, trk, gt_access, scenario, record_act]
+infra: {runtime: acot, record_act_ticks: 900}

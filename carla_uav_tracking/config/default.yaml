@@ -72,7 +72,7 @@ scene:
 # drives the numeric distance in the language ("about 15/30/45 m").
 distance_tiers:                    # §10: LOWERED (was 20-60) so viewing distance =
   close:    {weight: 0.34, altitude: [16, 22]}   # sqrt(standoff²+alt²) lands ~26-42 m →
-  suitable: {weight: 0.33, altitude: [22, 28]}   # a 4 m car projects to ~36-49 px at 512/FOV70
+  suitable: {weight: 0.33, altitude: [22, 28]}   # a 4 m car projects to ~25-35 px at 512/FOV90 (v6/Stage-2 standard; was ~36-49 px at the 09-04 FOV70)
   long:     {weight: 0.33, altitude: [28, 34]}   # (was ~12 px @ 336/FOV90/54 m → make unreadable)
 
 # Camera depression angle (A1c③). Default steep top-down; a fraction of episodes may
@@ -176,7 +176,9 @@ occlusion:
 
 output:
   rgb_resolution: [512, 512]      # §10: 336→512 so small aerial targets get enough pixels
-  fov: 70.0                       # §10: 90→70 (moderate zoom) → make/body readable (~40px @ 30-40m)
+  fov: 90.0                       # 2026-10-03: 70→90 to match what Stage-2 v5 was actually trained on (the original v5
+                                  # recorder hard-coded 90°) and the closed-loop camera (env.py fov_deg=90). The 09-04 regen
+                                  # rendered a true 70° → misaligned with config_v5 projections. See acot_note/1003_data-check.md §5.1
   save_depth: false
   save_segmentation: false
   compression: "jpeg85"           # PIL JPEG quality

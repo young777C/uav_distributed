@@ -1,0 +1,4 @@
+# Single-frame language grounding head (Stage-2 cross-attention TargetIDHead) as the WHICH module, no memory.
+name: lang_xattn
+extends: _base
+identity: {head: xattn}

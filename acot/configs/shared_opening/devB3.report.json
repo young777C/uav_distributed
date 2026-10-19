@@ -1,0 +1,8 @@
+{
+ "n": 40,
+ "reference_correct_at_12": 37,
+ "agreement_at_12": {
+  "n": 40,
+  "same": 39
+ }
+}

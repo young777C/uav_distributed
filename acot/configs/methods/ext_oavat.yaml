@@ -1,0 +1,8 @@
+# External baseline (1006 表 1 / 表 3(a)): OA-VAT identity adaptation (Sun et al., CVPR 2026) — DINOv3 instance
+# prototype + KF loss handling + online prototype enhancement in the WHICH slot (acot/runtime/head_oavat.py); repo
+# defaults converted from frames to S2 ticks (_base.yaml); conf_tau tuned on dev-B (1006 §6.1).
+name: ext_oavat
+extends: _base
+identity:
+  head: oavat
+  conf_tau: 0.05

@@ -1,0 +1,17 @@
+{"event": "plan", "seed": 10161, "block": 1, "n_units": 8, "order": [["deepsort", [93060]], ["ocsort", [93060]], ["deepsort", [93061]], ["ocsort_s2", [93060]], ["ocsort_s2", [93061]], ["ocsort", [93061]], ["deepsort_s2", [93061]], ["deepsort_s2", [93060]]], "t": 1792150133.540238}
+{"event": "start", "arm": "deepsort", "seeds": [93060], "worker": "w0", "carla_port": 2060, "gpu": 1, "tm_base": 9700, "svc_slot": null, "t": 1792150133.5405908}
+{"event": "start", "arm": "ocsort", "seeds": [93060], "worker": "w1", "carla_port": 2070, "gpu": 2, "tm_base": 9730, "svc_slot": null, "t": 1792150133.5409608}
+{"event": "start", "arm": "deepsort", "seeds": [93061], "worker": "w2", "carla_port": 2080, "gpu": 4, "tm_base": 9760, "svc_slot": null, "t": 1792150133.541376}
+{"event": "start", "arm": "ocsort_s2", "seeds": [93060], "worker": "w3", "carla_port": 2090, "gpu": 5, "tm_base": 9790, "svc_slot": null, "t": 1792150133.5416288}
+{"event": "start", "arm": "ocsort_s2", "seeds": [93061], "worker": "w4", "carla_port": 2230, "gpu": 7, "tm_base": 9820, "svc_slot": null, "t": 1792150133.5420973}
+{"event": "end", "arm": "ocsort_s2", "worker": "w3", "requeued": [], "t": 1792150321.9714503}
+{"event": "start", "arm": "ocsort", "seeds": [93061], "worker": "w3", "carla_port": 2090, "gpu": 5, "tm_base": 9790, "svc_slot": null, "t": 1792150321.9715436}
+{"event": "end", "arm": "deepsort", "worker": "w0", "requeued": [], "t": 1792150341.9311264}
+{"event": "start", "arm": "deepsort_s2", "seeds": [93061], "worker": "w0", "carla_port": 2060, "gpu": 1, "tm_base": 9700, "svc_slot": null, "t": 1792150341.9312534}
+{"event": "end", "arm": "ocsort", "worker": "w1", "requeued": [], "t": 1792150391.2130642}
+{"event": "start", "arm": "deepsort_s2", "seeds": [93060], "worker": "w1", "carla_port": 2070, "gpu": 2, "tm_base": 9730, "svc_slot": null, "t": 1792150391.2131512}
+{"event": "end", "arm": "deepsort", "worker": "w2", "requeued": [], "t": 1792150402.0134168}
+{"event": "end", "arm": "ocsort_s2", "worker": "w4", "requeued": [], "t": 1792150412.141786}
+{"event": "end", "arm": "ocsort", "worker": "w3", "requeued": [], "t": 1792150574.2252724}
+{"event": "end", "arm": "deepsort_s2", "worker": "w0", "requeued": [], "t": 1792150589.1888847}
+{"event": "end", "arm": "deepsort_s2", "worker": "w1", "requeued": [], "t": 1792150758.4509706}

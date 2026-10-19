@@ -1,0 +1,9 @@
+# Framework smoke (P1a L3): the final model on two dev seeds — validates the new entry point end to end
+# (NOT a results run; no ablation / baseline arm is executed).
+name: smoke_ours_final
+protocol: sim_proxy_v2@1
+seeds: {set: dev, subset: [[91000, 91001]], expect: 2}
+arms:
+  ours: {method: ours_final}
+collect: [ticks, trk, gt_access, scenario]
+infra: {runtime: legacy}           # reproduces / documents a run of the legacy policy runtime (P1 path)

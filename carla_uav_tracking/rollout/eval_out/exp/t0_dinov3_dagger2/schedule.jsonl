@@ -1,0 +1,15 @@
+{"event": "plan", "seed": 10081, "block": 4, "n_units": 6, "order": [["dag_v3off", [92008, 92009, 92010, 92011]], ["dag_v3off", [92016, 92017, 92018, 92019]], ["dag_v3off", [92000, 92001, 92002, 92003]], ["dag_v3off", [92012, 92013, 92014, 92015]], ["dag_v3off", [92020, 92021, 92022, 92023]], ["dag_v3off", [92004, 92005, 92006, 92007]]], "t": 1791361580.612591}
+{"event": "start", "arm": "dag_v3off", "seeds": [92008, 92009, 92010, 92011], "worker": "w0", "carla_port": 2230, "gpu": 3, "tm_base": 9850, "svc_slot": null, "t": 1791361580.6130342}
+{"event": "start", "arm": "dag_v3off", "seeds": [92016, 92017, 92018, 92019], "worker": "w1", "carla_port": 2250, "gpu": 6, "tm_base": 9880, "svc_slot": null, "t": 1791361580.6132665}
+{"event": "end", "arm": "dag_v3off", "worker": "w1", "requeued": [], "t": 1791362202.6227818}
+{"event": "start", "arm": "dag_v3off", "seeds": [92000, 92001, 92002, 92003], "worker": "w1", "carla_port": 2250, "gpu": 6, "tm_base": 9880, "svc_slot": null, "t": 1791362202.6228693}
+{"event": "end", "arm": "dag_v3off", "worker": "w0", "requeued": [], "t": 1791362382.848501}
+{"event": "start", "arm": "dag_v3off", "seeds": [92012, 92013, 92014, 92015], "worker": "w0", "carla_port": 2230, "gpu": 3, "tm_base": 9850, "svc_slot": null, "t": 1791362382.8485796}
+{"event": "end", "arm": "dag_v3off", "worker": "w1", "requeued": [92002], "t": 1791362884.720045}
+{"event": "start", "arm": "dag_v3off", "seeds": [92020, 92021, 92022, 92023], "worker": "w1", "carla_port": 2250, "gpu": 6, "tm_base": 9880, "svc_slot": null, "t": 1791362884.7201576}
+{"event": "end", "arm": "dag_v3off", "worker": "w0", "requeued": [], "t": 1791362975.1746273}
+{"event": "start", "arm": "dag_v3off", "seeds": [92004, 92005, 92006, 92007], "worker": "w0", "carla_port": 2230, "gpu": 3, "tm_base": 9850, "svc_slot": null, "t": 1791362975.1747057}
+{"event": "end", "arm": "dag_v3off", "worker": "w0", "requeued": [], "t": 1791363757.3562539}
+{"event": "start", "arm": "dag_v3off", "seeds": [92002], "worker": "w0", "carla_port": 2230, "gpu": 3, "tm_base": 9850, "svc_slot": null, "t": 1791363757.3563359}
+{"event": "end", "arm": "dag_v3off", "worker": "w1", "requeued": [], "t": 1791363841.6587353}
+{"event": "end", "arm": "dag_v3off", "worker": "w0", "requeued": [], "t": 1791363919.402935}

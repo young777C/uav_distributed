@@ -1,0 +1,46 @@
+{
+ "git_commit": "e18e427a2e95b4f56df753bad9a0f4acfaf31049",
+ "git_dirty_diff_sha256": "38e36e7fa1a423c5044ffc81e4faf4bd175121aa1ba884dfc387d2bfbeaf4cb7",
+ "git_dirty_files": 499,
+ "host": "dcs-20-04",
+ "python": "3.12.8",
+ "time": 1791110591.8962412,
+ "time_iso": "2026-10-04T06:43:11-0400",
+ "image": {
+  "name": "acot-uav-train:cu118",
+  "id": "sha256:315deb103e6041b00acff90f23d3cdbf4f206775eefb5d5518f4c95687b1dccc"
+ },
+ "files": {
+  "ours": {
+   "train/config_v5.yaml": "08fc471b2d489a216b73fba7aad83005f8bf22e5b12a562c9a79b0daf35c17eb",
+   "runs/stage2_v5/stage2_best.pt": "6465f91555798adeeef5af3213a463d88d99843d3714d354a73d56e93bdcc257",
+   "carla_uav_tracking/config/default.yaml": "b0f0c9a14f61fd8062b4c7cbdd6c9363fdff014b945224419f250b73d76d1e65",
+   "carla_uav_tracking/config/scenarios/mvp.yaml": "7af419e3ff5f0d25a0b42c7989ec410a1f359154aa353bdbb71917c57b793e8f",
+   "carla_uav_tracking/rollout/eval_out/opening_attr_cls.pt": "a5df3c4bc04c5915f285020f0ac312f02d2db30b69c9ee23f37c51584dbf0b9c",
+   "carla_uav_tracking/rollout/eval_out/opening_attr_ft.pt": "f315fb55d0cf57657246c4d482f08f39858d7d59909d8d547338f536aa0b78dc",
+   "runs/tah_relm_dag.pt": "5395079d846eb00df393f3e0b4976ab8d76f848ddfa7cff9e609385dfa66ce28"
+  }
+ },
+ "workers": [
+  {
+   "id": "w0",
+   "carla_port": 2050,
+   "adapter": 6,
+   "gpu": 1,
+   "tm_base": 9700
+  }
+ ],
+ "argv": {
+  "cmd": "eval",
+  "experiment": "acot/configs/experiments/smoke_ours_final.yaml",
+  "arms": null,
+  "seeds": null,
+  "dry_run": false,
+  "allow_test": false,
+  "workers": 1,
+  "carla_ports": "2050",
+  "gpus": "1",
+  "overrides": [],
+  "fn": "<function cmd_eval at 0x7f22b6d01440>"
+ }
+}

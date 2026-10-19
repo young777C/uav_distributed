@@ -1,0 +1,6 @@
+# UPPER-BOUND DIAGNOSTIC (uses GT): ours_final + a perfect "target absent" detector — whenever the target is not among the
+# candidates the policy abstains (ORACLE_ABSENT=1; runs/opening_dump/f_oracle_absent.sh).
+name: diag_oracle_absent
+extends: ours_final
+oracle_absent: abstain
+diagnostics: [oracle_absent_abstain]

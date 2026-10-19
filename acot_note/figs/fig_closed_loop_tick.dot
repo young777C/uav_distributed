@@ -1,0 +1,58 @@
+// 闭环评测 · 策略服务端每个 act 消息的调用链(acot runtime)。渲染:
+//   dot -Tpng -Gdpi=150 fig_closed_loop_tick.dot -o fig_closed_loop_tick.png ; dot -Tsvg ... -o .svg
+// 行号对应 2026-10-12 的代码;说明见 acot_note/1012_closed_loop_impl_map.md §3
+digraph G {
+  graph [rankdir=TB, fontname="SimHei", fontsize=13, nodesep=0.25, ranksep=0.32, newrank=true,
+         label="图 B  策略服务端每 tick 调用链(acot/runtime;S2 = step % 6 == 0,即 0.6 s;其余 tick 只跑 DiT)", labelloc=t];
+  node  [shape=box, style="rounded,filled", fillcolor="#ffffff", fontname="SimHei", fontsize=11, margin="0.12,0.05"];
+  edge  [fontname="SimHei", fontsize=9, color="#555555"];
+
+  msg   [label="CARLA 客户端 act 消息\n{step, rgb, rgb_hi, language, proprio, gt_candidates=(tpos, dstates, campose, …, vis)}", fillcolor="#eeeeee"];
+  onact [label="on_act()  server.py:259\n(gt_access 采集时 wrap_gt_candidates 审计 GT 读取  audit.py:131)"];
+  step  [label="Runtime.step()  server.py:75\nis_s2 = policy.is_s2(step)  policy.py:130"];
+  msg -> onact -> step;
+
+  subgraph cluster_s2pre {
+    label="仅 S2 tick:感知(所有方法共享,协议 sim_proxy_v2 规定)"; style="rounded,dashed"; color="#3070b0"; fontcolor="#3070b0";
+    enc  [label="Frontend.encode()  frontend.py:81\n→ OnlineVLM.encode()  rollout/online_vlm.py:73\nQwen VLM(language neutral)→ ctx_layers / ctx / grid", fillcolor="#e8f0fb"];
+    perc [label="SimProxyPerception.process()  perception.py:57", fillcolor="#e8f0fb"];
+    bc   [label="build_candidates()  rollout/candidates.py:44\n真值投影伪框(画面内任务车辆)+ 打乱顺序 + VLM 网格框内池化", fillcolor="#e8f0fb"];
+    occ  [label="ray-cast 遮挡过滤  perception.py:65", fillcolor="#e8f0fb"];
+    crop [label="crop-DINOv2 特征  perception.py:51\n(224 px,框 ×1.3,384 维)", fillcolor="#e8f0fb"];
+    trk  [label="TrackletAssigner.update()  rollout/tracklets.py:58\n跟踪器 ID(@2 起匈牙利,acot/runtime/lsa.py)", fillcolor="#e8f0fb"];
+    det  [label="Detections(key=跟踪器 ID, u,v,w,h, depth, world_xyz, vlm_feat, crop_feat)  io.py:20\n+ ScoringInfo(标签,只给记分/审计,不进策略)  io.py:53", fillcolor="#d5e5f7"];
+    enc -> perc -> bc -> occ -> crop -> trk -> det;
+  }
+  step -> enc [label="S2"];
+
+  act [label="AcotPolicy.act()  policy.py:135", fillcolor="#fff2cc"];
+  det -> act;
+  step -> act [label="非 S2", style=dashed];
+
+  subgraph cluster_s2pol {
+    label="仅 S2 tick:策略(方法差异全部在这里)"; style="rounded,dashed"; color="#b06a00"; fontcolor="#b06a00";
+    ear  [label="EAR:flow_matching.sample()  train/flow_matching.py:31\n→ z_ex(K 个航点,policy.py:154;ablate=ear 时置零)", fillcolor="#fff7e0"];
+    iar  [label="IAR:fe.iar() → z_im  policy.py:156", fillcolor="#fff7e0"];
+    ident[label="_identity()  policy.py:181", fillcolor="#ffe8b3"];
+    gr   [label="grounding 头 fe.tid() → 语言 logits / 初选  policy.py:189", fillcolor="#fff7e0"];
+    open [label="开局窗口(前 3 个 S2 tick):_opening()  policy.py:285\n属性开局 AttrScorer(rollout/opening_zoom.py,frontend.py:13)\n@2 起统一交接:各身份头从开局选择重置", fillcolor="#fff7e0"];
+    head [label="身份头 identity.head 分支  policy.py:210–255\n tah → TahHead.score/write  heads.py:40/55(TAHRelM  train/tah.py:88)\n reid → ReidHead.score  heads.py:215\n assoc → AssocHead.score  heads.py:86(deepsort / motion=OC-SORT 式)\n dam4sam → Dam4samHead.score  heads.py:155 ⇄ DAM4SAM 服务\n oavat → OavatHead.score  head_oavat.py:179\n xattn → 直接用 grounding 选择;oracle → 真值槽位(诊断)", fillcolor="#ffd98a"];
+    conf [label="置信度 = logit top1 − top2  policy.py:258", fillcolor="#fff7e0"];
+    pgif [label="PGIF:_filter()  policy.py:313 → Pgif.step()  pgif.py:78\ngate:MAP≠选择 → 改选 + 记忆重写 + 强制承诺\nabsent:MAP 不在画面 → 不选、撤销记忆写入", fillcolor="#fff7e0"];
+    where[label="_where()  policy.py:386\nconf ≥ conf_tau → _update_commit()(K = 5 滞回)policy.py:356\n承诺 ID 有框 → TargetStateEstimator.update/predict_wp\n(rollout/target_state.py:49/66)→ 覆盖 z_ex;无框 → 保留 EAR 航点", fillcolor="#ffe8b3"];
+    ear -> iar -> ident;
+    ident -> gr -> open -> head -> conf -> pgif;
+    pgif -> where;
+  }
+  act -> ear [label="S2"];
+
+  dit  [label="每个 tick:DiT action_sample()  train/stage2.py:50  (policy.py:166)\n→ (dx, dy, dz, dyaw, search)", fillcolor="#e2f0d9"];
+  where -> dit;
+  act -> dit [label="非 S2:沿用上次 z_ex / z_im", style=dashed];
+
+  reply [label="回复 {action, search_mode, pred_slot, cand_lite(含 gt_idx), committed}  server.py:289\nS2 tick 写 ticks.jsonl(pred / conf / committed / pgif / t_identity_ms …)server.py:270", fillcolor="#eeeeee"];
+  dit -> reply;
+
+  dam [label="DAM4SAM 服务(独立容器 dam4sam-svc:5601–5604)\ncarla_uav_tracking/rollout/dam4sam_service.py", shape=component, fillcolor="#f4e1f7"];
+  head -> dam [dir=both, style=dotted, label="init / track"];
+}

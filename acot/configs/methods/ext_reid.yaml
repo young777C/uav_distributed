@@ -1,0 +1,8 @@
+# External baseline (1006 表 1): DINOv2 crop appearance K-view gallery re-ID, deployable (gallery stores the committed
+# identity; the opening pick before any commitment). Defaults = the 1004 grid centre; tuned on dev-B (1006 §6.1).
+name: ext_reid
+extends: _base
+identity:
+  head: reid
+  reid: {feature: dinov2, bank: 2, topm: 2, tavg: 0.0, motion: 0.0, motion_gate_px: 160.0}
+  conf_tau: 0.05

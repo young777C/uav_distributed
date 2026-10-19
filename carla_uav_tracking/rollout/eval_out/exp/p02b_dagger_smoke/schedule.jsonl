@@ -1,0 +1,7 @@
+{"event": "plan", "seed": 10143, "block": 5, "n_units": 3, "order": [["dag_fa", [98100]], ["dag_fa", [98080]], ["dag_fa", [98060]]], "t": 1791963165.0175025}
+{"event": "start", "arm": "dag_fa", "seeds": [98100], "worker": "w0", "carla_port": 2050, "gpu": 1, "tm_base": 9700, "svc_slot": null, "t": 1791963165.018047}
+{"event": "start", "arm": "dag_fa", "seeds": [98080], "worker": "w1", "carla_port": 2070, "gpu": 2, "tm_base": 9730, "svc_slot": null, "t": 1791963165.0183187}
+{"event": "end", "arm": "dag_fa", "worker": "w1", "requeued": [], "t": 1791963227.825852}
+{"event": "start", "arm": "dag_fa", "seeds": [98060], "worker": "w1", "carla_port": 2070, "gpu": 2, "tm_base": 9730, "svc_slot": null, "t": 1791963227.8259346}
+{"event": "end", "arm": "dag_fa", "worker": "w0", "requeued": [], "t": 1791963337.7803042}
+{"event": "end", "arm": "dag_fa", "worker": "w1", "requeued": [], "t": 1791963440.158003}

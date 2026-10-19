@@ -1,0 +1,18 @@
+# 1006 T0 smoke (dev-B 93060–93061, protocol @2): end-to-end check of the new pieces — policy-commitment metrics, per-step
+# policy RNG, repeat salt, cost logging, uniform hand-over, the ported reid head and the U1 / U2 diagnostics, the
+# randomised dispatcher. NOT a results run.
+name: t0_smoke
+protocol: sim_proxy_v2@2
+seeds: {set: dev2, subset: [[93060, 93061]], expect: 2}
+completeness: {require: allow_skipped, allow_skipped_reasons: ["target stationary"], pairing: intersection}
+schedule: {block: 1, seed: 1006, max_infra_attempts: 3}
+arms:
+  ours:        {method: ours_final, role: main}
+  ours_r1:     {method: ours_final, role: main, repeat: 1}
+  no_pgif:     {method: ours_no_pgif, role: ablation}
+  assoc:       {method: ext_assoc_deepsort, role: baseline}
+  reid:        {method: ext_reid, role: baseline}
+  u1_oracle:   {method: diag_oracle_head, role: diagnostic}
+  u2_gtmem:    {method: diag_gt_memory, role: diagnostic}
+collect: [ticks, trk, gt_access, scenario]
+infra: {runtime: acot}

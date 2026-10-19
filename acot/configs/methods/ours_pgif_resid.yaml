@@ -1,0 +1,5 @@
+# ours_final without confidence weighting: PGIF filter_kind resid (each vote weight 1; decay, absent-hold and gating
+# unchanged) (1006 §5.2, H-P4).
+name: ours_pgif_resid
+extends: ours_final
+filter: {filter_kind: resid}

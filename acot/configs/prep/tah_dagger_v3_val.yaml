@@ -1,0 +1,4 @@
+# P0-2 stage B (1012 §6.2): merge the @3 on-policy DAgger of ours_fast_a (held-out selection seeds) → dagger artefact.
+kind: dagger
+name: tah_dagger_v3_val
+source: {experiment: acot/configs/experiments/p02b_dagger_val.yaml, arm: dag_fa}

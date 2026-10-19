@@ -27,7 +27,9 @@ import numpy as np
 
 
 def _identity_key(cand) -> str:
-    return "target" if cand.is_target else f"distractor_{cand.idx}"
+    # GT identity for SCORING: when the policy re-keys candidates with GT-free tracker ids (1004 deployable v2),
+    # the simulator actor index is kept in `gt_idx`; the scorer always judges against the true actor.
+    return "target" if cand.is_target else f"distractor_{getattr(cand, 'gt_idx', cand.idx)}"
 
 
 class RolloutScorer:
@@ -49,6 +51,8 @@ class RolloutScorer:
         self._id_switches = 0
         self._wrong_run = 0          # consecutive committed-wrong ticks (target present)
         self._max_wrong_run = 0
+        self._correct_run = 0           # committed==target consecutive in-frame ticks (symmetric to wrong run)
+        self._max_correct_run = 0
         self._off_run = 0            # consecutive target-off-screen ticks
         self._failed = False
         # counters
@@ -76,10 +80,19 @@ class RolloutScorer:
         self._reacq_success = 0      # re-locked the TRUE target
         self._reacq_wrong = 0        # committed to a WRONG car during recovery (≥1 tick)
         self._reacq_conv = []        # convergence frames, successful re-acquisitions only
+        # 1004 G13: ray-cast VISIBILITY split of target-present ticks (None = not measured → fields omitted)
+        self._vis_measured = False
+        self._present_vis = 0        # in frame AND not occluded
+        self._sustain_wrong_vis = 0
+        self._inst_wrong_vis = 0
+        self._abstain_vis = 0        # visible target, but no pick this tick
+        self._strict_ok_vis = 0      # visible target and the pick IS the target
+        self._abstain_occ = 0        # target in frame but occluded, no pick
 
     # ------------------------------------------------------------------
     def update(self, *, step: int, target_present: bool, target_central: bool,
-               in_loss_window: bool, info, uav_target_dist: float | None = None):
+               in_loss_window: bool, info, uav_target_dist: float | None = None,
+               target_visible: bool | None = None):
         """info: policy.ActInfo (cand_set + pred_slot). target_present: target in-frame."""
         self.n = step + 1
         cset = getattr(info, "cand_set", None)
@@ -131,6 +144,16 @@ class RolloutScorer:
                 db = "d<30" if td < 30 else ("d30-60" if td < 60 else "d>=60")
                 bd = self._byD.setdefault(db, [0, 0]); bd[0] += wrong; bd[1] += 1
             committed_wrong = self._committed is not None and self._committed != "target"
+            if target_visible is not None:
+                self._vis_measured = True
+                if target_visible:
+                    self._present_vis += 1
+                    self._sustain_wrong_vis += int(committed_wrong)
+                    self._inst_wrong_vis += int(pred_cand is not None and not pred_cand.is_target)
+                    self._abstain_vis += int(pred_cand is None)
+                    self._strict_ok_vis += int(pred_cand is not None and pred_cand.is_target)
+                else:
+                    self._abstain_occ += int(pred_cand is None)
             if committed_wrong:
                 self._sustain_wrong += 1
                 self._wrong_run += 1
@@ -139,11 +162,18 @@ class RolloutScorer:
                     self._failed = True
             else:
                 self._wrong_run = 0
+            if self._committed == "target":
+                self._correct_run += 1
+                self._max_correct_run = max(self._max_correct_run, self._correct_run)
+            else:
+                self._correct_run = 0
             # shortcut: does pred coincide with the nearest (smallest-depth) candidate?
             if cset is not None and len(cset.cands) > 1 and pred_cand is not None:
                 nearest = min(range(len(cset.cands)), key=lambda i: cset.cands[i].depth)
                 self._nearest_pred += int(pred_slot == nearest)
                 self._nearest_denom += 1
+        else:
+            self._correct_run = 0           # target out of frame ends a correct-lock run (conservative)
 
         if uav_target_dist is not None:
             self._dist_sum += float(uav_target_dist); self._dist_n += 1
@@ -184,6 +214,14 @@ class RolloutScorer:
             "track_seconds": self._present / self.fps,
             "centering_rate": self._central / present,
             "max_wrong_run_s": self._max_wrong_run / self.fps,
+            "max_correct_run_s": self._max_correct_run / self.fps,   # longest continuous correct lock (committed)
+            **({"vis_frames": self._present_vis,
+                "occluded_frames": self._present - self._present_vis,
+                "correct_committed_vis": (1 - self._sustain_wrong_vis / self._present_vis) if self._present_vis else None,
+                "correct_strict_vis": (self._strict_ok_vis / self._present_vis) if self._present_vis else None,
+                "abstain_rate_vis": (self._abstain_vis / self._present_vis) if self._present_vis else None,
+                "abstain_rate_occluded": (self._abstain_occ / (self._present - self._present_vis))
+                if self._present > self._present_vis else None} if self._vis_measured else {}),
             "mean_uav_target_dist": (self._dist_sum / self._dist_n) if self._dist_n else None,
             # re-acquisition (guide §7): each target-loss = one attempt (deliberate loss
             # window OR model-caused loss). success = re-locked TRUE target; the no-WM

@@ -1,0 +1,45 @@
+# Host placement (framework §5.6 / §13). NOT part of the scientific hash. Checked by `acot lint --infra` / preflight.
+docker:
+  network: cyh-carla-net            # must already exist — never created
+  carla_container: cyh-carla        # docker exec only
+  carla_mounts: {/workspace: carla_uav_tracking, /data: /nvidia/hque/data/carla_data}
+  policy_image: acot-uav-train:cu118          # legacy runtime (+ pip_preinstall at container start)
+  policy_image_acot: acot-uav-train:cu118-acot   # acot runtime: timm pinned in the image (acot/docker/build_acot_image.sh)
+  policy_container_prefix: acot-    # the only containers acot may `docker run` (policy servers)
+  shm_size: 16g
+runtime: acot                       # policy runtime: acot (acot/runtime/server.py reads the resolved config; framework
+                                    # §14 P2, decision parity with legacy: §20.3) | legacy (rollout/policy_server.py via
+                                    # the P1 wrapper — arms the acot runtime does not implement; experiments that reproduce
+                                    # legacy runs pin it)
+python: {carla_client: python, carla_client_version: "3.8", policy: python, policy_version: "3.11"}
+results_root: carla_uav_tracking/rollout/eval_out/exp      # visible on the host, in the policy container and in cyh-carla
+carla_servers:                       # CARLA RPC port → -graphicsadapter (launch_wd.sh ADAPTER map)
+  - {port: 2000, adapter: 0}
+  - {port: 2010, adapter: 2}
+  - {port: 2020, adapter: 3}
+  - {port: 2030, adapter: 4}
+  - {port: 2040, adapter: 5}
+  - {port: 2050, adapter: 6}
+  - {port: 2060, adapter: 7}
+  - {port: 2070, adapter: 0}
+  - {port: 2080, adapter: 3}
+  - {port: 2090, adapter: 5}
+  - {port: 2230, adapter: 0}
+  - {port: 2250, adapter: 3}
+tm_ports: {base: 9700, per_worker: 30, per_restart: 10}
+policy_gpus: [1, 2, 4, 6]
+reserved: {carla_ports: [[2100, 2190]], gpus: [], containers: []}
+policy_port: 5555
+pip_preinstall: timm==1.0.29         # legacy runtime only (the legacy launchers pip-install it at container start)
+services:
+  dam4sam:
+    instances: [{container: dam4sam-svc, host: dam4sam-svc, port: 5601},   # 1006 G10: one instance per concurrent unit
+                {container: dam4sam-svc, host: dam4sam-svc, port: 5602},
+                {container: dam4sam-svc, host: dam4sam-svc, port: 5603},
+                {container: dam4sam-svc, host: dam4sam-svc, port: 5604}]
+    clients_per_instance: 1          # dam4sam_service.py accepts one connection at a time
+    lifecycle: external              # external: health-check only | managed: docker start + exec the service
+    start_cmd: "source /opt/conda/etc/profile.d/conda.sh && conda activate dam4sam && python /nvidia/hque/code/cyhe/uav-acot-track/carla_uav_tracking/rollout/dam4sam_service.py --model {model} --port {port}"
+watchdog: {first_min: 25, stall_min: 12, max_restarts: 5}
+paths: {repo: /nvidia/hque/code/cyhe/uav-acot-track, data: /nvidia/hque/data/carla_data, hf_cache: ~/.cache/huggingface}
+threads: {omp: 6}

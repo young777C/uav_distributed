@@ -4,6 +4,7 @@ memory update from the GT target embedding. Off-screen frames (tidx=-1) hold mem
 Reports val target-accuracy + mis_follow (1-acc) to compare vs the heuristic stack."""
 from __future__ import annotations
 import argparse, os, sys
+from collections import Counter
 import numpy as np
 
 _REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -53,7 +54,22 @@ def run_epoch(model, episodes, opt, device, train=True, rel=False, fnoise=0.0, p
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--cache", default="runs/tah_cache.pt")
+    ap.add_argument("--cache", nargs="+", default=["runs/tah_cache.pt"],
+                    help="one or more caches; episodes are concatenated in the given order. The validation split is "
+                         "taken from the FIRST cache only (first val_frac of its episodes) — identical to the "
+                         "single-cache behaviour when one cache is given")
+    ap.add_argument("--val-cache", nargs="+", default=None,
+                    help="2026-10-12 P0-2: validate (and select the best epoch) on ALL episodes of these caches and "
+                         "train on ALL episodes of --cache. For a deployment-distribution (DAgger) validation set — "
+                         "the offline teacher-forced val saturates at ~0.99 from epoch 1. Default: legacy split")
+    ap.add_argument("--group-phases", action="store_true",
+                    help="2026-10-12 P0-2: training sequences cut from one source episode into phases (tah_cache "
+                         "--tick-stride; frames carry 'ep') form one group, and each epoch trains on ONE randomly drawn "
+                         "sequence per group → one gradient step per source episode, as without phases (keeps the "
+                         "offline : DAgger step ratio of the recorded recipe). Sequences without 'ep' = own group")
+    ap.add_argument("--seed", type=int, default=None, help="torch / numpy seed (training-seed replicates s0/s1/s2)")
+    ap.add_argument("--save-last", action="store_true", help="also save the final-epoch weights to <out>_last.pt "
+                    "(the offline val split can saturate early, so best-by-val may pick an under-trained epoch)")
     ap.add_argument("--out", default="runs/tah.pt")
     ap.add_argument("--epochs", type=int, default=40)
     ap.add_argument("--lr", type=float, default=3e-4)
@@ -68,10 +84,49 @@ def main():
     a = ap.parse_args()
     import torch
     from train.tah import TAH, TAHRel, TAHRelM
-    data = torch.load(a.cache, weights_only=False)
-    eps = data["episodes"]
-    nval = max(1, int(len(eps) * a.val_frac))
-    val, tr = eps[:nval], eps[nval:]
+    if a.seed is not None:
+        np.random.seed(a.seed); torch.manual_seed(a.seed)
+    datas = [torch.load(c, weights_only=False) for c in a.cache]
+    data = datas[0]
+    assert all(d["d_feat"] == data["d_feat"] for d in datas), "caches disagree on d_feat"
+    first = data["episodes"]
+    if a.val_cache:
+        same = {os.path.realpath(c) for c in a.val_cache} & {os.path.realpath(c) for c in a.cache}
+        if same:
+            raise SystemExit(f"--val-cache overlaps --cache: {sorted(same)}")
+        vdatas = [torch.load(c, weights_only=False) for c in a.val_cache]
+        assert all(d["d_feat"] == data["d_feat"] for d in vdatas), "val caches disagree on d_feat"
+        val = [e for d in vdatas for e in d["episodes"]]
+        tr = [e for d in datas for e in d["episodes"]]
+        print(f"[tah] val caches: " + ", ".join(f"{c} ({len(d['episodes'])} eps)" for c, d in zip(a.val_cache, vdatas)),
+              flush=True)
+    else:
+        nval = max(1, int(len(first) * a.val_frac))
+        val = first[:nval]
+        tr = first[nval:] + [e for d in datas[1:] for e in d["episodes"]]
+    print(f"[tah] caches: " + ", ".join(f"{c} ({len(d['episodes'])} eps)" for c, d in zip(a.cache, datas)), flush=True)
+    groups = None
+    if a.group_phases:
+        if not a.val_cache:
+            raise SystemExit("--group-phases needs --val-cache (the legacy val split could cut through a group)")
+        gidx, groups = {}, []
+        for ci, d in enumerate(datas):
+            for e in d["episodes"]:
+                k = (ci, int(e[0]["ep"])) if "ep" in e[0] else None
+                if k is not None:
+                    assert all(int(fr["ep"]) == k[1] for fr in e), f"sequence mixes source episodes ({a.cache[ci]} {k})"
+                if k is None or k not in gidx:
+                    if k is not None:
+                        gidx[k] = len(groups)
+                    groups.append([e])
+                else:
+                    groups[gidx[k]].append(e)
+        sizes = sorted(Counter(len(g) for g in groups).items())
+        print(f"[tah] --group-phases: {len(tr)} train sequences in {len(groups)} groups (size: count {sizes}); "
+              f"one sequence per group per epoch", flush=True)
+    # checkpoint metadata: the 2026-10-12 options appear only when used (legacy runs keep the legacy schema)
+    recipe = {k: v for k, v in vars(a).items() if not (k in ("val_cache", "group_phases") and not v)}
+    extra = {} if groups is None else {"n_groups": len(groups)}
     arch = "relm" if a.motion else ("rel" if a.rel else "abs")
     print(f"[tah] {len(tr)} train / {len(val)} val episodes; d_feat={data['d_feat']}; "
           f"arch={arch} aug={a.aug} (fnoise={a.fnoise} pjit={a.pjit})", flush=True)
@@ -84,13 +139,23 @@ def main():
     fn, pj, pm = (a.fnoise, a.pjit, True) if a.aug else (0.0, 0.0, False)
     best = 0.0
     for ep in range(a.epochs):
-        tl, ta = run_epoch(model, tr, opt, a.device, train=True, rel=a.rel, fnoise=fn, pjit=pj, perm=pm)
+        tr_ep = tr if groups is None else [g[np.random.randint(len(g))] for g in groups]
+        tl, ta = run_epoch(model, tr_ep, opt, a.device, train=True, rel=a.rel, fnoise=fn, pjit=pj, perm=pm)
         with torch.no_grad():
             vl, va = run_epoch(model, val, opt, a.device, train=False, rel=a.rel)
         if va > best:
-            best = va; torch.save({"model": model.state_dict(), "d_feat": data["d_feat"], "arch": arch}, a.out)
+            best = va
+            torch.save({"model": model.state_dict(), "d_feat": data["d_feat"], "arch": arch,
+                        "recipe": recipe, "n_train_eps": len(tr), "n_val_eps": len(val), **extra,
+                        "best_epoch": ep + 1, "best_val_acc": float(va)}, a.out)
         print(f"[tah] ep{ep+1}/{a.epochs} train_loss={tl:.3f} train_acc={ta:.3f} | "
               f"val_acc={va:.3f} (mis={1-va:.3f}) best={best:.3f}", flush=True)
+    if a.save_last:
+        lp = a.out[:-3] + "_last.pt" if a.out.endswith(".pt") else a.out + "_last"
+        torch.save({"model": model.state_dict(), "d_feat": data["d_feat"], "arch": arch,
+                    "recipe": recipe, "n_train_eps": len(tr), "n_val_eps": len(val), **extra,
+                    "epoch": a.epochs, "val_acc": float(va)}, lp)
+        print(f"[tah] last-epoch weights → {lp}", flush=True)
     print(f"[tah] done. best val_acc={best:.3f} (mis_follow={1-best:.3f}) → {a.out}", flush=True)
     print(f"[tah] compare vs heuristic stack: l5 offline mis ~0.26 (1-0.738); reid-dino gallery.", flush=True)
 

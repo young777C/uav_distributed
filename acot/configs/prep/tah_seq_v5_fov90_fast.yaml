@@ -1,0 +1,15 @@
+# P0-2 (2026-10-12): TAH candidate sequences of the regenerated moving-target data mvp_v5_fov90_fast (64 eps, 90°,
+# QC v3). Differences from tah_seq_v5_fov90: tick_stride 6 → three 0.6 s sequences per episode (phases 0 / 0.2 / 0.4 s),
+# i.e. the deployed S2 tick, so offline and DAgger data share one tick interval; frame_mask train → frames near an
+# in-view unjam relocation or with the camera inside a building are dropped (gap = memory held, as off-screen frames).
+kind: tah_seq
+name: tah_seq_v5_fov90_fast
+dataset: artefact:mvp_v5_fov90_fast
+split: artefact:split_v5_fov90_fast_naive
+model_config: train/config_v5_fov90.yaml
+stride: 2
+tick_stride: 6
+frame_mask: train
+feature_id: dino_s14_lvd142m_cls384_c224_p1.3
+depth_scale: 100.0
+shards: 4

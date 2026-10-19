@@ -1,0 +1,15 @@
+# P0-2 stage B (acot_note/1012_p02_identity_retrain.md §6, fixed 2026-10-14 before collecting): one on-policy DAgger
+# round of the stage-A model at the deployed setting — ours_fast_a + conf_tau 0.05 (= p02_fast_a_devB3 fa_r0), protocol
+# @3, natural opening, repeat 0 — on NEW training seeds (train_dagger_v3: Town05 / 01 / 02 / 04, no test town).
+# collect tah_dagger = per S2 tick the TAH inputs the head scored + GT labels (target's candidate index), written to
+# disk only (acot/runtime/server.py dagger_frame). Merged into artefact tah_dagger_v3 by
+#   python -m acot prep acot/configs/prep/tah_dagger_v3.yaml --gpus G
+name: p02b_dagger_train
+protocol: sim_proxy_v2@3
+seeds: {set: train_dagger_v3, expect: 120}
+completeness: {require: allow_skipped, allow_skipped_reasons: ["target stationary"], pairing: intersection}
+schedule: {block: 5, seed: 10141, max_infra_attempts: 3}
+arms:
+  dag_fa: {method: ours_fast_a, role: main, override: {identity.conf_tau: 0.05}}
+collect: [ticks, tah_dagger, scenario]
+infra: {runtime: acot}

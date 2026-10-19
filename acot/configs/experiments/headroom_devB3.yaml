@@ -1,0 +1,17 @@
+# 1016 §3 step 0 (pre-registered 2026-10-18, before any run of these arms): identity headroom under the current
+# protocol. D = pc_correct(U1 true identity head) − pc_correct(never switch), each the per-seed mean of r0 and r1,
+# averaged over the seeds complete in all four arms. Decision (user-approved thresholds): D ≥ 0.15 → iterate V1–V5;
+# 0.10 ≤ D < 0.15 → iterate, test with n = 160 or r = 2; D < 0.10 → stop iterating the identity module on this protocol.
+# dev-B 93060–93099, protocol @3, natural opening (U1 ignores it: the true target from the first tick).
+name: headroom_devB3
+protocol: sim_proxy_v2@3
+seeds: {set: dev2, subset: [[93060, 93099]], expect: 40}
+completeness: {require: allow_skipped, allow_skipped_reasons: ["target stationary"], pairing: intersection}
+schedule: {block: 5, seed: 10181, max_infra_attempts: 3}
+arms:
+  u1_r0:     {method: diag_oracle_head, role: diagnostic}
+  u1_r1:     {method: diag_oracle_head, role: diagnostic, repeat: 1}
+  sticky_r0: {method: null_sticky, role: baseline}
+  sticky_r1: {method: null_sticky, role: baseline, repeat: 1}
+collect: [ticks, trk, gt_access, scenario]
+infra: {runtime: acot}

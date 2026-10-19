@@ -1,0 +1,78 @@
+{
+  "aggregate": {
+    "episodes": 1,
+    "scored": 1,
+    "SR": 0.0,
+    "mis_follow_sustained": 1.0,
+    "mis_follow_inst": 0.7761194029850746,
+    "id_switches_mean": 0.0,
+    "track_seconds_mean": 13.4,
+    "centering_rate": 0.07462686567164178,
+    "reacquire_attempts_total": 2,
+    "reacquire_success_rate": 0.0,
+    "reacquire_timeout_rate": 1.0,
+    "reacquire_lock_wrong_rate": 1.0,
+    "reacquire_convergence_s_mean": null,
+    "shortcut_nearest_rate": 0.22,
+    "shortcut_target_central_rate": 0.07462686567164178
+  },
+  "episodes": [
+    {
+      "success": false,
+      "mis_follow_inst": 0.7761194029850746,
+      "mis_follow_sustained": 1.0,
+      "id_switches": 0,
+      "track_frames": 134,
+      "track_seconds": 13.4,
+      "centering_rate": 0.07462686567164178,
+      "max_wrong_run_s": 13.4,
+      "max_correct_run_s": 0.0,
+      "vis_frames": 46,
+      "occluded_frames": 88,
+      "correct_committed_vis": 0.0,
+      "correct_strict_vis": 0.0,
+      "abstain_rate_vis": 0.21739130434782608,
+      "abstain_rate_occluded": 0.22727272727272727,
+      "mean_uav_target_dist": 69.7443624005289,
+      "reacquire_attempts": 2,
+      "reacquire_success_rate": 0.0,
+      "reacquire_timeout_rate": 1.0,
+      "reacquire_lock_wrong_rate": 1.0,
+      "reacquire_convergence_s_mean": null,
+      "shortcut_nearest_rate": 0.22,
+      "shortcut_target_central_rate": 0.07462686567164178,
+      "mis_by_N": {
+        "4": 1.0,
+        "5": 1.0,
+        "3": 1.0,
+        "2": 1.0,
+        "1": 1.0
+      },
+      "n_dist": {
+        "4": 12,
+        "5": 18,
+        "3": 6,
+        "2": 6,
+        "1": 6
+      },
+      "mis_by_central": {
+        "central": 1.0,
+        "off": 1.0
+      },
+      "c_dist": {
+        "central": 10,
+        "off": 38
+      },
+      "mis_by_depth": {
+        "d30-60": 1.0
+      },
+      "d_dist": {
+        "d30-60": 48
+      },
+      "steps": 299,
+      "episode_seed": 91001,
+      "duration_seconds": 119.94973635673523,
+      "language": "Focus on the brown Mini Cooper directly ahead, heading east, maintaining a tracking distance of about 30 m."
+    }
+  ]
+}

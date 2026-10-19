@@ -1,0 +1,197 @@
+{
+  "aggregate": {
+    "episodes": 4,
+    "scored": 3,
+    "SR": 0.0,
+    "mis_follow_sustained": 0.3909656658165772,
+    "mis_follow_inst": 0.23735806363767098,
+    "id_switches_mean": 2.3333333333333335,
+    "track_seconds_mean": 50.86666666666667,
+    "centering_rate": 0.3526199328962097,
+    "reacquire_attempts_total": 10,
+    "reacquire_success_rate": 0.5,
+    "reacquire_timeout_rate": 0.5,
+    "reacquire_lock_wrong_rate": 0.4,
+    "reacquire_convergence_s_mean": 6.85,
+    "shortcut_nearest_rate": 0.35666399928869924,
+    "shortcut_target_central_rate": 0.3526199328962097
+  },
+  "episodes": [
+    {
+      "skipped": true,
+      "reason": "target stationary",
+      "episode_seed": 91004
+    },
+    {
+      "success": false,
+      "mis_follow_inst": 0.3106796116504854,
+      "mis_follow_sustained": 0.3925104022191401,
+      "id_switches": 4,
+      "track_frames": 721,
+      "track_seconds": 72.1,
+      "centering_rate": 0.030513176144244106,
+      "max_wrong_run_s": 24.7,
+      "max_correct_run_s": 24.6,
+      "vis_frames": 501,
+      "occluded_frames": 220,
+      "correct_committed_vis": 0.654690618762475,
+      "correct_strict_vis": 0.5748502994011976,
+      "abstain_rate_vis": 0.10578842315369262,
+      "abstain_rate_occluded": 0.6,
+      "mean_uav_target_dist": 102.4806142420155,
+      "reacquire_attempts": 7,
+      "reacquire_success_rate": 0.5714285714285714,
+      "reacquire_timeout_rate": 0.42857142857142855,
+      "reacquire_lock_wrong_rate": 0.5714285714285714,
+      "reacquire_convergence_s_mean": 8.1,
+      "shortcut_nearest_rate": 0.6,
+      "shortcut_target_central_rate": 0.030513176144244106,
+      "mis_by_N": {
+        "4": 0.25,
+        "3": 0.0,
+        "2": 0.5094339622641509,
+        "1": 0.0
+      },
+      "n_dist": {
+        "4": 48,
+        "3": 36,
+        "2": 318,
+        "1": 84
+      },
+      "mis_by_central": {
+        "central": 0.0,
+        "off": 0.375
+      },
+      "c_dist": {
+        "central": 22,
+        "off": 464
+      },
+      "mis_by_depth": {
+        "d30-60": 0.05,
+        "d>=60": 0.45901639344262296
+      },
+      "d_dist": {
+        "d30-60": 120,
+        "d>=60": 366
+      },
+      "steps": 899,
+      "episode_seed": 91005,
+      "duration_seconds": 358.29910707473755,
+      "language": "Pursue the dark red Lincoln sedan directly ahead, heading east, maintaining a tracking distance of about 30 m."
+    },
+    {
+      "success": false,
+      "mis_follow_inst": 0.3355263157894737,
+      "mis_follow_sustained": 0.7105263157894737,
+      "id_switches": 2,
+      "track_frames": 304,
+      "track_seconds": 30.4,
+      "centering_rate": 0.5822368421052632,
+      "max_wrong_run_s": 21.0,
+      "max_correct_run_s": 7.8,
+      "vis_frames": 142,
+      "occluded_frames": 162,
+      "correct_committed_vis": 0.5633802816901409,
+      "correct_strict_vis": 0.4788732394366197,
+      "abstain_rate_vis": 0.18309859154929578,
+      "abstain_rate_occluded": 0.6419753086419753,
+      "mean_uav_target_dist": 41.64874228194161,
+      "reacquire_attempts": 1,
+      "reacquire_success_rate": 0.0,
+      "reacquire_timeout_rate": 1.0,
+      "reacquire_lock_wrong_rate": 0.0,
+      "reacquire_convergence_s_mean": null,
+      "shortcut_nearest_rate": 0.30434782608695654,
+      "shortcut_target_central_rate": 0.5822368421052632,
+      "mis_by_N": {
+        "6": 0.3333333333333333,
+        "5": 0.6,
+        "4": 1.0,
+        "3": 1.0
+      },
+      "n_dist": {
+        "6": 72,
+        "5": 60,
+        "4": 6,
+        "3": 4
+      },
+      "mis_by_central": {
+        "central": 0.0,
+        "off": 0.5555555555555556
+      },
+      "c_dist": {
+        "central": 16,
+        "off": 126
+      },
+      "mis_by_depth": {
+        "d30-60": 0.2,
+        "d<30": 1.0
+      },
+      "d_dist": {
+        "d30-60": 90,
+        "d<30": 52
+      },
+      "steps": 483,
+      "episode_seed": 91006,
+      "duration_seconds": 181.61480569839478,
+      "language": "Pursue the red Seat Leon directly ahead, heading west, maintaining a tracking distance of about 30 m."
+    },
+    {
+      "success": false,
+      "mis_follow_inst": 0.0658682634730539,
+      "mis_follow_sustained": 0.06986027944111776,
+      "id_switches": 1,
+      "track_frames": 501,
+      "track_seconds": 50.1,
+      "centering_rate": 0.44510978043912175,
+      "max_wrong_run_s": 3.5,
+      "max_correct_run_s": 46.6,
+      "vis_frames": 500,
+      "occluded_frames": 1,
+      "correct_committed_vis": 0.9319999999999999,
+      "correct_strict_vis": 0.912,
+      "abstain_rate_vis": 0.024,
+      "abstain_rate_occluded": 0.0,
+      "mean_uav_target_dist": 57.46652284514329,
+      "reacquire_attempts": 2,
+      "reacquire_success_rate": 0.5,
+      "reacquire_timeout_rate": 0.5,
+      "reacquire_lock_wrong_rate": 0.0,
+      "reacquire_convergence_s_mean": 5.6,
+      "shortcut_nearest_rate": 0.1656441717791411,
+      "shortcut_target_central_rate": 0.44510978043912175,
+      "mis_by_N": {
+        "6": 0.04,
+        "2": 0.0,
+        "5": 0.4,
+        "4": 1.0
+      },
+      "n_dist": {
+        "6": 450,
+        "2": 6,
+        "5": 30,
+        "4": 12
+      },
+      "mis_by_central": {
+        "central": 0.0,
+        "off": 0.15272727272727274
+      },
+      "c_dist": {
+        "central": 223,
+        "off": 275
+      },
+      "mis_by_depth": {
+        "d30-60": 0.2692307692307692,
+        "d<30": 0.0
+      },
+      "d_dist": {
+        "d30-60": 156,
+        "d<30": 342
+      },
+      "steps": 680,
+      "episode_seed": 91007,
+      "duration_seconds": 251.15158915519714,
+      "language": "Keep tracking the dark green Seat Leon directly ahead, heading west, maintaining a tracking distance of about 35 m."
+    }
+  ]
+}

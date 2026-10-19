@@ -1,0 +1,10 @@
+# TAH candidate sequences of the 90° replica (= the legacy runs/tah_v90/off90.pt, now with an explicit split).
+kind: tah_seq
+name: tah_seq_v5_fov90
+dataset: artefact:mvp_full_v5_fov90
+split: artefact:split_v5_fov90_naive
+model_config: train/config_v5_fov90.yaml
+stride: 2
+feature_id: dino_s14_lvd142m_cls384_c224_p1.3
+depth_scale: 100.0
+shards: 4

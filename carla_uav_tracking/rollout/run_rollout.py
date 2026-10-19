@@ -98,9 +98,23 @@ def main() -> int:
                     help="P2a-2 positive control: anchor the road prediction at the TRUE CURRENT "
                          "target pos every tick (bounds road's value if last-seen staleness+branch "
                          "error were removed). Implies --predict-road; pair with --ex-source road.")
+    ap.add_argument("--vis-raycast", action="store_true",
+                    help="1004 G13: ray-cast occlusion flags (target + distractors) → policy (gt_candidates[4]) and "
+                         "scorer (visible-frame metrics)")
+    ap.add_argument("--retarget-tick", type=int, default=None,
+                    help="1003_dynamic-retarget-design.md S1: at this tick, swap in a currently-visible "
+                         "distractor as the new GT target (scripted, single event/episode) and flag "
+                         "Observation.retarget_event for that tick. Pair with the policy server's "
+                         "--event-override. None=off (default, no behavior change).")
+    ap.add_argument("--hires", type=int, default=1,
+                    help="1004 opening fix: k× resolution opening camera (ticks 0/6/12) for zoom-and-verify crops")
     a = ap.parse_args()
 
     cfg = load_config()
+    if a.town:   # evaluation on a town outside the data-gen list (e.g. held-out Town03): keep the scene manager on it
+        towns = cfg.setdefault("environment", {}).setdefault("towns", [])
+        if a.town not in towns:
+            towns.append(a.town)
     client = carla.Client("127.0.0.1", a.carla_port)
     client.set_timeout(60.0)   # first load_world after a fresh CARLA boot is slow (port-open != ready)
     world = client.load_world(a.town) if a.town else client.get_world()
@@ -117,7 +131,8 @@ def main() -> int:
             env = StudentRolloutEnv(scene, world, policy=policy, scorer=scorer,
                                     fps=10, resolution=(512, 512), expert_control=a.expert_control,
                                     predict_road=a.predict_road or a.road_oracle,
-                                    road_oracle=a.road_oracle)
+                                    road_oracle=a.road_oracle, vis_raycast=a.vis_raycast, hires_k=a.hires,
+                                    retarget_tick=a.retarget_tick)
             summary = env.run(max_steps=a.steps)
             rows.append(summary)
             tag = "SKIP" if summary.get("skipped") else (
@@ -125,6 +140,9 @@ def main() -> int:
             print(f"[rollout] ep{ep} seed={a.seed_base+ep} [{tag}] "
                   f"mis_follow_sus={summary.get('mis_follow_sustained')} "
                   f"track_s={summary.get('track_seconds')}", flush=True)
+            if a.out:   # incremental save: a simulator crash mid-run no longer loses the finished episodes
+                with open(a.out + ".partial", "w") as f:
+                    json.dump({"aggregate": _aggregate(rows), "episodes": rows, "partial": True}, f, indent=2, default=str)
     finally:
         policy.close()
 

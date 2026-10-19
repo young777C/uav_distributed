@@ -1,0 +1,9 @@
+# L0 golden replica of runs/opening_dump/f_v4.sh (full-length closed loop with the v4 opening, dev, 5 × 4 seeds).
+name: legacy_f_v4
+protocol: sim_proxy_v2@1
+seeds: {set: dev, expect: 20}
+arms:
+  zo4: {method: ours_final, ablation: opening,
+        override: {frontend.opening.agg: last, frontend.opening.force_final: true, frontend.opening.seed_asd: 3.0}}
+collect: [ticks]
+infra: {runtime: legacy}           # reproduces / documents a run of the legacy policy runtime (P1 path)

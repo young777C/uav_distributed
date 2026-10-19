@@ -1,0 +1,9 @@
+# Null reference "never switch" (1016 §3 step 0): the identity head is bound to the opening pick's key (re-bound at
+# every opening tick, the last one = the opening's accumulated conclusion) and afterwards votes only for that key,
+# abstaining when it has no box (acot/runtime/policy.py, kind sticky). Shared perception / opening / commitment rule /
+# WHERE / DiT unchanged; no PGIF. The head's margin is 1 (vote) or 0 (abstain), so any conf_tau in (0, 1] is equivalent.
+name: null_sticky
+extends: _base
+identity:
+  head: sticky
+  conf_tau: 0.05

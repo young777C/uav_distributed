@@ -10,7 +10,7 @@ for _p in (os.path.dirname(_CARLA), _CARLA):
     if _p not in sys.path: sys.path.insert(0, _p)
 from acot_probe.projection import project_point
 from rollout.candidates import Candidate
-from train.dataset import _select_episodes
+from train.dataset import _select_episodes, _frame_keep
 
 
 def _mk(world, is_t, idx, campose, W, H, fov, vsz, bmin, bmax):
@@ -28,7 +28,14 @@ def main():
     ap.add_argument("--out", default="runs/tah_cache.pt")
     ap.add_argument("--stride", type=int, default=2)
     ap.add_argument("--device", default="cuda:0")
+    ap.add_argument("--shard", type=int, default=0); ap.add_argument("--nshard", type=int, default=1)  # parallel build
+    ap.add_argument("--tick-stride", type=int, default=None,
+                    help="2026-10-12 P0-2: emit one sequence per phase p in range(0, K, stride) holding the frames "
+                         "i %% K == p, i.e. sequences at the deployed S2 tick (K = 6 → 0.6 s) instead of one 0.2 s "
+                         "sequence; default None = legacy single sequence")
     a = ap.parse_args()
+    if a.tick_stride is not None and (a.tick_stride <= 0 or a.tick_stride % a.stride):
+        raise SystemExit(f"--tick-stride {a.tick_stride} must be a positive multiple of --stride {a.stride}")
     import torch
     from train.reid_resolution_probe import _load_dino, _dino_feats
     cfg = yaml.safe_load(open(a.config)); ic = cfg["image"]
@@ -36,15 +43,22 @@ def main():
     vsz, bmin, bmax = float(ic["vehicle_size_m"]), float(ic["box_min_px"]), float(ic["box_max_px"])
     dino = _load_dino("vit_small_patch14_dinov2.lvd142m", a.device)
     eps = _select_episodes(cfg, "train") + _select_episodes(cfg, "val")
-    episodes = []
+    episodes, order = [], []
     for ei, ep in enumerate(eps):
+        if ei % a.nshard != a.shard:
+            continue
         with h5py.File(ep, "r") as fh:
             n = fh["rgb"].shape[0]
             tgt = np.stack([fh["target/tx"][:], fh["target/ty"][:], fh["target/tz"][:]], -1)
             dpos = fh["distractors/positions"][:]                       # (T,D,6)
             cam = np.stack([fh[f"state/cam_{k}"][:] for k in ["x","y","z","pitch","yaw"]], -1)
+            keep = _frame_keep(cfg, fh)                                 # None unless cfg data.frame_mask: train
+            if keep is not None and len(keep) != n:
+                raise SystemExit(f"{ep}: frame mask has {len(keep)} frames, rgb has {n}")
             frames = []
             for i in range(0, n, a.stride):
+                if keep is not None and not keep[i]:
+                    continue                    # masked frame dropped = a gap, handled like an off-screen frame
                 campose = cam[i]
                 cands, aidx, tflag = [], [], []
                 c = _mk(tgt[i], True, -1, campose, W, H, fov, vsz, bmin, bmax)
@@ -57,11 +71,19 @@ def main():
                 feats = feats / (np.linalg.norm(feats, axis=1, keepdims=True) + 1e-8)
                 pos = np.array([[c.u / W, c.v / H, c.depth / 100.0] for c in cands], np.float32)
                 tidx = tflag.index(1) if 1 in tflag else -1
-                frames.append({"feat": feats.astype(np.float16), "pos": pos,
-                               "aidx": np.array(aidx, np.int16), "tidx": tidx})
-            if frames: episodes.append(frames)
-        print(f"[tah_cache] ep{ei} {os.path.basename(ep)}: {len(frames)} frames (total eps={len(episodes)})", flush=True)
-    torch.save({"episodes": episodes, "d_feat": 384}, a.out)
+                fr = {"feat": feats.astype(np.float16), "pos": pos, "aidx": np.array(aidx, np.int16), "tidx": tidx}
+                if a.tick_stride is not None:   # extra keys (ignored unless tah_train --group-phases)
+                    fr["fi"] = i                # source frame index
+                    fr["ep"] = ei               # source episode = the group of its phase sequences
+                frames.append(fr)
+            seqs = [frames] if a.tick_stride is None else \
+                [[f for f in frames if f["fi"] % a.tick_stride == p] for p in range(0, a.tick_stride, a.stride)]
+            for s in seqs:
+                if s: episodes.append(s); order.append(ei)   # ei = position in the full ordered list
+        print(f"[tah_cache] ep{ei} {os.path.basename(ep)}: {len(frames)} frames in {sum(1 for s in seqs if s)} "
+              f"sequence(s) (total seqs={len(episodes)})", flush=True)
+    torch.save({"episodes": episodes, "d_feat": 384, "order": order, "fov": fov, "tick_stride": a.tick_stride,
+                "frame_mask": cfg["data"].get("frame_mask")}, a.out)
     nf = sum(len(e) for e in episodes)
     print(f"[tah_cache] wrote {a.out}: {len(episodes)} episodes, {nf} frames", flush=True)
 

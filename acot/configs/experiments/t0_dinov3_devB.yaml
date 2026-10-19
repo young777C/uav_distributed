@@ -1,0 +1,17 @@
+# 1006 DINOv3 trial (exploratory, dev-B, protocol @2, natural opening): does a DINOv3 crop backbone help Ours?
+#   ours        = current model (DINOv2, offline + DAgger)          ours_v3zs = DINOv3 features, TAHRelM unchanged
+#   ours_v2off  = DINOv2, retrained offline-only                    ours_v3off = DINOv3, retrained offline-only
+# (ours_v2off vs ours_v3off is the data-matched backbone comparison); ours_rt_s0 = G13 retrain-equivalence arm. Tracker ids / perception stay DINOv2 for all.
+name: t0_dinov3_devB
+protocol: sim_proxy_v2@2
+seeds: {set: dev2, subset: [[93060, 93099]], expect: 40}
+completeness: {require: allow_skipped, allow_skipped_reasons: ["target stationary"], pairing: intersection}
+schedule: {block: 5, seed: 10065, max_infra_attempts: 3}
+arms:
+  ours:        {method: ours_final, role: main}
+  ours_v3zs:   {method: ours_dinov3, role: ablation}
+  ours_v2off:  {method: ours_v2off, role: ablation}
+  ours_v3off:  {method: ours_v3off, role: ablation}
+  ours_rt_s0:  {method: ours_rt_s0, role: ablation}        # G13 closed-loop equivalence (vs ours)
+collect: [ticks, gt_access, scenario]
+infra: {runtime: acot}

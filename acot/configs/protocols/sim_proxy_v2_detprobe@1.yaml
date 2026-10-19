@@ -1,0 +1,9 @@
+# 1006 CARLA determinism probe: = sim_proxy_v2@2 + env_determinism {sync_setup, reload_world}. Used ONLY by
+# t0_determinism2 to test whether identical runs become identical; if adopted, the switches go into sim_proxy_v2@3.
+extends: sim_proxy_v2@2
+name: sim_proxy_v2_detprobe
+version: 1
+aliases: []
+description: sim_proxy_v2@2 + synchronous scene setup + reload_world per seed (determinism probe)
+sim:
+  env_determinism: {sync_setup: true, reload_world: true}

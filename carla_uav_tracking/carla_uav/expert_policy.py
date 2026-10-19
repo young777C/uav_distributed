@@ -125,6 +125,15 @@ class ExpertPolicy:
         dz += noise[2]
         dyaw += noise[3] * 5.0  # scale yaw noise slightly higher
 
+        # 2026-10-09 (velocity_limits.strict, default off): hard cap on the FINAL horizontal speed — the PID clips
+        # dx and dy separately (diagonal up to √2·xy_max) and the noise is added after that clip.
+        lim = self._cfg.get("velocity_limits", {}) or {}
+        if lim.get("strict"):
+            cap = float(lim.get("xy_max", 15.0)) * float(self._current_style.pid_config.dt)
+            nrm = float(np.hypot(dx, dy))
+            if nrm > cap:
+                dx, dy = dx * cap / nrm, dy * cap / nrm
+
         return (dx, dy, dz, dyaw)
 
     @property

@@ -1,0 +1,1563 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="1440pt" height="1044pt" viewBox="0 0 1440 1044" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:date>2026-10-06T06:55:53.234012</dc:date>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.10.9, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 1044 
+L 1440 1044 
+L 1440 0 
+L 0 0 
+z
+" style="fill: #fcfcfb"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 186.319951 146.16 
+Q 210.959977 146.16 233.811149 146.16 
+" clip-path="url(#p52f92b7c4f)" style="fill: none; stroke: #1baf7a; stroke-width: 1.6; stroke-linecap: round"/>
+    <path d="M 229.411149 143.96 
+L 233.811149 146.16 
+L 229.411149 148.36 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #1baf7a; stroke: #1baf7a; stroke-width: 1.6; stroke-linecap: round"/>
+   </g>
+   <g id="patch_3">
+    <path d="M 186.319951 223.416 
+Q 210.959977 223.416 233.811149 223.416 
+" clip-path="url(#p52f92b7c4f)" style="fill: none; stroke: #1baf7a; stroke-width: 1.6; stroke-linecap: round"/>
+    <path d="M 229.411149 221.216 
+L 233.811149 223.416 
+L 229.411149 225.616 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #1baf7a; stroke: #1baf7a; stroke-width: 1.6; stroke-linecap: round"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 186.17335 376.586488 
+Q 203.757845 383.669132 220.097853 390.250524 
+" clip-path="url(#p52f92b7c4f)" style="fill: none; stroke: #52514e; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 216.838421 386.565948 
+L 220.097853 390.250524 
+L 215.194533 390.647325 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #52514e; stroke: #52514e; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_1">
+    <path d="M 184.32 313.2 
+L 204.48 313.2 
+L 204.48 281.88 
+" clip-path="url(#p52f92b7c4f)" style="fill: none; stroke: #1baf7a; stroke-width: 1.6; stroke-linecap: square"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 206.48127 281.88 
+Q 221.039684 281.88 233.809245 281.88 
+" clip-path="url(#p52f92b7c4f)" style="fill: none; stroke: #1baf7a; stroke-width: 1.6; stroke-linecap: round"/>
+    <path d="M 229.409245 279.68 
+L 233.809245 281.88 
+L 229.409245 284.08 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #1baf7a; stroke: #1baf7a; stroke-width: 1.6; stroke-linecap: round"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 186.318105 522 
+Q 203.757317 522 219.854887 522 
+" clip-path="url(#p52f92b7c4f)" style="fill: none; stroke: #52514e; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 215.454887 519.8 
+L 219.854887 522 
+L 215.454887 524.2 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #52514e; stroke: #52514e; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_2">
+    <path d="M 184.32 490.68 
+L 210.24 490.68 
+L 210.24 433.26 
+" clip-path="url(#p52f92b7c4f)" style="fill: none; stroke: #52514e; stroke-width: 1.2; stroke-linecap: square"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 212.242852 433.26 
+Q 216.722282 433.26 219.860071 433.26 
+" clip-path="url(#p52f92b7c4f)" style="fill: none; stroke: #52514e; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 215.460071 431.06 
+L 219.860071 433.26 
+L 215.460071 435.46 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #52514e; stroke: #52514e; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_3">
+    <path d="M 184.32 156.6 
+L 195.84 156.6 
+L 195.84 495.9 
+" clip-path="url(#p52f92b7c4f)" style="fill: none; stroke: #898781; stroke-linecap: square"/>
+   </g>
+   <g id="patch_8">
+    <path d="M 197.840566 495.9 
+Q 209.518846 495.9 220.079091 495.9 
+" clip-path="url(#p52f92b7c4f)" style="fill: none; stroke: #898781; stroke-linecap: round"/>
+    <path d="M 215.679091 493.7 
+L 220.079091 495.9 
+L 215.679091 498.1 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #898781; stroke: #898781; stroke-linecap: round"/>
+   </g>
+   <g id="patch_9">
+    <path d="M 380.723203 396.72 
+Q 388.802003 396.72 395.539161 396.72 
+" clip-path="url(#p52f92b7c4f)" style="fill: none; stroke: #52514e; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 391.139161 394.52 
+L 395.539161 396.72 
+L 391.139161 398.92 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #52514e; stroke: #52514e; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="patch_10">
+    <path d="M 478.08 337.301974 
+Q 478.08 325.728134 478.08 315.719542 
+" clip-path="url(#p52f92b7c4f)" style="fill: none; stroke: #0b0b0b; stroke-width: 1.4; stroke-linecap: round"/>
+    <path d="M 475.88 320.119542 
+L 478.08 315.719542 
+L 480.28 320.119542 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #0b0b0b; stroke: #0b0b0b; stroke-width: 1.4; stroke-linecap: round"/>
+   </g>
+   <g id="patch_11">
+    <path d="M 388.8 173.218359 
+Q 388.8 175.393297 388.8 176.226594 
+" clip-path="url(#p52f92b7c4f)" style="fill: none; stroke: #1baf7a; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 391 171.826594 
+L 388.8 176.226594 
+L 386.6 171.826594 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #1baf7a; stroke: #1baf7a; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="patch_12">
+    <path d="M 388.8 252.562359 
+Q 388.8 254.737297 388.8 255.570594 
+" clip-path="url(#p52f92b7c4f)" style="fill: none; stroke: #1baf7a; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 391 251.170594 
+L 388.8 255.570594 
+L 386.6 251.170594 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #1baf7a; stroke: #1baf7a; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="patch_13">
+    <path d="M 556.379297 283.681002 
+Q 583.200059 279.791991 608.029188 276.191768 
+" clip-path="url(#p52f92b7c4f)" style="fill: none; stroke: #1baf7a; stroke-width: 1.8; stroke-linecap: round"/>
+    <path d="M 603.359028 274.645934 
+L 608.029188 276.191768 
+L 603.990425 279.000396 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #1baf7a; stroke: #1baf7a; stroke-width: 1.8; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_4">
+    <path d="M 374.4 448.92 
+L 374.4 457.272 
+" clip-path="url(#p52f92b7c4f)" style="fill: none; stroke: #52514e; stroke-width: 1.2; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_5">
+    <path d="M 302.4 448.92 
+L 302.4 457.272 
+L 570.24 457.272 
+L 570.24 161.82 
+" clip-path="url(#p52f92b7c4f)" style="fill: none; stroke: #52514e; stroke-width: 1.2; stroke-linecap: square"/>
+   </g>
+   <g id="patch_14">
+    <path d="M 572.24083 161.82 
+Q 591.118185 161.82 608.653899 161.82 
+" clip-path="url(#p52f92b7c4f)" style="fill: none; stroke: #52514e; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 604.253899 159.62 
+L 608.653899 161.82 
+L 604.253899 164.02 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #52514e; stroke: #52514e; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="patch_15">
+    <path d="M 388.8 586.635732 
+Q 388.8 594.035358 388.8 600.093342 
+" clip-path="url(#p52f92b7c4f)" style="fill: none; stroke: #52514e; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 391 595.693342 
+L 388.8 600.093342 
+L 386.6 595.693342 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #52514e; stroke: #52514e; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="patch_16">
+    <path d="M 555.673535 523.538855 
+Q 575.9983 548.097946 595.467678 571.623444 
+" clip-path="url(#p52f92b7c4f)" style="fill: none; stroke: #52514e; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 594.357248 566.83106 
+L 595.467678 571.623444 
+L 590.967513 569.636358 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #52514e; stroke: #52514e; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="patch_17">
+    <path d="M 383.60061 668.16 
+Q 489.599469 668.16 594.256686 668.16 
+" clip-path="url(#p52f92b7c4f)" style="fill: none; stroke: #52514e; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 589.856686 665.96 
+L 594.256686 668.16 
+L 589.856686 670.36 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #52514e; stroke: #52514e; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_6">
+    <path d="M 475.2 694.26 
+L 475.2 776.736 
+L 953.28 776.736 
+L 953.28 642.06 
+" clip-path="url(#p52f92b7c4f)" style="fill: none; stroke-dasharray: 3.6,2.4; stroke-dashoffset: 0; stroke: #52514e; stroke-width: 1.2"/>
+   </g>
+   <g id="patch_18">
+    <path d="M 955.277227 642.06 
+Q 962.640391 642.06 968.661915 642.06 
+" clip-path="url(#p52f92b7c4f)" style="fill: none; stroke-dasharray: 3.6,2.4; stroke-dashoffset: 0; stroke: #52514e; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 964.261915 639.86 
+L 968.661915 642.06 
+L 964.261915 644.26 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #52514e; stroke-dasharray: 3.6,2.4; stroke-dashoffset: 0; stroke: #52514e; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_7">
+    <path d="M 554.4 375.84 
+L 586.08 375.84 
+L 586.08 327.816 
+L 950.4 327.816 
+L 950.4 310.068 
+" clip-path="url(#p52f92b7c4f)" style="fill: none; stroke: #0b0b0b; stroke-width: 1.2; stroke-linecap: square"/>
+   </g>
+   <g id="patch_19">
+    <path d="M 951.040503 308.173392 
+Q 968.400302 256.823105 985.330428 206.743795 
+" clip-path="url(#p52f92b7c4f)" style="fill: none; stroke: #0b0b0b; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 981.837158 210.207473 
+L 985.330428 206.743795 
+L 986.005408 211.616617 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #0b0b0b; stroke: #0b0b0b; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="patch_20">
+    <path d="M 763.2 337.304268 
+Q 763.2 329.904642 763.2 324.070265 
+" clip-path="url(#p52f92b7c4f)" style="fill: none; stroke: #2a78d6; stroke-width: 1.4; stroke-linecap: round"/>
+    <path d="M 761 328.470265 
+L 763.2 324.070265 
+L 765.4 328.470265 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #2a78d6; stroke: #2a78d6; stroke-width: 1.4; stroke-linecap: round"/>
+   </g>
+   <g id="patch_21">
+    <path d="M 916.399512 276.66 
+Q 950.397857 276.66 982.607347 276.66 
+" clip-path="url(#p52f92b7c4f)" style="fill: none; stroke: #2a78d6; stroke-width: 1.6; stroke-linecap: round"/>
+    <path d="M 978.207347 274.46 
+L 982.607347 276.66 
+L 978.207347 278.86 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #2a78d6; stroke: #2a78d6; stroke-width: 1.6; stroke-linecap: round"/>
+   </g>
+   <g id="patch_22">
+    <path d="M 929.936426 468.152183 
+Q 950.399543 438.480662 970.227916 409.729522 
+" clip-path="url(#p52f92b7c4f)" style="fill: none; stroke: #52514e; stroke-linecap: round"/>
+    <path d="M 965.918823 412.102645 
+L 970.227916 409.729522 
+L 969.540959 414.60067 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #52514e; stroke: #52514e; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_8">
+    <path d="M 928.8 454.14 
+L 940.32 454.14 
+L 940.32 496.944 
+" clip-path="url(#p52f92b7c4f)" style="fill: none"/>
+   </g>
+   <g id="patch_23">
+    <path d="M 985.020117 311.518602 
+Q 957.598055 340.346045 931.408916 367.877377 
+" clip-path="url(#p52f92b7c4f)" style="fill: none; stroke: #eb6834; stroke-width: 1.6; stroke-linecap: round"/>
+    <path d="M 936.035509 366.205663 
+L 931.408916 367.877377 
+L 932.8475 363.173074 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #eb6834; stroke: #eb6834; stroke-width: 1.6; stroke-linecap: round"/>
+   </g>
+   <g id="patch_24">
+    <path d="M 1200.24 320.420065 
+Q 1200.24 328.33868 1200.24 334.468441 
+" clip-path="url(#p52f92b7c4f)" style="fill: none; stroke: #eb6834; stroke-width: 1.6; stroke-linecap: round"/>
+    <path d="M 1202.44 330.068441 
+L 1200.24 334.468441 
+L 1198.04 330.068441 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #eb6834; stroke: #eb6834; stroke-width: 1.6; stroke-linecap: round"/>
+   </g>
+   <g id="patch_25">
+    <path d="M 1200.24 424.820065 
+Q 1200.24 432.73868 1200.24 439.315655 
+" clip-path="url(#p52f92b7c4f)" style="fill: none; stroke: #52514e; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 1202.44 434.915655 
+L 1200.24 439.315655 
+L 1198.04 434.915655 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #52514e; stroke: #52514e; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="patch_26">
+    <path d="M 969.99873 605.52 
+Q 950.398907 605.52 932.140725 605.52 
+" clip-path="url(#p52f92b7c4f)" style="fill: none; stroke: #52514e; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 936.540725 607.72 
+L 932.140725 605.52 
+L 936.540725 603.32 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #52514e; stroke: #52514e; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="patch_27">
+    <path d="M 930.80127 720.36 
+Q 950.401093 720.36 968.659275 720.36 
+" clip-path="url(#p52f92b7c4f)" style="fill: none; stroke: #52514e; stroke-width: 1.2; stroke-linecap: round"/>
+    <path d="M 964.259275 718.16 
+L 968.659275 720.36 
+L 964.259275 722.56 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #52514e; stroke: #52514e; stroke-width: 1.2; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_9">
+    <path d="M 97.92 756.9 
+L 97.92 766.296 
+L 584.64 766.296 
+L 584.64 741.24 
+" clip-path="url(#p52f92b7c4f)" style="fill: none; stroke-dasharray: 3,2; stroke-dashoffset: 0; stroke: #898781"/>
+   </g>
+   <g id="patch_28">
+    <path d="M 586.642852 741.24 
+Q 591.122282 741.24 594.483677 741.24 
+" clip-path="url(#p52f92b7c4f)" style="fill: none; stroke-dasharray: 3,2; stroke-dashoffset: 0; stroke: #898781; stroke-linecap: round"/>
+    <path d="M 590.083677 739.04 
+L 594.483677 741.24 
+L 590.083677 743.44 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #898781; stroke-dasharray: 3,2; stroke-dashoffset: 0; stroke: #898781; stroke-linecap: round"/>
+   </g>
+   <g id="line2d_10">
+    <path d="M 1200.24 756.9 
+L 1200.24 791.352 
+L 5.04 791.352 
+L 5.04 527.22 
+" clip-path="url(#p52f92b7c4f)" style="fill: none; stroke: #52514e; stroke-width: 1.1; stroke-linecap: square"/>
+   </g>
+   <g id="patch_29">
+    <path d="M 7.042852 527.22 
+Q 8.282375 527.22 8.29206 527.22 
+" clip-path="url(#p52f92b7c4f)" style="fill: none; stroke: #52514e; stroke-width: 1.1; stroke-linecap: round"/>
+    <path d="M 3.89206 525.02 
+L 8.29206 527.22 
+L 3.89206 529.42 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #52514e; stroke: #52514e; stroke-width: 1.1; stroke-linecap: round"/>
+   </g>
+   <g id="patch_30">
+    <path d="M 234 321.03 
+L 543.6 321.03 
+Q 558 321.03 558 310.59 
+L 558 93.438 
+Q 558 82.998 543.6 82.998 
+L 234 82.998 
+Q 219.6 82.998 219.6 93.438 
+L 219.6 310.59 
+Q 219.6 321.03 234 321.03 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #d9f2e8; stroke: #1baf7a; stroke-width: 2.2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_31">
+    <path d="M 608.4 321.03 
+L 918 321.03 
+Q 932.4 321.03 932.4 310.59 
+L 932.4 93.438 
+Q 932.4 82.998 918 82.998 
+L 608.4 82.998 
+Q 594 82.998 594 93.438 
+L 594 310.59 
+Q 594 321.03 608.4 321.03 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #dbe8f8; stroke: #2a78d6; stroke-width: 2.2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_32">
+    <path d="M 982.8 321.03 
+L 1417.68 321.03 
+Q 1432.08 321.03 1432.08 310.59 
+L 1432.08 93.438 
+Q 1432.08 82.998 1417.68 82.998 
+L 982.8 82.998 
+Q 968.4 82.998 968.4 93.438 
+L 968.4 310.59 
+Q 968.4 321.03 982.8 321.03 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #fde3d7; stroke: #eb6834; stroke-width: 2.2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_33">
+    <path d="M 19.44 169.65 
+L 176.4 169.65 
+Q 187.92 169.65 187.92 161.298 
+L 187.92 93.438 
+Q 187.92 85.086 176.4 85.086 
+L 19.44 85.086 
+Q 7.92 85.086 7.92 93.438 
+L 7.92 161.298 
+Q 7.92 169.65 19.44 169.65 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #ffffff; stroke: #b9b8b2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_34">
+    <path d="M 19.44 268.83 
+L 176.4 268.83 
+Q 187.92 268.83 187.92 260.478 
+L 187.92 193.662 
+Q 187.92 185.31 176.4 185.31 
+L 19.44 185.31 
+Q 7.92 185.31 7.92 193.662 
+L 7.92 260.478 
+Q 7.92 268.83 19.44 268.83 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #ffffff; stroke: #b9b8b2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_35">
+    <path d="M 19.44 451.53 
+L 176.4 451.53 
+Q 187.92 451.53 187.92 443.178 
+L 187.92 292.842 
+Q 187.92 284.49 176.4 284.49 
+L 19.44 284.49 
+Q 7.92 284.49 7.92 292.842 
+L 7.92 443.178 
+Q 7.92 451.53 19.44 451.53 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #ffffff; stroke: #b9b8b2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_36">
+    <path d="M 19.44 587.25 
+L 176.4 587.25 
+Q 187.92 587.25 187.92 578.898 
+L 187.92 475.542 
+Q 187.92 467.19 176.4 467.19 
+L 19.44 467.19 
+Q 7.92 467.19 7.92 475.542 
+L 7.92 578.898 
+Q 7.92 587.25 19.44 587.25 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #ffffff; stroke: #b9b8b2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_37">
+    <path d="M 19.44 759.51 
+L 176.4 759.51 
+Q 187.92 759.51 187.92 751.158 
+L 187.92 700.002 
+Q 187.92 691.65 176.4 691.65 
+L 19.44 691.65 
+Q 7.92 691.65 7.92 700.002 
+L 7.92 751.158 
+Q 7.92 759.51 19.44 759.51 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #ffffff; stroke: #b9b8b2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_38">
+    <path d="M 245.52 173.826 
+L 532.08 173.826 
+Q 543.6 173.826 543.6 165.474 
+L 543.6 126.846 
+Q 543.6 118.494 532.08 118.494 
+L 245.52 118.494 
+Q 234 118.494 234 126.846 
+L 234 165.474 
+Q 234 173.826 245.52 173.826 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #ffffff; stroke: #1baf7a; stroke-width: 1.2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_39">
+    <path d="M 245.52 253.17 
+L 532.08 253.17 
+Q 543.6 253.17 543.6 244.818 
+L 543.6 185.31 
+Q 543.6 176.958 532.08 176.958 
+L 245.52 176.958 
+Q 234 176.958 234 185.31 
+L 234 244.818 
+Q 234 253.17 245.52 253.17 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #ffffff; stroke: #1baf7a; stroke-width: 1.2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_40">
+    <path d="M 245.52 312.678 
+L 532.08 312.678 
+Q 543.6 312.678 543.6 304.326 
+L 543.6 264.654 
+Q 543.6 256.302 532.08 256.302 
+L 245.52 256.302 
+Q 234 256.302 234 264.654 
+L 234 304.326 
+Q 234 312.678 245.52 312.678 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #ffffff; stroke: #1baf7a; stroke-width: 1.2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_41">
+    <path d="M 231.12 451.53 
+L 370.8 451.53 
+Q 382.32 451.53 382.32 443.178 
+L 382.32 345.042 
+Q 382.32 336.69 370.8 336.69 
+L 231.12 336.69 
+Q 219.6 336.69 219.6 345.042 
+L 219.6 443.178 
+Q 219.6 451.53 231.12 451.53 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #e6e5e1; stroke: #b9b8b2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_42">
+    <path d="M 406.8 451.53 
+L 546.48 451.53 
+Q 558 451.53 558 443.178 
+L 558 345.042 
+Q 558 336.69 546.48 336.69 
+L 406.8 336.69 
+Q 395.28 336.69 395.28 345.042 
+L 395.28 443.178 
+Q 395.28 451.53 406.8 451.53 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #e6e5e1; stroke-dasharray: 6.4,3.2; stroke-dashoffset: 0; stroke: #0b0b0b; stroke-width: 1.6; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_43">
+    <path d="M 231.12 587.25 
+L 546.48 587.25 
+Q 558 587.25 558 578.898 
+L 558 475.542 
+Q 558 467.19 546.48 467.19 
+L 231.12 467.19 
+Q 219.6 467.19 219.6 475.542 
+L 219.6 578.898 
+Q 219.6 587.25 231.12 587.25 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #e6e5e1; stroke: #b9b8b2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_44">
+    <path d="M 231.12 696.87 
+L 373.68 696.87 
+Q 385.2 696.87 385.2 688.518 
+L 385.2 611.262 
+Q 385.2 602.91 373.68 602.91 
+L 231.12 602.91 
+Q 219.6 602.91 219.6 611.262 
+L 219.6 688.518 
+Q 219.6 696.87 231.12 696.87 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #e6e5e1; stroke: #b9b8b2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_45">
+    <path d="M 403.92 696.87 
+L 546.48 696.87 
+Q 558 696.87 558 688.518 
+L 558 611.262 
+Q 558 602.91 546.48 602.91 
+L 403.92 602.91 
+Q 392.4 602.91 392.4 611.262 
+L 392.4 688.518 
+Q 392.4 696.87 403.92 696.87 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #e6e5e1; stroke: #b9b8b2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_46">
+    <path d="M 619.92 184.266 
+L 906.48 184.266 
+Q 918 184.266 918 175.914 
+L 918 114.318 
+Q 918 105.966 906.48 105.966 
+L 619.92 105.966 
+Q 608.4 105.966 608.4 114.318 
+L 608.4 175.914 
+Q 608.4 184.266 619.92 184.266 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #ffffff; stroke: #2a78d6; stroke-width: 1.2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_47">
+    <path d="M 619.92 232.29 
+L 906.48 232.29 
+Q 918 232.29 918 223.938 
+L 918 197.838 
+Q 918 189.486 906.48 189.486 
+L 619.92 189.486 
+Q 608.4 189.486 608.4 197.838 
+L 608.4 223.938 
+Q 608.4 232.29 619.92 232.29 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #ffffff; stroke: #2a78d6; stroke-width: 1.2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_48">
+    <path d="M 619.92 312.678 
+L 906.48 312.678 
+Q 918 312.678 918 304.326 
+L 918 244.818 
+Q 918 236.466 906.48 236.466 
+L 619.92 236.466 
+Q 608.4 236.466 608.4 244.818 
+L 608.4 304.326 
+Q 608.4 312.678 619.92 312.678 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #ffffff; stroke: #2a78d6; stroke-width: 1.2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_49">
+    <path d="M 605.52 425.43 
+L 920.88 425.43 
+Q 932.4 425.43 932.4 417.078 
+L 932.4 345.042 
+Q 932.4 336.69 920.88 336.69 
+L 605.52 336.69 
+Q 594 336.69 594 345.042 
+L 594 417.078 
+Q 594 425.43 605.52 425.43 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #dbe8f8; stroke: #2a78d6; stroke-width: 1.6; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_50">
+    <path d="M 605.52 498.51 
+L 920.88 498.51 
+Q 932.4 498.51 932.4 490.158 
+L 932.4 449.442 
+Q 932.4 441.09 920.88 441.09 
+L 605.52 441.09 
+Q 594 441.09 594 449.442 
+L 594 490.158 
+Q 594 498.51 605.52 498.51 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #e6e5e1; stroke: #b9b8b2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_51">
+    <path d="M 605.52 759.51 
+L 920.88 759.51 
+Q 932.4 759.51 932.4 751.158 
+L 932.4 527.742 
+Q 932.4 519.39 920.88 519.39 
+L 605.52 519.39 
+Q 594 519.39 594 527.742 
+L 594 751.158 
+Q 594 759.51 605.52 759.51 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #e6e5e1; stroke: #b9b8b2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_52">
+    <path d="M 994.32 166.518 
+L 1406.16 166.518 
+Q 1417.68 166.518 1417.68 158.166 
+L 1417.68 116.406 
+Q 1417.68 108.054 1406.16 108.054 
+L 994.32 108.054 
+Q 982.8 108.054 982.8 116.406 
+L 982.8 158.166 
+Q 982.8 166.518 994.32 166.518 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #ffffff; stroke: #eb6834; stroke-width: 1.2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_53">
+    <path d="M 994.32 230.202 
+L 1406.16 230.202 
+Q 1417.68 230.202 1417.68 221.85 
+L 1417.68 180.09 
+Q 1417.68 171.738 1406.16 171.738 
+L 994.32 171.738 
+Q 982.8 171.738 982.8 180.09 
+L 982.8 221.85 
+Q 982.8 230.202 994.32 230.202 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #ffffff; stroke: #eb6834; stroke-width: 1.2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_54">
+    <path d="M 994.32 312.678 
+L 1406.16 312.678 
+Q 1417.68 312.678 1417.68 304.326 
+L 1417.68 243.774 
+Q 1417.68 235.422 1406.16 235.422 
+L 994.32 235.422 
+Q 982.8 235.422 982.8 243.774 
+L 982.8 304.326 
+Q 982.8 312.678 994.32 312.678 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #ffffff; stroke: #eb6834; stroke-width: 1.2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_55">
+    <path d="M 979.92 425.43 
+L 1420.56 425.43 
+Q 1432.08 425.43 1432.08 417.078 
+L 1432.08 345.042 
+Q 1432.08 336.69 1420.56 336.69 
+L 979.92 336.69 
+Q 968.4 336.69 968.4 345.042 
+L 968.4 417.078 
+Q 968.4 425.43 979.92 425.43 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #ffffff; stroke: #eb6834; stroke-width: 1.6; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_56">
+    <path d="M 979.92 660.33 
+L 1420.56 660.33 
+Q 1432.08 660.33 1432.08 651.978 
+L 1432.08 449.442 
+Q 1432.08 441.09 1420.56 441.09 
+L 979.92 441.09 
+Q 968.4 441.09 968.4 449.442 
+L 968.4 651.978 
+Q 968.4 660.33 979.92 660.33 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #e6e5e1; stroke: #b9b8b2; stroke-linejoin: miter"/>
+   </g>
+   <g id="patch_57">
+    <path d="M 979.92 759.51 
+L 1420.56 759.51 
+Q 1432.08 759.51 1432.08 751.158 
+L 1432.08 689.562 
+Q 1432.08 681.21 1420.56 681.21 
+L 979.92 681.21 
+Q 968.4 681.21 968.4 689.562 
+L 968.4 751.158 
+Q 968.4 759.51 979.92 759.51 
+z
+" clip-path="url(#p52f92b7c4f)" style="fill: #ffffff; stroke: #b9b8b2; stroke-linejoin: miter"/>
+   </g>
+   <g id="line2d_11">
+    <path d="M 11.52 810.144 
+L 1428.48 810.144 
+" clip-path="url(#p52f92b7c4f)" style="fill: none; stroke: #c3c2b7; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_12">
+    <path d="M 17.28 944.82 
+L 410.4 944.82 
+" clip-path="url(#p52f92b7c4f)" style="fill: none; stroke: #e1e0d9; stroke-width: 0.8; stroke-linecap: square"/>
+   </g>
+   <g id="line2d_13">
+    <path d="M 1010.88 921.852 
+L 1431.36 921.852 
+" clip-path="url(#p52f92b7c4f)" style="fill: none; stroke: #e1e0d9; stroke-width: 0.8; stroke-linecap: square"/>
+   </g>
+   <g id="text_1">
+    <text style="font-weight: 700; font-size: 15px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #0b0b0b" x="11.52" y="18.4515" transform="rotate(-0 11.52 18.4515)">ACoT-UAV-Track 当前模型架构 v3:属性开局 + TAHRelM + PGIF + 匈牙利跟踪器(部署设定 v2,身份决策不使用真值)</text>
+   </g>
+   <g id="text_2">
+    <text style="font-size: 9px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #52514e" x="11.52" y="36.685125" transform="rotate(-0 11.52 36.685125)">按代码绘制(acot/runtime/,方法 ours_final + 感知消融 tracker.assign = hungarian = 实验臂 ab_where_assign/hung,2026-10-06 起的当前模型)。S2 决策 tick 每 0.6 s 一次;DiT 每帧(0.1 s)出动作。训练过的部件只有开局属性分类器与 TAHRelM(4,740 参数),部署时都冻结;PGIF、跟踪器、WHERE 是推理期规则。</text>
+   </g>
+   <g id="text_3">
+    <text style="font-size: 9px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #0b0b0b" x="11.52" y="53.318813" transform="rotate(-0 11.52 53.318813)">理想化感知输入(所有对比臂相同):候选框由真值投影得到(只因射线遮挡漏检),只含目标与场景指定的干扰车;WHERE 使用匹配框所对应车辆的仿真真值世界坐标。</text>
+   </g>
+   <g id="text_4">
+    <text style="font-size: 9.2px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="97.92" y="104.674813" transform="rotate(-0 97.92 104.674813)">语言指令</text>
+   </g>
+   <g id="text_5">
+    <text style="font-size: 7.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(58.92 126.414975)">去位置化，只保留身份</text>
+    <text style="font-size: 7.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(64.77 136.347788)">“Follow the gold</text>
+    <text style="font-size: 7.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(70.62 146.067319)">Mini Cooper.”</text>
+   </g>
+   <g id="text_6">
+    <text style="font-size: 9.2px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="97.92" y="204.539438" transform="rotate(-0 97.92 204.539438)">高清开局帧</text>
+   </g>
+   <g id="text_7">
+    <text style="font-size: 7.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(47.22 226.395225)">同位姿、同 FOV 的 3× 相机</text>
+    <text style="font-size: 7.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(55.02 235.986788)">仅开局 tick 0 / 6 / 12</text>
+   </g>
+   <g id="text_8">
+    <text style="font-size: 9.2px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="97.92" y="303.971" transform="rotate(-0 97.92 303.971)">候选框(仿真替身)</text>
+   </g>
+   <g id="text_9">
+    <text style="font-size: 7.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(58.92 325.666631)">任务车辆中在画面内的</text>
+    <text style="font-size: 7.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(66.72 335.386163)">按真值投影成伪框</text>
+    <text style="font-size: 7.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(47.22 345.361631)">(车长 4 m,框边 10–140 px)</text>
+    <text style="font-size: 7.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(97.92 353.844131)"/>
+    <text style="font-size: 7.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(55.02 363.734288)">射线遮挡检测：被遮挡的</text>
+    <text style="font-size: 7.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(53.07 373.453819)">车整框丢掉(目标与干扰车</text>
+    <text style="font-size: 7.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(80.37 383.258663)">同一规则)</text>
+    <text style="font-size: 7.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(97.92 391.741163)"/>
+    <text style="font-size: 7.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(58.92 401.588663)">每集固定种子打乱顺序</text>
+   </g>
+   <g id="text_10">
+    <text style="font-size: 9.2px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="97.92" y="486.419438" transform="rotate(-0 97.92 486.419438)">无人机 RGB</text>
+   </g>
+   <g id="text_11">
+    <text style="font-size: 7.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(64.77 508.305694)">512×512 机载相机</text>
+    <text style="font-size: 7.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(90.12 517.982569)">每帧</text>
+   </g>
+   <g id="text_12">
+    <text style="font-size: 9.2px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="97.92" y="709.981" transform="rotate(-0 97.92 709.981)">Proprio 5D</text>
+   </g>
+   <g id="text_13">
+    <text style="font-size: 7.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #52514e" x="97.92" y="732.003975" transform="rotate(-0 97.92 732.003975)">cam_z, pitch, uav_vel×3</text>
+   </g>
+   <g id="text_14">
+    <text style="font-weight: 700; font-size: 10px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="388.8" y="96.865" transform="rotate(-0 388.8 96.865)">开局身份模块 OPENING=attr(v1)</text>
+   </g>
+   <g id="text_15">
+    <text style="font-size: 8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #52514e" x="388.8" y="114.00075" transform="rotate(-0 388.8 114.00075)">只在开局 tick 0 / 6 / 12 运行</text>
+   </g>
+   <g id="text_16">
+    <text style="font-size: 9.2px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="388.8" y="138.11875" transform="rotate(-0 388.8 138.11875)">① 语言解析 describe()</text>
+   </g>
+   <g id="text_17">
+    <text style="font-size: 7.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #52514e" x="388.8" y="159.670631" transform="rotate(-0 388.8 159.670631)">→ 颜色词 c*、车型词 m*</text>
+   </g>
+   <g id="text_18">
+    <text style="font-size: 9.2px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="388.8" y="196.58275" transform="rotate(-0 388.8 196.58275)">② 属性分类器(DINOv2 ViT-S/14)</text>
+   </g>
+   <g id="text_19">
+    <text style="font-size: 7.4px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(342.55 217.955725)">高清帧裁剪，多尺度 + 翻转</text>
+    <text style="font-size: 7.4px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(303.7 227.621975)">线性头 ⊕ 微调头，各占 0.5(17 车型 · 18 颜色)</text>
+    <text style="font-size: 7.4px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(311.1 237.652444)">分数 = log p(m* | 裁剪) + log p(c* | 裁剪)</text>
+   </g>
+   <g id="text_20">
+    <text style="font-size: 9.2px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="388.8" y="275.92675" transform="rotate(-0 388.8 275.92675)">③ 窗口聚合</text>
+   </g>
+   <g id="text_21">
+    <text style="font-size: 7.4px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(305.55 297.270819)">每 tick 分数 - max,按跟踪器 ID 累加 → argmax</text>
+    <text style="font-size: 7.4px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(370.3 306.451444)">= 开局选择</text>
+   </g>
+   <g id="text_22">
+    <text style="font-weight: 700; font-size: 9.2px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="300.96" y="355.16475" transform="rotate(-0 300.96 355.16475)">crop-DINOv2</text>
+   </g>
+   <g id="text_23">
+    <text style="font-size: 7.4px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(275.06 377.456475)">ViT-S/14(冻结)</text>
+    <text style="font-size: 7.4px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(275.06 386.798975)">每个候选框裁剪</text>
+    <text style="font-size: 7.4px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(273.21 395.939131)">224 px,1.3× 框</text>
+    <text style="font-size: 7.4px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(276.91 405.119756)">→ 384 维外观</text>
+    <text style="font-size: 7.4px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(280.61 413.936163)">(L2 归一化)</text>
+   </g>
+   <g id="text_24">
+    <text style="font-weight: 700; font-size: 9.2px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="476.64" y="356.02725" transform="rotate(-0 476.64 356.02725)">GT-free 跟踪器</text>
+   </g>
+   <g id="text_25">
+    <text style="font-size: 7.2px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(446.04 377.5221)">匈牙利匹配(numpy)</text>
+    <text style="font-size: 7.2px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(446.04 386.572725)">代价 0.15·d/门限</text>
+    <text style="font-size: 7.2px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(440.64 394.83585)">   + 0.85·(1 - cos)</text>
+    <text style="font-size: 7.2px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(435.24 404.08335)">门限 max(150 px, 2×框)</text>
+    <text style="font-size: 7.2px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(438.84 412.9371)">cos &lt; 0.2 禁止;8 tick</text>
+    <text style="font-size: 7.2px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(440.64 422.0271)">未匹配 → 删除,新 ID</text>
+   </g>
+   <g id="text_26">
+    <text style="font-weight: 700; font-size: 9.2px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="388.8" y="486.52725" transform="rotate(-0 388.8 486.52725)">Qwen3-VL-4B(冻结,44.4 亿,S2)</text>
+   </g>
+   <g id="text_27">
+    <text style="font-size: 7.4px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(300 508.187725)">指令文本 + RGB 一次前向(language_mode = neutral)</text>
+    <text style="font-size: 7.4px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(342.55 517.749913)">第 24 层隐藏态 → vlm_ctx</text>
+    <text style="font-size: 7.4px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(327.75 527.190694)">Stage-2 grounding 头的语言 logits</text>
+    <text style="font-size: 7.4px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(335.15 536.6546)">只记日志，不参与 TAHRelM 选车</text>
+   </g>
+   <g id="text_28">
+    <text style="font-weight: 700; font-size: 9.2px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="302.4" y="622.24725" transform="rotate(-0 302.4 622.24725)">IAR(冻结,97 万)</text>
+   </g>
+   <g id="text_29">
+    <text style="font-size: 7.4px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(283.9 643.878819)">8 个 query</text>
+    <text style="font-size: 7.4px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(274.65 651.926319)">cross-attention</text>
+    <text style="font-size: 7.4px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(289.45 659.973819)">→ z_im</text>
+   </g>
+   <g id="text_30">
+    <text style="font-weight: 700; font-size: 9.2px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="475.2" y="622.24725" transform="rotate(-0 475.2 622.24725)">EAR(冻结)</text>
+   </g>
+   <g id="text_31">
+    <text style="font-size: 7.4px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(451.15 642.924913)">flow-matching</text>
+    <text style="font-size: 7.4px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(453 652.105538)">采样航点先验</text>
+    <text style="font-size: 7.4px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(447.45 661.3671)">→ z_ex(默认值)</text>
+   </g>
+   <g id="text_32">
+    <text style="font-weight: 700; font-size: 10px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="763.2" y="96.669688" transform="rotate(-0 763.2 96.669688)">TAHRelM(WHICH,4,740 参数,S2)</text>
+   </g>
+   <g id="text_33">
+    <text style="font-size: 9.2px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="763.2" y="125.447" transform="rotate(-0 763.2 125.447)">输入与 7 个相对特征</text>
+   </g>
+   <g id="text_34">
+    <text style="font-size: 7.4px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(694.75 146.790288)">每个候选：外观 + (u/W, v/H, 深度/100)</text>
+    <text style="font-size: 7.4px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(685.5 156.011381)">cos(外观, 记忆)· 相对位移 · 深度 · 排名</text>
+    <text style="font-size: 7.4px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(733.6 165.313413)">距离 · 软运动门</text>
+   </g>
+   <g id="text_35">
+    <text style="font-size: 8.6px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="763.2" y="213.894641" transform="rotate(-0 763.2 213.894641)">MLP 7·64·64·1 → 每个候选的 logit</text>
+   </g>
+   <g id="text_36">
+    <!-- 原始选择 $s^M$ = argmax -->
+    <g style="fill: #0b0b0b" transform="translate(716.28 256.752)">
+     <text>
+      <tspan x="0" y="-0.960938" style="font-size: 9.2px; font-family: 'SimHei'; fill: #0b0b0b">原</tspan>
+      <tspan x="9.25" y="-0.960938" style="font-size: 9.2px; font-family: 'SimHei'; fill: #0b0b0b">始</tspan>
+      <tspan x="18.5" y="-0.960938" style="font-size: 9.2px; font-family: 'SimHei'; fill: #0b0b0b">选</tspan>
+      <tspan x="27.75" y="-0.960938" style="font-size: 9.2px; font-family: 'SimHei'; fill: #0b0b0b">择</tspan>
+      <tspan x="37" y="-0.960938" style="font-size: 9.2px; font-family: 'SimHei'; fill: #0b0b0b"> </tspan>
+      <tspan x="52.696345" y="-0.960938" style="font-size: 9.2px; font-family: 'SimHei'; fill: #0b0b0b"> </tspan>
+      <tspan x="57.321345" y="-0.960938" style="font-size: 9.2px; font-family: 'SimHei'; fill: #0b0b0b">=</tspan>
+      <tspan x="61.946345" y="-0.960938" style="font-size: 9.2px; font-family: 'SimHei'; fill: #0b0b0b"> </tspan>
+      <tspan x="66.571345" y="-0.960938" style="font-size: 9.2px; font-family: 'SimHei'; fill: #0b0b0b">a</tspan>
+      <tspan x="71.196345" y="-0.960938" style="font-size: 9.2px; font-family: 'SimHei'; fill: #0b0b0b">r</tspan>
+      <tspan x="75.821345" y="-0.960938" style="font-size: 9.2px; font-family: 'SimHei'; fill: #0b0b0b">g</tspan>
+      <tspan x="80.446345" y="-0.960938" style="font-size: 9.2px; font-family: 'SimHei'; fill: #0b0b0b">m</tspan>
+      <tspan x="85.071345" y="-0.960938" style="font-size: 9.2px; font-family: 'SimHei'; fill: #0b0b0b">a</tspan>
+      <tspan x="89.696345" y="-0.960938" style="font-size: 9.2px; font-family: 'SimHei'; fill: #0b0b0b">x</tspan>
+      <tspan x="41.625" y="-0.960938" style="font-style: oblique; font-size: 9.2px; font-family: 'DejaVu Sans'; fill: #0b0b0b">s</tspan>
+      <tspan x="46.863667" y="-4.40625" style="font-style: oblique; font-size: 6.44px; font-family: 'DejaVu Sans'; fill: #0b0b0b">M</tspan>
+     </text>
+    </g>
+   </g>
+   <g id="text_37">
+    <!-- 开局 tick 0 / 6:先清空记忆 → $s^M$ = 当前累计开局选择 -->
+    <g style="fill: #52514e" transform="translate(669.395 277.7961)">
+     <text>
+      <tspan x="0" y="-0.74375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">开</tspan>
+      <tspan x="7.25" y="-0.74375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">局</tspan>
+      <tspan x="14.5" y="-0.74375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e"> </tspan>
+      <tspan x="18.125" y="-0.74375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">t</tspan>
+      <tspan x="21.75" y="-0.74375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">i</tspan>
+      <tspan x="25.375" y="-0.74375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">c</tspan>
+      <tspan x="29" y="-0.74375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">k</tspan>
+      <tspan x="32.625" y="-0.74375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e"> </tspan>
+      <tspan x="36.25" y="-0.74375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">0</tspan>
+      <tspan x="39.875" y="-0.74375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e"> </tspan>
+      <tspan x="43.5" y="-0.74375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">/</tspan>
+      <tspan x="47.125" y="-0.74375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e"> </tspan>
+      <tspan x="50.75" y="-0.74375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">6</tspan>
+      <tspan x="54.375" y="-0.74375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">:</tspan>
+      <tspan x="58" y="-0.74375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">先</tspan>
+      <tspan x="65.25" y="-0.74375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">清</tspan>
+      <tspan x="72.5" y="-0.74375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">空</tspan>
+      <tspan x="79.75" y="-0.74375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">记</tspan>
+      <tspan x="87" y="-0.74375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">忆</tspan>
+      <tspan x="94.25" y="-0.74375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e"> </tspan>
+      <tspan x="97.875" y="-0.74375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">→</tspan>
+      <tspan x="105.125" y="-0.74375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e"> </tspan>
+      <tspan x="117.423057" y="-0.74375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e"> </tspan>
+      <tspan x="121.048057" y="-0.74375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">=</tspan>
+      <tspan x="124.673057" y="-0.74375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e"> </tspan>
+      <tspan x="128.298057" y="-0.74375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">当</tspan>
+      <tspan x="135.548057" y="-0.74375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">前</tspan>
+      <tspan x="142.798057" y="-0.74375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">累</tspan>
+      <tspan x="150.048057" y="-0.74375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">计</tspan>
+      <tspan x="157.298057" y="-0.74375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">开</tspan>
+      <tspan x="164.548057" y="-0.74375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">局</tspan>
+      <tspan x="171.798057" y="-0.74375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">选</tspan>
+      <tspan x="179.048057" y="-0.74375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">择</tspan>
+      <tspan x="108.75" y="-0.74375" style="font-style: oblique; font-size: 7.3px; font-family: 'DejaVu Sans'; fill: #52514e">s</tspan>
+      <tspan x="112.852977" y="-3.423438" style="font-style: oblique; font-size: 5.11px; font-family: 'DejaVu Sans'; fill: #52514e">M</tspan>
+     </text>
+    </g>
+    <text style="font-size: 7.3px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(690.2 286.852663)">tick 12 起由记忆打分(累计开局分只记日志)</text>
+    <text style="font-size: 7.3px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(692.025 296.028991)">写入记忆前保存快照(供 PGIF 改写 / 撤销)</text>
+   </g>
+   <g id="text_38">
+    <text style="font-weight: 700; font-size: 9.2px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="763.2" y="356.31475" transform="rotate(-0 763.2 356.31475)">身份记忆 {app, pos, vel}</text>
+   </g>
+   <g id="text_39">
+    <text style="font-size: 7.6px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(696.7 377.7346)">外观：可学门 EMA;速度：可学衰减 EMA</text>
+    <!-- 按 $s^M$ 写入;PGIF 可改写或撤销本次写入 -->
+    <g style="fill: #52514e" transform="translate(694.04 388.101)">
+     <text>
+      <tspan x="0" y="-0.857813" style="font-size: 7.6px; font-family: 'SimHei'; fill: #52514e">按</tspan>
+      <tspan x="7.625" y="-0.857813" style="font-size: 7.6px; font-family: 'SimHei'; fill: #52514e"> </tspan>
+      <tspan x="20.606607" y="-0.857813" style="font-size: 7.6px; font-family: 'SimHei'; fill: #52514e"> </tspan>
+      <tspan x="24.419107" y="-0.857813" style="font-size: 7.6px; font-family: 'SimHei'; fill: #52514e">写</tspan>
+      <tspan x="32.044107" y="-0.857813" style="font-size: 7.6px; font-family: 'SimHei'; fill: #52514e">入</tspan>
+      <tspan x="39.669107" y="-0.857813" style="font-size: 7.6px; font-family: 'SimHei'; fill: #52514e">;</tspan>
+      <tspan x="43.481607" y="-0.857813" style="font-size: 7.6px; font-family: 'SimHei'; fill: #52514e">P</tspan>
+      <tspan x="47.294107" y="-0.857813" style="font-size: 7.6px; font-family: 'SimHei'; fill: #52514e">G</tspan>
+      <tspan x="51.106607" y="-0.857813" style="font-size: 7.6px; font-family: 'SimHei'; fill: #52514e">I</tspan>
+      <tspan x="54.919107" y="-0.857813" style="font-size: 7.6px; font-family: 'SimHei'; fill: #52514e">F</tspan>
+      <tspan x="58.731607" y="-0.857813" style="font-size: 7.6px; font-family: 'SimHei'; fill: #52514e"> </tspan>
+      <tspan x="62.544107" y="-0.857813" style="font-size: 7.6px; font-family: 'SimHei'; fill: #52514e">可</tspan>
+      <tspan x="70.169107" y="-0.857813" style="font-size: 7.6px; font-family: 'SimHei'; fill: #52514e">改</tspan>
+      <tspan x="77.794107" y="-0.857813" style="font-size: 7.6px; font-family: 'SimHei'; fill: #52514e">写</tspan>
+      <tspan x="85.419107" y="-0.857813" style="font-size: 7.6px; font-family: 'SimHei'; fill: #52514e">或</tspan>
+      <tspan x="93.044107" y="-0.857813" style="font-size: 7.6px; font-family: 'SimHei'; fill: #52514e">撤</tspan>
+      <tspan x="100.669107" y="-0.857813" style="font-size: 7.6px; font-family: 'SimHei'; fill: #52514e">销</tspan>
+      <tspan x="108.294107" y="-0.857813" style="font-size: 7.6px; font-family: 'SimHei'; fill: #52514e">本</tspan>
+      <tspan x="115.919107" y="-0.857813" style="font-size: 7.6px; font-family: 'SimHei'; fill: #52514e">次</tspan>
+      <tspan x="123.544107" y="-0.857813" style="font-size: 7.6px; font-family: 'SimHei'; fill: #52514e">写</tspan>
+      <tspan x="131.169107" y="-0.857813" style="font-size: 7.6px; font-family: 'SimHei'; fill: #52514e">入</tspan>
+      <tspan x="11.4375" y="-0.857813" style="font-style: oblique; font-size: 7.6px; font-family: 'DejaVu Sans'; fill: #52514e">s</tspan>
+      <tspan x="15.782699" y="-3.920313" style="font-style: oblique; font-size: 5.32px; font-family: 'DejaVu Sans'; fill: #52514e">M</tspan>
+     </text>
+    </g>
+   </g>
+   <g id="text_40">
+    <text style="font-size: 9.2px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="763.2" y="460.642875" transform="rotate(-0 763.2 460.642875)">置信度 c = top1 - top2 logit 差</text>
+   </g>
+   <g id="text_41">
+    <text style="font-size: 7.4px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #52514e" x="763.2" y="482.087725" transform="rotate(-0 763.2 482.087725)">(TAHRelM 自带的学习置信度被覆盖，未使用)</text>
+   </g>
+   <g id="text_42">
+    <text style="font-weight: 700; font-size: 9.2px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="763.2" y="538.799125" transform="rotate(-0 763.2 538.799125)">HOW:DiT(冻结,32 层,1.37 亿)</text>
+   </g>
+   <g id="text_43">
+    <text style="font-size: 7.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(716.4 560.718975)">S1 快流，每帧(0.1 s)运行</text>
+    <text style="font-size: 7.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(700.8 570.950381)">flow-matching 生成动作块(H = 16)</text>
+    <text style="font-size: 7.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(763.2 579.432881)"/>
+    <text style="font-size: 7.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(751.5 589.152413)">条件：</text>
+    <text style="font-size: 7.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(714.45 599.042569)">z_ex(航点先验,来自 WHERE)</text>
+    <text style="font-size: 7.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(712.5 607.586006)">z_im · vlm_ctx · proprio</text>
+    <text style="font-size: 7.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(763.2 616.129444)"/>
+    <text style="font-size: 7.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(700.8 626.0196)">→ (dx, dy, dz, dyaw) + 搜索标志</text>
+    <text style="font-size: 7.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(735.9 634.630069)">frame_gain = 0</text>
+   </g>
+   <g id="text_44">
+    <text style="font-weight: 700; font-size: 10px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="1200.24" y="96.904063" transform="rotate(-0 1200.24 96.904063)">PGIF(tempered + absent-hold,0 可训练参数,S2)</text>
+   </g>
+   <g id="text_45">
+    <text style="font-size: 9.2px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="1200.24" y="127.67875" transform="rotate(-0 1200.24 127.67875)">① 置信度秩 → 投票权重(c 来自左侧置信度模块)</text>
+   </g>
+   <g id="text_46">
+    <text style="font-size: 7.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #52514e" x="1200.24" y="149.291569" transform="rotate(-0 1200.24 149.291569)">ρ = c 在最近 30 个置信度中的分位(不足 5 个取 0.5);w = 0.5 + ρ</text>
+   </g>
+   <g id="text_47">
+    <text style="font-size: 9.2px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="1200.24" y="191.36275" transform="rotate(-0 1200.24 191.36275)">② 回火证据(按跟踪器 ID 记账)</text>
+   </g>
+   <g id="text_48">
+    <!-- 所有 ID:$L_k \leftarrow 0.98\,L_k$;再 $L_{s^M}$ += w -->
+    <g style="fill: #52514e" transform="translate(1139.712 213.0036)">
+     <text>
+      <tspan x="0" y="-0.46875" style="font-size: 7.8px; font-family: 'SimHei'; fill: #52514e">所</tspan>
+      <tspan x="7.75" y="-0.46875" style="font-size: 7.8px; font-family: 'SimHei'; fill: #52514e">有</tspan>
+      <tspan x="15.5" y="-0.46875" style="font-size: 7.8px; font-family: 'SimHei'; fill: #52514e"> </tspan>
+      <tspan x="19.375" y="-0.46875" style="font-size: 7.8px; font-family: 'SimHei'; fill: #52514e">I</tspan>
+      <tspan x="23.25" y="-0.46875" style="font-size: 7.8px; font-family: 'SimHei'; fill: #52514e">D</tspan>
+      <tspan x="27.125" y="-0.46875" style="font-size: 7.8px; font-family: 'SimHei'; fill: #52514e">:</tspan>
+      <tspan x="74.383802" y="-0.46875" style="font-size: 7.8px; font-family: 'SimHei'; fill: #52514e">;</tspan>
+      <tspan x="78.258802" y="-0.46875" style="font-size: 7.8px; font-family: 'SimHei'; fill: #52514e">再</tspan>
+      <tspan x="86.008802" y="-0.46875" style="font-size: 7.8px; font-family: 'SimHei'; fill: #52514e"> </tspan>
+      <tspan x="100.937109" y="-0.46875" style="font-size: 7.8px; font-family: 'SimHei'; fill: #52514e"> </tspan>
+      <tspan x="104.812109" y="-0.46875" style="font-size: 7.8px; font-family: 'SimHei'; fill: #52514e">+</tspan>
+      <tspan x="108.687109" y="-0.46875" style="font-size: 7.8px; font-family: 'SimHei'; fill: #52514e">=</tspan>
+      <tspan x="112.562109" y="-0.46875" style="font-size: 7.8px; font-family: 'SimHei'; fill: #52514e"> </tspan>
+      <tspan x="116.437109" y="-0.46875" style="font-size: 7.8px; font-family: 'SimHei'; fill: #52514e">w</tspan>
+      <tspan x="31" y="-0.46875" style="font-style: oblique; font-size: 7.8px; font-family: 'DejaVu Sans'; fill: #52514e">L</tspan>
+      <tspan x="66.705677" y="-0.46875" style="font-style: oblique; font-size: 7.8px; font-family: 'DejaVu Sans'; fill: #52514e">L</tspan>
+      <tspan x="89.883802" y="-0.46875" style="font-style: oblique; font-size: 7.8px; font-family: 'DejaVu Sans'; fill: #52514e">L</tspan>
+      <tspan x="35.317749" y="0.84375" style="font-style: oblique; font-size: 5.46px; font-family: 'DejaVu Sans'; fill: #52514e">k</tspan>
+      <tspan x="71.023426" y="0.84375" style="font-style: oblique; font-size: 5.46px; font-family: 'DejaVu Sans'; fill: #52514e">k</tspan>
+      <tspan x="94.201551" y="0.84375" style="font-style: oblique; font-size: 5.46px; font-family: 'DejaVu Sans'; fill: #52514e">s</tspan>
+      <tspan x="40.188013" y="-0.46875" style="font-size: 7.8px; font-family: 'DejaVu Sans'; fill: #52514e">←</tspan>
+      <tspan x="48.191553" y="-0.46875" style="font-size: 7.8px; font-family: 'DejaVu Sans'; fill: #52514e">0</tspan>
+      <tspan x="53.122339" y="-0.46875" style="font-size: 7.8px; font-family: 'DejaVu Sans'; fill: #52514e">.</tspan>
+      <tspan x="55.58584" y="-0.46875" style="font-size: 7.8px; font-family: 'DejaVu Sans'; fill: #52514e">9</tspan>
+      <tspan x="60.516626" y="-0.46875" style="font-size: 7.8px; font-family: 'DejaVu Sans'; fill: #52514e">8</tspan>
+      <tspan x="97.288778" y="-1.3" style="font-style: oblique; font-size: 3.822px; font-family: 'DejaVu Sans'; fill: #52514e">M</tspan>
+     </text>
+    </g>
+   </g>
+   <g id="text_49">
+    <text style="font-size: 9.2px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="1200.24" y="255.04675" transform="rotate(-0 1200.24 255.04675)">③ 决策</text>
+   </g>
+   <g id="text_50">
+    <text style="font-size: 7.3px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(1048.765 276.251366)">absent-hold:最近 8 tick 内出现过的 ID 中，证据最高者本 tick 不可见且高于所有可见 ID</text>
+    <text style="font-size: 7.3px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(1103.515 285.786991)">→ 输出「缺席」:不选车、c = 0、撤销记忆写入、承诺不变</text>
+    <!-- 否则 $\hat{s}$ = argmax 可见 $L_k$;若 $\hat{s} \neq s^M$ → 从快照用 $\hat{s}$ 重写记忆，直接承诺,c = 1 -->
+    <g style="fill: #52514e" transform="translate(1068.913 296.204091)">
+     <text>
+      <tspan x="0" y="-0.49375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">否</tspan>
+      <tspan x="7.25" y="-0.49375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">则</tspan>
+      <tspan x="14.5" y="-0.49375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e"> </tspan>
+      <tspan x="21.902222" y="-0.49375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e"> </tspan>
+      <tspan x="25.527222" y="-0.49375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">=</tspan>
+      <tspan x="29.152222" y="-0.49375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e"> </tspan>
+      <tspan x="32.777222" y="-0.49375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">a</tspan>
+      <tspan x="36.402222" y="-0.49375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">r</tspan>
+      <tspan x="40.027222" y="-0.49375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">g</tspan>
+      <tspan x="43.652222" y="-0.49375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">m</tspan>
+      <tspan x="47.277222" y="-0.49375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">a</tspan>
+      <tspan x="50.902222" y="-0.49375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">x</tspan>
+      <tspan x="54.527222" y="-0.49375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e"> </tspan>
+      <tspan x="58.152222" y="-0.49375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">可</tspan>
+      <tspan x="65.402222" y="-0.49375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">见</tspan>
+      <tspan x="72.652222" y="-0.49375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e"> </tspan>
+      <tspan x="83.446753" y="-0.49375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">;</tspan>
+      <tspan x="87.071753" y="-0.49375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">若</tspan>
+      <tspan x="94.321753" y="-0.49375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e"> </tspan>
+      <tspan x="119.29669" y="-0.49375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e"> </tspan>
+      <tspan x="122.92169" y="-0.49375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">→</tspan>
+      <tspan x="130.17169" y="-0.49375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e"> </tspan>
+      <tspan x="133.79669" y="-0.49375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">从</tspan>
+      <tspan x="141.04669" y="-0.49375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">快</tspan>
+      <tspan x="148.29669" y="-0.49375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">照</tspan>
+      <tspan x="155.54669" y="-0.49375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">用</tspan>
+      <tspan x="162.79669" y="-0.49375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e"> </tspan>
+      <tspan x="170.198912" y="-0.49375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e"> </tspan>
+      <tspan x="173.823912" y="-0.49375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">重</tspan>
+      <tspan x="181.073912" y="-0.49375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">写</tspan>
+      <tspan x="188.323912" y="-0.49375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">记</tspan>
+      <tspan x="195.573912" y="-0.49375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">忆</tspan>
+      <tspan x="202.823912" y="-0.49375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">，</tspan>
+      <tspan x="210.073912" y="-0.49375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">直</tspan>
+      <tspan x="217.323912" y="-0.49375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">接</tspan>
+      <tspan x="224.573912" y="-0.49375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">承</tspan>
+      <tspan x="231.823912" y="-0.49375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">诺</tspan>
+      <tspan x="239.073912" y="-0.49375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">,</tspan>
+      <tspan x="242.698912" y="-0.49375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">c</tspan>
+      <tspan x="246.323912" y="-0.49375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e"> </tspan>
+      <tspan x="249.948912" y="-0.49375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">=</tspan>
+      <tspan x="253.573912" y="-0.49375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e"> </tspan>
+      <tspan x="257.198912" y="-0.49375" style="font-size: 7.3px; font-family: 'SimHei'; fill: #52514e">1</tspan>
+      <tspan x="22.006805" y="-1.40625" style="font-size: 7.3px; font-family: 'DejaVu Sans'; fill: #52514e">̂</tspan>
+      <tspan x="101.828558" y="-1.40625" style="font-size: 7.3px; font-family: 'DejaVu Sans'; fill: #52514e">̂</tspan>
+      <tspan x="103.13645" y="-0.49375" style="font-size: 7.3px; font-family: 'DejaVu Sans'; fill: #52514e">≠</tspan>
+      <tspan x="170.303496" y="-1.40625" style="font-size: 7.3px; font-family: 'DejaVu Sans'; fill: #52514e">̂</tspan>
+      <tspan x="18.125" y="-0.49375" style="font-style: oblique; font-size: 7.3px; font-family: 'DejaVu Sans'; fill: #52514e">s</tspan>
+      <tspan x="76.277222" y="-0.49375" style="font-style: oblique; font-size: 7.3px; font-family: 'DejaVu Sans'; fill: #52514e">L</tspan>
+      <tspan x="97.946753" y="-0.49375" style="font-style: oblique; font-size: 7.3px; font-family: 'DejaVu Sans'; fill: #52514e">s</tspan>
+      <tspan x="110.623633" y="-0.49375" style="font-style: oblique; font-size: 7.3px; font-family: 'DejaVu Sans'; fill: #52514e">s</tspan>
+      <tspan x="166.42169" y="-0.49375" style="font-style: oblique; font-size: 7.3px; font-family: 'DejaVu Sans'; fill: #52514e">s</tspan>
+      <tspan x="80.316406" y="0.654687" style="font-style: oblique; font-size: 5.11px; font-family: 'DejaVu Sans'; fill: #52514e">k</tspan>
+      <tspan x="114.72661" y="-3.173438" style="font-style: oblique; font-size: 5.11px; font-family: 'DejaVu Sans'; fill: #52514e">M</tspan>
+     </text>
+    </g>
+   </g>
+   <g id="text_51">
+    <text style="font-weight: 700; font-size: 9.2px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="1200.24" y="356.171" transform="rotate(-0 1200.24 356.171)">承诺身份(跟踪器 ID)</text>
+   </g>
+   <g id="text_52">
+    <text style="font-size: 7.6px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(1088.14 377.704913)">只有 c ≥ 0.5 时才更新承诺;挑战者需连续 K = 5 tick 才能取代</text>
+    <text style="font-size: 7.6px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(1105.24 387.4246)">PGIF 改写时跳过滞回直接承诺;「缺席」时保持上一承诺</text>
+   </g>
+   <g id="text_53">
+    <text style="font-weight: 700; font-size: 9.2px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="1200.24" y="460.535062" transform="rotate(-0 1200.24 460.535062)">WHERE(冻结规则)</text>
+   </g>
+   <g id="text_54">
+    <text style="font-weight: 700; font-size: 8.2px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #0b0b0b" x="989.28" y="487.786344" transform="rotate(-0 989.28 487.786344)">承诺 ID 本 tick 有匹配框：</text>
+   </g>
+   <g id="text_55">
+    <text style="font-size: 7.6px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(989.28 508.309313)">取该车仿真真值世界坐标;若 c ≥ 0.5 且在画面内 → 更新匀速目标估计器</text>
+    <text style="font-size: 7.6px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(989.28 518.256109)">估计器外推出的航点投影到相机系 → 替换 z_ex</text>
+   </g>
+   <g id="text_56">
+    <text style="font-weight: 700; font-size: 8.2px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #0b0b0b" x="989.28" y="555.8065" transform="rotate(-0 989.28 555.8065)">承诺 ID 本 tick 没有匹配框(遮挡 / 出画 / 缺席):</text>
+   </g>
+   <g id="text_57">
+    <text style="font-size: 7.6px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(989.28 576.31775)">不覆盖 z_ex,沿用 EAR 自己采样的航点(与 10-03 模型相同)</text>
+    <text style="font-size: 7.6px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(989.28 586.453062)">匀速外推已测(cv 臂):跟随更久，但身份不变、最长锁错有变长趋势 → 未采用</text>
+   </g>
+   <g id="text_58">
+    <text style="font-size: 7.6px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #898781" x="989.28" y="626.19225" transform="rotate(-0 989.28 626.19225)">尚未有承诺 / 估计器未初始化时：沿用 EAR 航点</text>
+   </g>
+   <g id="text_59">
+    <text style="font-weight: 700; font-size: 9.2px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="1200.24" y="700.54725" transform="rotate(-0 1200.24 700.54725)">CARLA 闭环</text>
+   </g>
+   <g id="text_60">
+    <text style="font-size: 7.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #52514e" x="1200.24" y="722.478038" transform="rotate(-0 1200.24 722.478038)">无人机执行动作 → 下一帧(选哪辆车决定下一帧看到什么)</text>
+   </g>
+   <g id="text_61">
+    <text style="font-size: 7.4px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #52514e" x="483.84" y="327.80925" transform="rotate(-0 483.84 327.80925)">ID</text>
+   </g>
+   <g id="text_62">
+    <g id="patch_58">
+     <path d="M 654.954 780.587469 
+L 785.046 780.587469 
+L 785.046 772.884531 
+L 654.954 772.884531 
+z
+" style="fill: #fcfcfb"/>
+    </g>
+    <text style="font-size: 7.4px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #52514e" x="720" y="779.308656" transform="rotate(-0 720 779.308656)">EAR 航点(WHERE 不覆盖时的默认 z_ex)</text>
+   </g>
+   <g id="text_63">
+    <g id="patch_59">
+     <path d="M 294.304 795.058938 
+L 339.296 795.058938 
+L 339.296 787.645062 
+L 294.304 787.645062 
+z
+" style="fill: #fcfcfb"/>
+    </g>
+    <text style="font-size: 7.4px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #52514e" x="316.8" y="793.837938" transform="rotate(-0 316.8 793.837938)">下一帧(闭环)</text>
+   </g>
+   <g id="text_64">
+    <text style="font-weight: 700; font-size: 12px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #0b0b0b" x="11.52" y="828.574125" transform="rotate(-0 11.52 828.574125)">相对 fig_architecture_v1(10-03 最终模型):采用 ①,② 已测未采用</text>
+   </g>
+   <g id="text_65">
+    <text style="font-weight: 700; font-size: 10px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #0b0b0b" x="11.52" y="858.09725" transform="rotate(-0 11.52 858.09725)">① 跟踪器匹配：贪心 → 匈牙利</text>
+   </g>
+   <g id="text_66">
+    <text style="font-size: 8.2px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(11.52 876.442625)">旧策略镜像没有 scipy,TrackletAssigner 一直退回贪心;而跟踪器参数是在装有 scipy 的主机上(匈牙利)调出来的。</text>
+    <text style="font-size: 8.2px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(11.52 887.413328)">PGIF 证据与承诺按跟踪器 ID 记账：目标换 ID → 证据清零;ID 被干扰车接走 → 证据转给干扰车。</text>
+    <text style="font-size: 8.2px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(11.52 898.624266)">离线回放(127 集最终模型记录;跟踪器只依赖候选框与外观，回放对固定输入是精确的):</text>
+   </g>
+   <g id="text_67">
+    <text style="font-weight: 700; font-size: 8.4px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #52514e" x="20.16" y="938.18025" transform="rotate(-0 20.16 938.18025)">指标</text>
+   </g>
+   <g id="text_68">
+    <text style="font-weight: 700; font-size: 8.4px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #52514e" x="187.2" y="938.278688" transform="rotate(-0 187.2 938.278688)">贪心(v1)</text>
+   </g>
+   <g id="text_69">
+    <text style="font-weight: 700; font-size: 8.4px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #52514e" x="302.4" y="938.295094" transform="rotate(-0 302.4 938.295094)">匈牙利(v2)</text>
+   </g>
+   <g id="text_70">
+    <text style="font-size: 8.4px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #0b0b0b" x="20.16" y="961.115437" transform="rotate(-0 20.16 961.115437)">目标 IDF1 ↑</text>
+   </g>
+   <g id="text_71">
+    <text style="font-size: 8.4px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #0b0b0b" x="187.2" y="960.7545" transform="rotate(-0 187.2 960.7545)">0.589</text>
+   </g>
+   <g id="text_72">
+    <text style="font-weight: 700; font-size: 8.4px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #0b0b0b" x="302.4" y="960.7545" transform="rotate(-0 302.4 960.7545)">0.654</text>
+   </g>
+   <g id="text_73">
+    <text style="font-size: 8.4px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #0b0b0b" x="20.16" y="981.049875" transform="rotate(-0 20.16 981.049875)">每集目标 ID 数 ↓</text>
+   </g>
+   <g id="text_74">
+    <text style="font-size: 8.4px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #0b0b0b" x="187.2" y="980.5905" transform="rotate(-0 187.2 980.5905)">3.79</text>
+   </g>
+   <g id="text_75">
+    <text style="font-weight: 700; font-size: 8.4px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #0b0b0b" x="302.4" y="980.5905" transform="rotate(-0 302.4 980.5905)">3.16</text>
+   </g>
+   <g id="text_76">
+    <text style="font-size: 8.4px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #0b0b0b" x="20.16" y="1000.918688" transform="rotate(-0 20.16 1000.918688)">目标 ID 变化次数 ↓</text>
+   </g>
+   <g id="text_77">
+    <text style="font-size: 8.4px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #0b0b0b" x="187.2" y="1000.4265" transform="rotate(-0 187.2 1000.4265)">786</text>
+   </g>
+   <g id="text_78">
+    <text style="font-weight: 700; font-size: 8.4px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #0b0b0b" x="302.4" y="1000.4265" transform="rotate(-0 302.4 1000.4265)">559</text>
+   </g>
+   <g id="text_79">
+    <text style="font-size: 8.4px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #0b0b0b" x="20.16" y="1020.721875" transform="rotate(-0 20.16 1020.721875)">目标与他车 ID 互换 ↓</text>
+   </g>
+   <g id="text_80">
+    <text style="font-size: 8.4px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #0b0b0b" x="187.2" y="1020.2625" transform="rotate(-0 187.2 1020.2625)">1430</text>
+   </g>
+   <g id="text_81">
+    <text style="font-weight: 700; font-size: 8.4px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #0b0b0b" x="302.4" y="1020.2625" transform="rotate(-0 302.4 1020.2625)">1012</text>
+   </g>
+   <g id="text_82">
+    <text style="font-weight: 700; font-size: 10px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #0b0b0b" x="489.6" y="858.09725" transform="rotate(-0 489.6 858.09725)">② 承诺目标本 tick 无匹配框时的 WHERE:EAR 航点 → 匀速外推(未采用)</text>
+   </g>
+   <g id="text_83">
+    <text style="font-size: 8.2px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(489.6 876.506687)">v1 文档写的是「不可见时按匀速估计滑行」,但代码在承诺 ID 没有匹配框时不覆盖 z_ex,无人机按 EAR 自己</text>
+    <text style="font-size: 8.2px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(489.6 887.781687)">采样的航点飞(旧代码与 acot 运行时逐位一致)。v1 最终模型的身份错误 tick 中 54% 发生在目标不在候选中时，</text>
+    <text style="font-size: 8.2px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(489.6 898.976609)">遮挡期间找不回目标是最长连续正确偏低的主因。</text>
+    <text style="font-size: 8.2px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(489.6 908.457859)"/>
+    <text style="font-size: 8.2px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(489.6 919.668797)">改动:承诺 ID 无框时，用估计器从最后一次确信位置按匀速外推出航点，投影到相机系后替换 z_ex。</text>
+    <text style="font-size: 8.2px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(489.6 931.103953)">外推一直持续到承诺 ID 重新出现匹配框，或 episode 因丢失超过 18 s 结束;估计器本身没有改动。</text>
+   </g>
+   <g id="text_84">
+    <text style="font-weight: 700; font-size: 10px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #0b0b0b" x="1008" y="858.058188" transform="rotate(-0 1008 858.058188)">闭环验证:ab_where_assign(2×2,dev2 93000–93059,同种子配对)</text>
+   </g>
+   <g id="text_85">
+    <text style="font-size: 8.2px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(1008 876.538719)">四个臂：ours(v1)· cv(仅 ②)· hung(仅 ①)· cv_hung(①+②)</text>
+    <text style="font-size: 8.2px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(1008 887.621531)">每个主效应用 120 对估计;承诺正确的最小可检出效应约 0.07–0.10。</text>
+   </g>
+   <g id="text_86">
+    <text style="font-weight: 700; font-size: 7.9px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #52514e" x="1013.76" y="915.156195" transform="rotate(-0 1013.76 915.156195)">臂</text>
+   </g>
+   <g id="text_87">
+    <text style="font-weight: 700; font-size: 7.9px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #52514e" x="1128.96" y="914.94018" transform="rotate(-0 1128.96 914.94018)">开局</text>
+   </g>
+   <g id="text_88">
+    <text style="font-weight: 700; font-size: 7.9px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #52514e" x="1195.2" y="915.156195" transform="rotate(-0 1195.2 915.156195)">承诺正确↑</text>
+   </g>
+   <g id="text_89">
+    <text style="font-weight: 700; font-size: 7.9px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #52514e" x="1267.2" y="915.156195" transform="rotate(-0 1267.2 915.156195)">最长正确↑</text>
+   </g>
+   <g id="text_90">
+    <text style="font-weight: 700; font-size: 7.9px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #52514e" x="1339.2" y="915.048188" transform="rotate(-0 1339.2 915.048188)">最长锁错↓</text>
+   </g>
+   <g id="text_91">
+    <text style="font-weight: 700; font-size: 7.9px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #52514e" x="1405.44" y="915.156195" transform="rotate(-0 1405.44 915.156195)">正确时长↑</text>
+   </g>
+   <g id="text_92">
+    <text style="font-size: 7.9px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #0b0b0b" x="1013.76" y="935.727602" transform="rotate(-0 1013.76 935.727602)">ours(v1)</text>
+   </g>
+   <g id="text_93">
+    <text style="font-size: 7.9px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="1128.96" y="935.557875" transform="rotate(-0 1128.96 935.557875)">46/55</text>
+   </g>
+   <g id="text_94">
+    <text style="font-size: 7.9px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="1195.2" y="935.557875" transform="rotate(-0 1195.2 935.557875)">0.539</text>
+   </g>
+   <g id="text_95">
+    <text style="font-size: 7.9px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="1267.2" y="935.557875" transform="rotate(-0 1267.2 935.557875)">10.0 s</text>
+   </g>
+   <g id="text_96">
+    <text style="font-size: 7.9px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="1339.2" y="935.557875" transform="rotate(-0 1339.2 935.557875)">13.1 s</text>
+   </g>
+   <g id="text_97">
+    <text style="font-size: 7.9px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="1405.44" y="935.557875" transform="rotate(-0 1405.44 935.557875)">14.0 s</text>
+   </g>
+   <g id="text_98">
+    <text style="font-size: 7.9px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #0b0b0b" x="1013.76" y="953.861344" transform="rotate(-0 1013.76 953.861344)">cv(仅 ②)</text>
+   </g>
+   <g id="text_99">
+    <text style="font-size: 7.9px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="1128.96" y="953.305875" transform="rotate(-0 1128.96 953.305875)">49/55</text>
+   </g>
+   <g id="text_100">
+    <text style="font-size: 7.9px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="1195.2" y="953.305875" transform="rotate(-0 1195.2 953.305875)">0.548</text>
+   </g>
+   <g id="text_101">
+    <text style="font-size: 7.9px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="1267.2" y="953.305875" transform="rotate(-0 1267.2 953.305875)">15.1 s</text>
+   </g>
+   <g id="text_102">
+    <text style="font-size: 7.9px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="1339.2" y="953.305875" transform="rotate(-0 1339.2 953.305875)">15.6 s</text>
+   </g>
+   <g id="text_103">
+    <text style="font-size: 7.9px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="1405.44" y="953.305875" transform="rotate(-0 1405.44 953.305875)">19.9 s</text>
+   </g>
+   <g id="text_104">
+    <text style="font-weight: 700; font-size: 7.9px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #0b0b0b" x="1013.76" y="971.655633" transform="rotate(-0 1013.76 971.655633)">hung(仅 ①) 本图</text>
+   </g>
+   <g id="text_105">
+    <text style="font-weight: 700; font-size: 7.9px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="1128.96" y="971.053875" transform="rotate(-0 1128.96 971.053875)">51/55</text>
+   </g>
+   <g id="text_106">
+    <text style="font-weight: 700; font-size: 7.9px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="1195.2" y="971.053875" transform="rotate(-0 1195.2 971.053875)">0.660</text>
+   </g>
+   <g id="text_107">
+    <text style="font-weight: 700; font-size: 7.9px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="1267.2" y="971.053875" transform="rotate(-0 1267.2 971.053875)">13.7 s</text>
+   </g>
+   <g id="text_108">
+    <text style="font-weight: 700; font-size: 7.9px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="1339.2" y="971.053875" transform="rotate(-0 1339.2 971.053875)">9.9 s</text>
+   </g>
+   <g id="text_109">
+    <text style="font-weight: 700; font-size: 7.9px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="1405.44" y="971.053875" transform="rotate(-0 1405.44 971.053875)">19.0 s</text>
+   </g>
+   <g id="text_110">
+    <text style="font-size: 7.9px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #0b0b0b" x="1013.76" y="988.771016" transform="rotate(-0 1013.76 988.771016)">cv_hung</text>
+   </g>
+   <g id="text_111">
+    <text style="font-size: 7.9px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="1128.96" y="988.801875" transform="rotate(-0 1128.96 988.801875)">49/55</text>
+   </g>
+   <g id="text_112">
+    <text style="font-size: 7.9px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="1195.2" y="988.801875" transform="rotate(-0 1195.2 988.801875)">0.597</text>
+   </g>
+   <g id="text_113">
+    <text style="font-size: 7.9px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="1267.2" y="988.801875" transform="rotate(-0 1267.2 988.801875)">15.2 s</text>
+   </g>
+   <g id="text_114">
+    <text style="font-size: 7.9px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="1339.2" y="988.801875" transform="rotate(-0 1339.2 988.801875)">14.1 s</text>
+   </g>
+   <g id="text_115">
+    <text style="font-size: 7.9px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="1405.44" y="988.801875" transform="rotate(-0 1405.44 988.801875)">20.1 s</text>
+   </g>
+   <g id="text_116">
+    <text style="font-size: 7.7px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(1008 1002.352562)">n = 55:四个臂都完成的种子(cv_hung 有 4 个种子因 CARLA 服务器故障失败),各臂单次运行。</text>
+    <text style="font-size: 7.7px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(1008 1012.621234)">匈牙利：承诺正确主效应 +0.085(p = 0.02);外推：最长正确 +3.3 s(p = 0.002),</text>
+    <text style="font-size: 7.7px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; fill: #52514e" transform="translate(1008 1022.82975)">承诺正确不变、最长锁错 +3.4 s(p = 0.07)。当前模型 = hung(fig_architecture_v3),外推需改进后再用;详见 §5.5c。</text>
+   </g>
+   <g id="text_117">
+    <text style="font-size: 7.6px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: start; fill: #898781" x="11.52" y="1036.726625" transform="rotate(-0 11.52 1036.726625)">源 acot_note/figs/fig_architecture_v2.py hung;改动 ① 的离线数字由 acot/analysis/trk_assign.py 现算,最终模型记录 = runs/asd/iter/{zo*, aa_legacy*, v2h*}.trk.jsonl。</text>
+   </g>
+   <g id="text_118">
+    <g id="patch_60">
+     <path d="M 560.01 264.985312 
+L 591.99 264.985312 
+L 591.99 257.014687 
+L 560.01 257.014687 
+z
+" style="fill: #fcfcfb"/>
+    </g>
+    <text style="font-size: 7.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #52514e" x="576" y="263.620312" transform="rotate(-0 576 263.620312)">开局选择</text>
+   </g>
+   <g id="text_119">
+    <g id="patch_61">
+     <path d="M 554.16 143.850844 
+L 597.84 143.850844 
+L 597.84 135.941156 
+L 554.16 135.941156 
+z
+" style="fill: #fcfcfb"/>
+    </g>
+    <text style="font-size: 7.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #52514e" x="576" y="142.485844" transform="rotate(-0 576 142.485844)">外观 + 位置</text>
+   </g>
+   <g id="text_120">
+    <g id="patch_62">
+     <path d="M 561.96 540.205219 
+L 590.04 540.205219 
+L 590.04 533.026781 
+L 561.96 533.026781 
+z
+" style="fill: #fcfcfb"/>
+    </g>
+    <text style="font-size: 7.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #52514e" x="576" y="538.779281" transform="rotate(-0 576 538.779281)">vlm_ctx</text>
+   </g>
+   <g id="text_121">
+    <g id="patch_63">
+     <path d="M 567.81 659.205984 
+L 584.19 659.205984 
+L 584.19 652.058016 
+L 567.81 652.058016 
+z
+" style="fill: #fcfcfb"/>
+    </g>
+    <text style="font-size: 7.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #52514e" x="576" y="657.780047" transform="rotate(-0 576 657.780047)">z_im</text>
+   </g>
+   <g id="text_122">
+    <g id="patch_64">
+     <path d="M 665.254 331.566297 
+L 832.346 331.566297 
+L 832.346 324.065703 
+L 665.254 324.065703 
+z
+" style="fill: #fcfcfb"/>
+    </g>
+    <text style="font-size: 7.4px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #0b0b0b" x="748.8" y="330.345297" transform="rotate(-0 748.8 330.345297)">跟踪器 ID:开局累加、PGIF 证据、承诺都按它记账</text>
+   </g>
+   <g id="text_123">
+    <g id="patch_65">
+     <path d="M 945.33 268.11 
+L 955.47 268.11 
+L 955.47 260.154 
+L 945.33 260.154 
+z
+" style="fill: #fcfcfb"/>
+    </g>
+    <!-- $s^M$ -->
+    <g style="fill: #52514e" transform="translate(945.72 266.745)">
+     <text>
+      <tspan x="0" y="-0.857813" style="font-style: oblique; font-size: 7.8px; font-family: 'DejaVu Sans'; fill: #52514e">s</tspan>
+      <tspan x="4.410324" y="-3.920313" style="font-style: oblique; font-size: 5.46px; font-family: 'DejaVu Sans'; fill: #52514e">M</tspan>
+     </text>
+    </g>
+   </g>
+   <g id="text_124">
+    <g id="patch_66">
+     <path d="M 953.82 448.30275 
+L 958.5 448.30275 
+L 958.5 441.18525 
+L 953.82 441.18525 
+z
+" style="fill: #fcfcfb"/>
+    </g>
+    <text style="font-size: 7.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #52514e" x="956.16" y="446.93775" transform="rotate(-0 956.16 446.93775)">c</text>
+   </g>
+   <g id="text_125">
+    <g id="patch_67">
+     <path d="M 926.52 355.813313 
+L 985.8 355.813313 
+L 985.8 347.842688 
+L 926.52 347.842688 
+z
+" style="fill: #fcfcfb"/>
+    </g>
+    <text style="font-size: 7.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #52514e" x="956.16" y="354.448313" transform="rotate(-0 956.16 354.448313)">改写 / 撤销写入</text>
+   </g>
+   <g id="text_126">
+    <g id="patch_68">
+     <path d="M 942.21 595.50675 
+L 958.59 595.50675 
+L 958.59 588.38925 
+L 942.21 588.38925 
+z
+" style="fill: #fcfcfb"/>
+    </g>
+    <text style="font-size: 7.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #52514e" x="950.4" y="594.080813" transform="rotate(-0 950.4 594.080813)">z_ex</text>
+   </g>
+   <g id="text_127">
+    <g id="patch_69">
+     <path d="M 942.21 711.863016 
+L 958.59 711.863016 
+L 958.59 703.800984 
+L 942.21 703.800984 
+z
+" style="fill: #fcfcfb"/>
+    </g>
+    <text style="font-size: 7.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: middle; fill: #52514e" x="950.4" y="710.498016" transform="rotate(-0 950.4 710.498016)">动作</text>
+   </g>
+   <g id="text_128">
+    <g id="patch_70">
+     <path d="M 535.92 343.755609 
+L 551.52 343.755609 
+Q 553.47 343.755609 553.47 341.805609 
+L 553.47 334.706391 
+Q 553.47 332.756391 551.52 332.756391 
+L 535.92 332.756391 
+Q 533.97 332.756391 533.97 334.706391 
+L 533.97 341.805609 
+Q 533.97 343.755609 535.92 343.755609 
+z
+" style="fill: #0b0b0b"/>
+    </g>
+    <text style="font-weight: 700; font-size: 7.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: end; fill: #fcfcfb" x="551.52" y="340.830609" transform="rotate(-0 551.52 340.830609)">改动</text>
+   </g>
+   <g id="legend_1">
+    <g id="patch_71">
+     <path d="M 16.56 72.55875 
+L 30.64 72.55875 
+L 30.64 66.39875 
+L 16.56 66.39875 
+z
+" style="fill: #d9f2e8; stroke: #1baf7a; stroke-width: 2; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_129">
+     <text style="font-size: 8.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: start" x="37.68" y="72.55875" transform="rotate(-0 37.68 72.55875)">开局属性模块(训练过，冻结)</text>
+    </g>
+    <g id="patch_72">
+     <path d="M 169.68 72.55875 
+L 183.76 72.55875 
+L 183.76 66.39875 
+L 169.68 66.39875 
+z
+" style="fill: #dbe8f8; stroke: #2a78d6; stroke-width: 2; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_130">
+     <text style="font-size: 8.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: start" x="190.8" y="72.55875" transform="rotate(-0 190.8 72.55875)">TAHRelM(训练过，冻结)</text>
+    </g>
+    <g id="patch_73">
+     <path d="M 300.8 72.55875 
+L 314.88 72.55875 
+L 314.88 66.39875 
+L 300.8 66.39875 
+z
+" style="fill: #fde3d7; stroke: #eb6834; stroke-width: 2; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_131">
+     <text style="font-size: 8.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: start" x="321.92" y="72.55875" transform="rotate(-0 321.92 72.55875)">PGIF(推理期规则,0 参数)</text>
+    </g>
+    <g id="patch_74">
+     <path d="M 440.72 72.55875 
+L 454.8 72.55875 
+L 454.8 66.39875 
+L 440.72 66.39875 
+z
+" style="fill: #e6e5e1; stroke: #b9b8b2; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_132">
+     <text style="font-size: 8.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: start" x="461.84" y="72.55875" transform="rotate(-0 461.84 72.55875)">冻结模块 / 规则</text>
+    </g>
+    <g id="patch_75">
+     <path d="M 545.44 72.55875 
+L 559.52 72.55875 
+L 559.52 66.39875 
+L 545.44 66.39875 
+z
+" style="fill: #ffffff; stroke: #b9b8b2; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_133">
+     <text style="font-size: 8.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: start" x="566.56" y="72.55875" transform="rotate(-0 566.56 72.55875)">输入 / 环境</text>
+    </g>
+    <g id="patch_76">
+     <path d="M 632.56 72.55875 
+L 646.64 72.55875 
+L 646.64 66.39875 
+L 632.56 66.39875 
+z
+" style="fill: #e6e5e1; stroke-dasharray: 5.92,2.56; stroke-dashoffset: 0; stroke: #0b0b0b; stroke-width: 1.6; stroke-linejoin: miter"/>
+    </g>
+    <g id="text_134">
+     <text style="font-size: 8.8px; font-family: 'SimHei', 'DejaVu Sans', sans-serif; text-anchor: start" x="653.68" y="72.55875" transform="rotate(-0 653.68 72.55875)">相对 10-03 模型的改动(fig_architecture_v1)</text>
+    </g>
+   </g>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="p52f92b7c4f">
+   <rect x="0" y="0" width="1440" height="1044"/>
+  </clipPath>
+ </defs>
+</svg>

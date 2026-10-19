@@ -16,3 +16,13 @@ data/
 all_scenes.png
 paper1_all_scenes.png
 external/DAM4SAM/
+# third-party repos (each its own git repo), tool state, per-episode eval outputs; under eval_out/exp only the
+# experiment-level files (summary / manifest / experiment.resolved / schedule) are tracked
+external/
+.humanize/
+carla_uav_tracking/rollout/eval_out/exp/*/*/
+carla_uav_tracking/rollout/eval_out/labels_tr/
+carla_uav_tracking/rollout/eval_out/acot_l3_legacy_labels/
+carla_uav_tracking/rollout/eval_out/*.partial
+carla_uav_tracking/rollout/eval_out/*.pt
+carla_uav_tracking/rollout/eval_out/*.npz

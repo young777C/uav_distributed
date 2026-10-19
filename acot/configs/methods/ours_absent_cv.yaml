@@ -1,0 +1,7 @@
+# ours_final + constant-velocity WHERE while the committed key has no box (occluded / out of frame / PGIF absence):
+# the target-state estimator extrapolates the committed target's last confident position instead of leaving the EAR
+# sample in z_ex (2026-10-06, acot runtime only — the legacy policy cannot express it).
+name: ours_absent_cv
+extends: ours_final
+control:
+  absent_where: cv

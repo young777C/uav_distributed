@@ -1,0 +1,4 @@
+# 1006 表 3(b) cross-memory: PGIF (tempered + absent-hold) on the DINOv2 gallery re-ID memory.
+name: ext_reid_pgif
+extends: ext_reid
+filter: {mode: filter, filter_kind: tempered, absent_hold: true, absent_max: 8}

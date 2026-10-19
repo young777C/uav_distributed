@@ -68,6 +68,8 @@ def serve(policy: Policy, port: int, host: str = "0.0.0.0"):
                 elif cmd == "close":
                     if hasattr(policy, "_dagger_flush"):
                         policy._dagger_flush()          # flush the LAST episode's DAgger frames
+                    if hasattr(policy, "_tahdag_flush"):
+                        policy._tahdag_flush()          # ... and the LAST episode's TAH DAgger frames
                     send_msg(conn, {"ok": True})
                     break
                 elif cmd == "act":
@@ -75,7 +77,9 @@ def serve(policy: Policy, port: int, host: str = "0.0.0.0"):
                                       proprio=np.asarray(msg["proprio"], dtype=np.float32),
                                       step=int(msg["step"]),
                                       target_color=msg.get("target_color", ""),
-                                      target_bp=msg.get("target_bp", ""))
+                                      target_bp=msg.get("target_bp", ""),
+                                      retarget_event=bool(msg.get("retarget_event", False)),
+                                      rgb_hi=None if msg.get("rgb_hi") is None else np.asarray(msg["rgb_hi"]))
                     action, search_mode, info = policy.act(obs, gt_candidates=msg["gt_candidates"])
                     send_msg(conn, {"action": [float(x) for x in action],
                                     "search_mode": float(search_mode),
@@ -105,7 +109,7 @@ def main():
                          "loss only; needs run_rollout --predict-road) | track (Plan A: seed from "
                          "tid-COMMITTED candidate → grounding drives control). no-WM baseline = cv_gated.")
     ap.add_argument("--commit-k", type=int, default=5, help="track: hysteresis frames to switch committed target")
-    ap.add_argument("--tid-head", default="xattn", choices=["xattn", "attrbind", "reid", "oracle", "assoc", "dam4sam", "tah"],
+    ap.add_argument("--tid-head", default="xattn", choices=["xattn", "attrbind", "reid", "oracle", "assoc", "dam4sam", "tah", "fusion", "sticky"],
                     help="xattn=language grounding (default) | attrbind=CLIP-style head (needs --tid-ckpt) "
                          "| reid=temporal appearance-memory re-ID (match the tracked instance, not the "
                          "language; reframe test — no ckpt, falls back to xattn before a template exists)")
@@ -156,6 +160,19 @@ def main():
     ap.add_argument("--dam4sam-host", default="dam4sam-svc", help="external baseline (--tid-head dam4sam) service host")
     ap.add_argument("--tah-ckpt", default="runs/tah_rel.pt", help="path-B: TAHRel learned association ckpt")
     ap.add_argument("--dam4sam-port", type=int, default=5601, help="DAM4SAM service port")
+    ap.add_argument("--asd", default="off", choices=["off", "observe", "rule", "learned", "filter"],
+                    help="ASD memory-agnostic confident-drift correction (rollout/asd.py)")
+    ap.add_argument("--asd-cfg", default="", help="ASD kwargs as JSON, e.g. '{\"h\":2.0}'")
+    ap.add_argument("--tracklets", default="sim", choices=["sim", "tracker"],
+                    help="identity keys: sim = simulator actor index (legacy, ideal association) | tracker = GT-free "
+                         "SORT/DeepSORT-style tracklet ids (rollout/tracklets.py; 1004 deployable v2)")
+    ap.add_argument("--occl-cands", action="store_true",
+                    help="occlusion-aware candidates: drop vehicles the env ray-cast marks occluded "
+                         "(needs run_rollout --vis-raycast)")
+    ap.add_argument("--event-override", action="store_true",
+                    help="1003_dynamic-retarget-design.md S1: on Observation.retarget_event (needs "
+                         "run_rollout --retarget-tick), hard-reset TAHRelM memory + PGIF belief to the "
+                         "(GT-driven) new target. tid_head=tah/fusion + --gallery-seed committed only.")
     ap.add_argument("--port", type=int, default=5555)
     a = ap.parse_args()
 
@@ -172,7 +189,9 @@ def main():
                     gallery_seed=a.gallery_seed, reanchor=a.reanchor,
                     reanchor_patience=a.reanchor_patience, reanchor_tavg=a.reanchor_tavg, assoc_mode=a.assoc_mode,
                     assoc_gate_px=a.assoc_gate_px, assoc_lambda=a.assoc_lambda,
-                    dam4sam_host=a.dam4sam_host, dam4sam_port=a.dam4sam_port, tah_ckpt=a.tah_ckpt)
+                    dam4sam_host=a.dam4sam_host, dam4sam_port=a.dam4sam_port, tah_ckpt=a.tah_ckpt,
+                    asd=a.asd, asd_cfg=a.asd_cfg, tracklets=a.tracklets, occl_cands=a.occl_cands,
+                    event_override=a.event_override)
     print(f"[policy-server] loaded policy (language_mode={a.language_mode}, "
           f"s2_period={a.s2_period}, ablate={a.ablate}, ex_source={a.ex_source}, commit_k={a.commit_k}, "
           f"tid_head={a.tid_head})", flush=True)

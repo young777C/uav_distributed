@@ -1,0 +1,9 @@
+# 1006 DINOv3 stage 2 (exploratory, dev only): Ours with TAHRelM trained under the recorded full recipe (64 offline
+# episodes + one DAgger round) with DINOv3 ViT-B/16 crop features — the DINOv3 counterpart of ours_rt_s0; replaces the
+# main model only if it beats the existing weights (1006_t0_log.md two-stage rule).
+name: ours_v3full
+extends: ours_final
+identity:
+  tah: {ckpt: runs/tah_1006/tah_relm_v3full_s0.pt, feature: dinov3_crop}
+accept_provenance_gaps:
+  identity.tah.ckpt: "recipe stored in the checkpoint (train/tah_train.py --motion --aug --seed 0, cache runs/tah_1006/tah_cache_dinov3_dag.pt = 64 offline DINOv3 + t0_dinov3_dagger2)"

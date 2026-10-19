@@ -1,0 +1,9 @@
+# Framework validation (P1a): record the first act messages of one episode of the final model for the audit replay
+# (acot/eval/replay_neutral.py). NOT a results run.
+name: smoke_replay
+protocol: sim_proxy_v2@1
+seeds: {set: dev2, subset: [[93000, 93000]], expect: 1}
+arms:
+  ours: {method: ours_final}
+collect: [ticks, trk, gt_access, scenario, record_act]
+infra: {runtime: legacy}           # reproduces / documents a run of the legacy policy runtime (P1 path)

@@ -1,0 +1,18 @@
+# 1007 optimisation round 2a (user decision 2026-10-08: round-2 method improvement only, component setting = shared
+# attribute opening). dev-B, protocol @3, natural opening. New Ours default conf_tau = 0.05 (round 1, §4d).
+#   memw_tau005   TAHRelM memory writes the COMMITTED identity's box (identity.tah.memory_write = committed)
+#   dampgif       DAM4SAM + PGIF (tempered + absent-hold) — the 1003 V1 idea re-tested under @3
+#   tau005_r1     repeat 1 of round-1 tau005 (r = 2 for the conf_tau gain)
+#   dam4sam_r1    repeat 1 of the tuned DAM4SAM (r = 2 for the gap to DAM4SAM)
+name: opt2a_screen_devB3
+protocol: sim_proxy_v2@3
+seeds: {set: dev2, subset: [[93060, 93099]], expect: 40}
+completeness: {require: allow_skipped, allow_skipped_reasons: ["target stationary"], pairing: intersection}
+schedule: {block: 5, seed: 10092, max_infra_attempts: 3}
+arms:
+  memw_tau005: {method: ours_final, role: ablation, override: {identity.conf_tau: 0.05, identity.tah.memory_write: committed}}
+  dampgif:     {method: ext_dam4sam_pgif, role: baseline}
+  tau005_r1:   {method: ours_final, role: ablation, repeat: 1, override: {identity.conf_tau: 0.05}}
+  dam4sam_r1:  {method: ext_dam4sam, role: baseline, repeat: 1}
+collect: [ticks, gt_access, scenario]
+infra: {runtime: acot}

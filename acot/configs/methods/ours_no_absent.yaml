@@ -1,0 +1,4 @@
+# ours_final without absent-hold (PGIF tempered only) = 1004 S3 (v2t_pgif_trk).
+name: ours_no_absent
+extends: ours_final
+filter: {absent_hold: false}

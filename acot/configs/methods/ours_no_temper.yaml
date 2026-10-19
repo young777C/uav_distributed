@@ -1,0 +1,5 @@
+# ours_final without tempering: PGIF evidence decay λ = 1 (pure accumulation), everything else identical
+# (confidence weighting, absent-hold, gating) = the single-variable tempering ablation (1006 §5.2, H-P3).
+name: ours_no_temper
+extends: ours_final
+filter: {resid_decay: 1.0}

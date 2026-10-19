@@ -1,0 +1,12 @@
+# P0-2 stage B smoke (1012 §6.2): the p02b_dagger_train arm on one seed of each non-Town05 town (Town01 / 02 / 04) —
+# do these towns run at @3 on the acot runtime and write tah_dagger.pt? Results are discarded (not merged); the same
+# seeds are collected again by p02b_dagger_train.
+name: p02b_dagger_smoke
+protocol: sim_proxy_v2@3
+seeds: {set: train_dagger_v3, subset: [[98060, 98060], [98080, 98080], [98100, 98100]], expect: 3}
+completeness: {require: allow_skipped, allow_skipped_reasons: ["target stationary"], pairing: intersection}
+schedule: {block: 5, seed: 10143, max_infra_attempts: 2}
+arms:
+  dag_fa: {method: ours_fast_a, role: main, override: {identity.conf_tau: 0.05}}
+collect: [ticks, tah_dagger, scenario]
+infra: {runtime: acot}

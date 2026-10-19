@@ -1,0 +1,13 @@
+{"event": "plan", "seed": 10067, "block": 1, "n_units": 6, "order": [["det_a", [93060]], ["det_b", [93061]], ["det_a", [93061]], ["det_c", [93060]], ["det_c", [93061]], ["det_b", [93060]]], "t": 1791332302.4294984}
+{"event": "start", "arm": "det_a", "seeds": [93060], "worker": "w0", "carla_port": 2230, "gpu": 3, "tm_base": 9730, "svc_slot": null, "t": 1791332302.4299233}
+{"event": "start", "arm": "det_b", "seeds": [93061], "worker": "w1", "carla_port": 2250, "gpu": 6, "tm_base": 9790, "svc_slot": null, "t": 1791332302.4301255}
+{"event": "end", "arm": "det_a", "worker": "w0", "requeued": [], "t": 1791332559.6838164}
+{"event": "start", "arm": "det_a", "seeds": [93061], "worker": "w0", "carla_port": 2230, "gpu": 3, "tm_base": 9730, "svc_slot": null, "t": 1791332559.6839352}
+{"event": "end", "arm": "det_b", "worker": "w1", "requeued": [], "t": 1791332569.634697}
+{"event": "start", "arm": "det_c", "seeds": [93060], "worker": "w1", "carla_port": 2250, "gpu": 6, "tm_base": 9790, "svc_slot": null, "t": 1791332569.6347754}
+{"event": "end", "arm": "det_c", "worker": "w1", "requeued": [], "t": 1791332786.5693352}
+{"event": "start", "arm": "det_c", "seeds": [93061], "worker": "w1", "carla_port": 2250, "gpu": 6, "tm_base": 9790, "svc_slot": null, "t": 1791332786.5694156}
+{"event": "end", "arm": "det_a", "worker": "w0", "requeued": [], "t": 1791332836.6155896}
+{"event": "start", "arm": "det_b", "seeds": [93060], "worker": "w0", "carla_port": 2230, "gpu": 3, "tm_base": 9730, "svc_slot": null, "t": 1791332836.6156654}
+{"event": "end", "arm": "det_c", "worker": "w1", "requeued": [], "t": 1791333048.5773282}
+{"event": "end", "arm": "det_b", "worker": "w0", "requeued": [], "t": 1791333141.3312945}

@@ -1,0 +1,11 @@
+# Reproduction of runs/tah_v90/tah_relm_v90_s0.pt (its recipe is stored in the checkpoint) through `acot train`.
+kind: tah_ckpt
+name: tah_relm_v90_s0_repro
+trainer: tah_relm
+inputs: [artefact:tah_cache_v5_fov90, artefact:tah_dagger_v1_reencoded, artefact:tah_dagger_v2]
+hparams: {epochs: 60, lr: 0.0003, val_frac: 0.15, rel: true, motion: true, aug: true, fnoise: 0.05, pjit: 0.02, wd: 0.0001}
+seed: 0
+save_last: true
+waivers:
+  tick_s: "legacy recipe of the 1004 FOV-fix retrain: 0.2 s offline sequences + 0.6 s DAgger sequences (kept only to
+    reproduce tah_relm_v90_s0; a new recipe should use a single tick interval)"

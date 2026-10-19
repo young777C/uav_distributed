@@ -1,0 +1,64 @@
+# Seed registry (framework §5.4). A seed's identity is (town, seed). Ranges are INCLUSIVE [lo, hi]. Sets of different
+# purposes must not overlap (acot lint). `locked` sets need --allow-test and the experiment's prereg_ref.
+seedsets:
+  datagen_mvp_v5:
+    purpose: train_data
+    description: 64-episode mvp_full_v5 / _fov90 data-gen plan (seed→town), incl. substitute 108 for 49
+    blocks: [{town: "*", list_file: runs/tah_v90/b_manifest.json}]
+  train_dagger_v1:
+    purpose: train
+    description: on-policy DAgger episodes of runs/tah_relm_dag.pt (deploy_v1, 907)
+    blocks: [{town: Town05, ranges: [[92000, 92023]]}]
+  train_opening:
+    purpose: train
+    description: opening-classifier training snapshots (1004 opening fix)
+    blocks: [{town: Town05, ranges: [[96000, 96279]]}]
+  train_dagger_v2:
+    purpose: train
+    description: on-policy DAgger collection for the FOV-fix retrain (runs/tah_v90/collect_dagger.sh)
+    blocks:
+      - {town: Town05, ranges: [[97000, 97059]]}
+      - {town: Town01, ranges: [[97060, 97074]]}
+      - {town: Town02, ranges: [[97075, 97089]]}
+      - {town: Town04, ranges: [[97090, 97104]]}
+  train_dagger_v3:
+    purpose: train
+    description: P0-2 stage B (1012 §6) on-policy DAgger of ours_fast_a at sim_proxy_v2@3 — training episodes
+    blocks:
+      - {town: Town05, ranges: [[98000, 98059]]}
+      - {town: Town01, ranges: [[98060, 98079]]}
+      - {town: Town02, ranges: [[98080, 98099]]}
+      - {town: Town04, ranges: [[98100, 98119]]}
+  val_dagger_v3:
+    purpose: train
+    description: P0-2 stage B (1012 §6) on-policy DAgger of ours_fast_a at @3 — held-out epoch selection, never trained on
+    blocks:
+      - {town: Town05, ranges: [[98200, 98224]]}
+      - {town: Town01, ranges: [[98225, 98229]]}
+      - {town: Town02, ranges: [[98230, 98234]]}
+      - {town: Town04, ranges: [[98235, 98239]]}
+  dev:
+    purpose: dev
+    description: the development seeds (used repeatedly during research → dev only)
+    blocks: [{town: Town05, ranges: [[91000, 91019]]}]
+  dev2:
+    purpose: dev
+    description: second dev block (1004 ablation design dev 93000–93019; opening snapshot benchmark 93000–93099)
+    blocks: [{town: Town05, ranges: [[93000, 93099]]}]
+  heldout_opening:
+    purpose: heldout
+    description: closed-loop opening validation blocks (v1/head 93100–239, v2 –379, v3 –519, v4 –659); now spent
+    blocks: [{town: Town05, ranges: [[93100, 93659]]}]
+  test_town05:
+    purpose: test
+    locked: true
+    description: 1004 pre-registered test (n = 80), never run before the formal batch
+    blocks: [{town: Town05, ranges: [[95000, 95079]]}]
+  test_town03:
+    purpose: test
+    locked: true
+    blocks: [{town: Town03, ranges: [[95000, 95039]]}]
+  test_town10hd:
+    purpose: test
+    locked: true
+    blocks: [{town: Town10HD, ranges: [[95000, 95039]]}]

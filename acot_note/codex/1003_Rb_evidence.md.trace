@@ -1,0 +1,3089 @@
+Reading additional input from stdin...
+OpenAI Codex v0.159.3
+--------
+workdir: /nvidia/hque/code/cyhe/uav-acot-track
+model: gpt-5.5
+provider: openai
+approval: never
+sandbox: read-only
+reasoning effort: high
+reasoning summaries: none
+session id: 01a0ff86-4427-7fa3-8465-ec04d0038999
+--------
+user
+你是 IEEE T-RO / RA-L 审稿人兼 CCF-A 会议(CoRL/ICRA/NeurIPS)领域主席。请审核 acot_note/1003_iteration_roadmap.md 的「方法学发现」「结果」「机理诊断」「总结」各节,以及 acot_note/1001_innovation-design.md 的 §指标口径 与 §5.5(已按口径修正更新)。数据与脚本:carla_uav_tracking/rollout/iter_gate.py、iter_mech.py、deploy_compare.py、metrics.py(scorer:mis_follow_inst / mis_follow_sustained / max_correct_run_s / max_wrong_run_s 的定义)、policy.py(_dam4sam_select 何时返回全 -1e9 即弃权)、eval_out/paper_it_*.json、paper_dep_*.json、runs/asd/iter/*.jsonl。预注册设计见 acot_note/1003_v1_v2_design.md、1003_v3_design.md、1003_iteration_workflow.md。重点审:(1) 把正确锁定比例主口径从 1-mis_follow_inst 改为 1-mis_follow_sustained(承诺身份)是否有原则依据、是否属于看结果后改口径(HARKing),报告方式是否足以防止这种质疑;核对 scorer 代码确认'弃权帧算正确'的说法属实;(2) 各版本门控判定是否与预注册一致、有无过度声称或遗漏(包括未跑的 V1-selfreset、V2-single@K);(3) '开局身份决定一切'与'回灌门控使记忆误差同步(ρ_err 0.34→0.72)'两条机理结论是否被数据支持、有无混杂(例如 ρ_err 受飞行轨迹/DAM 弃权模式影响,commit-only 的 ρ 也高);(4) 泛化结论的措辞是否恰当;(5) 总结中列出的可写进论文的新增贡献是否足够 SCI 一区/CCF-A,还缺什么。输出:verdict(NO MAJOR / MAJOR),逐条 MAJOR / MINOR 问题与具体修改建议,中文。
+codex
+我会按审稿口径先核对预注册文档、指标实现和现有结果，再回到两份 note 看文字是否被代码与数据支撑。因为你特别点名 HARKing 与 scorer 语义，我会把“代码事实”和“论文表述风险”分开判断。
+exec
+/bin/sh -lc "rg -n \"方法学发现|结果|机理诊断|总结|指标口径|5\\.5|mis_follow|sustained|inst|rho|ρ|开局|回灌|V1|V2|V3|selfreset|single\" acot_note/1003_iteration_roadmap.md acot_note/1001_innovation-design.md acot_note/1003_v1_v2_design.md acot_note/1003_v3_design.md acot_note/1003_iteration_workflow.md" in /nvidia/hque/code/cyhe/uav-acot-track
+exec
+/bin/sh -lc 'rg -n "mis_follow_inst|mis_follow_sustained|max_correct_run_s|max_wrong_run_s|dam4sam|_dam4sam_select|return|1e9|rho|ρ|gate|selfreset|single" carla_uav_tracking/rollout/iter_gate.py carla_uav_tracking/rollout/iter_mech.py carla_uav_tracking/rollout/deploy_compare.py carla_uav_tracking/rollout/metrics.py carla_uav_tracking/rollout/policy.py' in /nvidia/hque/code/cyhe/uav-acot-track
+ succeeded in 6ms:
+carla_uav_tracking/rollout/deploy_compare.py:3:(max_correct_run_s, committed identity, out-of-frame ends the run), longest wrong lock (max_wrong_run_s).
+carla_uav_tracking/rollout/deploy_compare.py:22:    ("dam4sam", "DAM4SAM", "external"),
+carla_uav_tracking/rollout/deploy_compare.py:29:    return 1 - sum(bn[k] * nd[k] for k in nd if k in bn) / t if t else float("nan")
+carla_uav_tracking/rollout/deploy_compare.py:33:# "lock" as longC / longW; an abstaining tracker (DAM4SAM: empty mask / nothing within its gate) holds its last commitment.
+carla_uav_tracking/rollout/deploy_compare.py:34:# The former definition 1 − mis_follow_inst counted abstention frames as CORRECT (DAM4SAM abstains ~60% → 0.786 vs 0.367);
+carla_uav_tracking/rollout/deploy_compare.py:36:EXTRA = [("correct_l", lambda e: 1 - e["mis_follow_inst"]), ("correct_s", _strict)]
+carla_uav_tracking/rollout/deploy_compare.py:37:METRICS = [("correct", "正确锁定比例(承诺)", lambda e: 1 - e["mis_follow_sustained"]),
+carla_uav_tracking/rollout/deploy_compare.py:38:           ("longC", "最长连续正确锁定(s)", lambda e: e["max_correct_run_s"]),
+carla_uav_tracking/rollout/deploy_compare.py:39:           ("longW", "最长锁错(s)", lambda e: e["max_wrong_run_s"])]
+carla_uav_tracking/rollout/deploy_compare.py:46:        return None
+carla_uav_tracking/rollout/deploy_compare.py:48:    return {int(e["episode_seed"]): e for e in d["episodes"] if e.get("mis_follow_inst") is not None}
+carla_uav_tracking/rollout/deploy_compare.py:53:    return [float(x.mean()), float(np.percentile(b, 2.5)), float(np.percentile(b, 97.5))]
+carla_uav_tracking/rollout/policy.py:13:action is conditioned on z_ex/z_im/vlm_ctx/proprio, not tid); it is returned raw
+carla_uav_tracking/rollout/policy.py:38:# rest inject a training-free memory+CV prior (rollout.target_state); '*_gated' only
+carla_uav_tracking/rollout/policy.py:45:# vs cv_gated's straight-line dead-reckon. Same last-seen anchor+speed → isolates
+carla_uav_tracking/rollout/policy.py:46:# follow-the-lane vs go-straight (offline M2 gate: road << cv_frame on turns/junctions).
+carla_uav_tracking/rollout/policy.py:47:_EX_MODES = {"ear": (None, None), "cv": ("cv", False), "cv_gated": ("cv", True),
+carla_uav_tracking/rollout/policy.py:48:             "zerovel": ("zerovel", False), "zerovel_gated": ("zerovel", True),
+carla_uav_tracking/rollout/policy.py:91:    return (*mods, d, meta)
+carla_uav_tracking/rollout/policy.py:101:                 reid_tavg: float = 0.0, reid_motion: float = 0.0, reid_motion_gate_px: float = 160.0,
+carla_uav_tracking/rollout/policy.py:104:                 assoc_gate_px: float = 160.0, assoc_lambda: float = 1.0,
+carla_uav_tracking/rollout/policy.py:105:                 dam4sam_host: str = "dam4sam-svc", dam4sam_port: int = 5601,
+carla_uav_tracking/rollout/policy.py:122:        self._ex_mode, self._ex_gated = _EX_MODES[ex_source]   # (None,None) for 'ear'
+carla_uav_tracking/rollout/policy.py:127:                                                               # (dist < conf_consensus·gate) to commit-fly (0=off)
+carla_uav_tracking/rollout/policy.py:132:        self.reid_motion_gate_px = float(reid_motion_gate_px)  # borrow#1: motion soft-gate radius (px)
+carla_uav_tracking/rollout/policy.py:139:        self.reanchor_tavg = float(reanchor_tavg)              # temporal language re-anchor: per-actor EMA of language logit (0=single-frame)
+carla_uav_tracking/rollout/policy.py:171:        self.assoc_mode = assoc_mode; self.assoc_gate_px = float(assoc_gate_px); self.assoc_lambda = float(assoc_lambda)
+carla_uav_tracking/rollout/policy.py:185:        self.cold_single = os.environ.get("COLD_SINGLE", "0") == "1"         # V2 control: commit single-frame pick at K
+carla_uav_tracking/rollout/policy.py:186:        self.v1_selfreset = os.environ.get("V1_SELFRESET", "0") == "1"       # V1 control: re-init on own pick, no identity change
+carla_uav_tracking/rollout/policy.py:197:        self._dam4sam_sock = None
+carla_uav_tracking/rollout/policy.py:198:        if tid_head in ("dam4sam", "fusion"):
+carla_uav_tracking/rollout/policy.py:200:            self._dam4sam_sock = _sk.socket(_sk.AF_INET, _sk.SOCK_STREAM)
+carla_uav_tracking/rollout/policy.py:201:            self._dam4sam_sock.connect((dam4sam_host, int(dam4sam_port)))
+carla_uav_tracking/rollout/policy.py:202:            print(f"[policy] connected to DAM4SAM service {dam4sam_host}:{dam4sam_port}", flush=True)
+carla_uav_tracking/rollout/policy.py:232:        self._reid_mscore = None        # borrow#2: stashed per-candidate motion score for the consensus gate
+carla_uav_tracking/rollout/policy.py:239:        self._dam4sam_inited = False     # dam4sam baseline: has the tracker been init'd this episode
+carla_uav_tracking/rollout/policy.py:240:        self._dam4sam_iou = 0.0; self._dam4sam_cool = 0; self._dam4sam_rgb = None   # V1: PGIF∘DAM4SAM state
+carla_uav_tracking/rollout/policy.py:262:            return
+carla_uav_tracking/rollout/policy.py:279:            return
+carla_uav_tracking/rollout/policy.py:311:        return logits
+carla_uav_tracking/rollout/policy.py:317:            return self._asd_fe
+carla_uav_tracking/rollout/policy.py:320:            return self._reid_fn
+carla_uav_tracking/rollout/policy.py:324:        return fe / (np.linalg.norm(fe, axis=1, keepdims=True) + 1e-8)
+carla_uav_tracking/rollout/policy.py:326:    def _asd_gate_memory(self, slot, which=None):
+carla_uav_tracking/rollout/policy.py:327:        """Posterior-gated memory update: redo this tick's update with the filter's MAP crop (tah); reid's gallery
+carla_uav_tracking/rollout/policy.py:328:        already stores the COMMITTED identity, which is overridden by the caller; dam4sam (V1): re-init SAM2 on the
+carla_uav_tracking/rollout/policy.py:331:        if which == "dam4sam" and self._dam4sam_rgb is not None and self._cand_set_cur is not None \
+carla_uav_tracking/rollout/policy.py:332:           and self._dam4sam_cool == 0:
+carla_uav_tracking/rollout/policy.py:335:            send_msg(self._dam4sam_sock, {"cmd": "init", "rgb": np.asarray(self._dam4sam_rgb, np.uint8),
+carla_uav_tracking/rollout/policy.py:337:            recv_msg(self._dam4sam_sock)
+carla_uav_tracking/rollout/policy.py:338:            self._dam4sam_cool = 3
+carla_uav_tracking/rollout/policy.py:339:            return
+carla_uav_tracking/rollout/policy.py:347:        """V2: one tempered, rank-weighted language vote per tick; returns the slot of argmax_k G_k (visible)."""
+carla_uav_tracking/rollout/policy.py:350:        h = self._cold_hist; rho = float(np.searchsorted(np.sort(h), m)) / len(h) if len(h) >= 2 else 0.5
+carla_uav_tracking/rollout/policy.py:354:        a = int(aidx[lang_slot]); self._cold_G[a] = self._cold_G.get(a, 0.0) + 0.5 + rho
+carla_uav_tracking/rollout/policy.py:355:        return max(range(len(aidx)), key=lambda s_: self._cold_G.get(int(aidx[s_]), 0.0))
+carla_uav_tracking/rollout/policy.py:377:            return np.zeros(len(cands), np.float64)
+carla_uav_tracking/rollout/policy.py:380:        return -np.linalg.norm(uv - pred[None], axis=1) / self.reid_motion_gate_px
+carla_uav_tracking/rollout/policy.py:386:            return
+carla_uav_tracking/rollout/policy.py:393:        Motion (constant-velocity image-space prediction + gate) + optional appearance (crop-DINOv2
+carla_uav_tracking/rollout/policy.py:401:        if self._assoc_uv is not None:                                  # motion: predict + gate
+carla_uav_tracking/rollout/policy.py:404:            score = -dist / self.assoc_gate_px                          # higher = closer
+carla_uav_tracking/rollout/policy.py:405:            gate = dist < self.assoc_gate_px
+carla_uav_tracking/rollout/policy.py:407:            score = np.zeros(n); gate = np.ones(n, bool)
+carla_uav_tracking/rollout/policy.py:416:        if self._assoc_uv is not None and gate.any():                  # hard motion gate (fall back if empty)
+carla_uav_tracking/rollout/policy.py:417:            score = np.where(gate, score, -1e9)
+carla_uav_tracking/rollout/policy.py:425:                ti = int(score.argmax()) if float(score.max()) > -1e8 else None   # no gated match → hold state
+carla_uav_tracking/rollout/policy.py:435:        return score.astype(np.float32)
+carla_uav_tracking/rollout/policy.py:437:    def _dam4sam_select(self, cset, rgb, init_slot=None):
+carla_uav_tracking/rollout/policy.py:442:        gate) → pred_slot. Returns (N,) scores (higher=nearer the DAM4SAM box); -1e9 gate for far."""
+carla_uav_tracking/rollout/policy.py:449:        if not self._dam4sam_inited:
+carla_uav_tracking/rollout/policy.py:453:                send_msg(self._dam4sam_sock, {"cmd": "init", "rgb": np.asarray(rgb, np.uint8), "box": box})
+carla_uav_tracking/rollout/policy.py:454:                bbox = recv_msg(self._dam4sam_sock).get("bbox")
+carla_uav_tracking/rollout/policy.py:455:                self._dam4sam_inited = True
+carla_uav_tracking/rollout/policy.py:456:                self._dam4sam_iou = 0.5                                 # init frame: no predicted IoU yet
+carla_uav_tracking/rollout/policy.py:458:                return np.full(n, -1e9, np.float32)                     # target never seen yet → no pick
+carla_uav_tracking/rollout/policy.py:460:            send_msg(self._dam4sam_sock, {"cmd": "track", "rgb": np.asarray(rgb, np.uint8)})
+carla_uav_tracking/rollout/policy.py:461:            resp = recv_msg(self._dam4sam_sock); bbox = resp.get("bbox")
+carla_uav_tracking/rollout/policy.py:463:            self._dam4sam_iou = float(iou) if iou is not None and iou == iou else 0.0   # SAM2 predicted IoU = confidence
+carla_uav_tracking/rollout/policy.py:464:        self._dam4sam_rgb = rgb                                         # for the PGIF reset hook (re-init on ŝ)
+carla_uav_tracking/rollout/policy.py:465:        self._dam4sam_cool = max(0, getattr(self, "_dam4sam_cool", 0) - 1)
+carla_uav_tracking/rollout/policy.py:467:            return np.full(n, -1e9, np.float32)                         # lost (empty mask) → hold
+carla_uav_tracking/rollout/policy.py:472:        gate = float(self.assoc_gate_px)
+carla_uav_tracking/rollout/policy.py:473:        return np.where(dist < gate, -dist / gate, -1e9).astype(np.float32)
+carla_uav_tracking/rollout/policy.py:483:            return                                              # loss -> hold commitment
+carla_uav_tracking/rollout/policy.py:496:            return None
+carla_uav_tracking/rollout/policy.py:499:                return s
+carla_uav_tracking/rollout/policy.py:500:        return None
+carla_uav_tracking/rollout/policy.py:505:            return None
+carla_uav_tracking/rollout/policy.py:507:            return np.asarray(tpos, np.float64)
+carla_uav_tracking/rollout/policy.py:509:        return np.asarray(ds[self._committed_idx][:3], np.float64) if self._committed_idx < ds.shape[0] else None
+carla_uav_tracking/rollout/policy.py:516:            return False
+carla_uav_tracking/rollout/policy.py:518:        return bool(0 <= u < W and 0 <= v < H)
+carla_uav_tracking/rollout/policy.py:562:                # TEMPORAL language re-anchor: single-frame language picks wrong at re-appearance (H0 ceiling) →
+carla_uav_tracking/rollout/policy.py:564:                # language vote, not one noisy frame (mirrors reid_tavg, which fixed single-frame reid).
+carla_uav_tracking/rollout/policy.py:573:                # the WHICH wall is the single-frame paradigm. Falls back to tid before a template
+carla_uav_tracking/rollout/policy.py:586:                            self._reid_mscore = ms                    # borrow#2: stash for the consensus commit-fly gate
+carla_uav_tracking/rollout/policy.py:593:                        # TEMPORAL re-ID: the gallery template is temporal but the QUERY is single-frame
+carla_uav_tracking/rollout/policy.py:596:                        # the TEMPORALLY-INTEGRATED best visible candidate → robust to single bad frames,
+carla_uav_tracking/rollout/policy.py:597:                        # persists evidence across brief losses. reid_tavg=decay (0=off=single-frame).
+carla_uav_tracking/rollout/policy.py:603:                            best_s, best_v = self._pred_slot, -1e9
+carla_uav_tracking/rollout/policy.py:605:                                v = self._reid_score.get(c.idx, -1e9)
+carla_uav_tracking/rollout/policy.py:609:                            self._tid_logits = np.array([self._reid_score.get(c.idx, -1e9)
+carla_uav_tracking/rollout/policy.py:619:                    dl = self._dam4sam_select(cset, obs.rgb, init_slot=lang_slot)
+carla_uav_tracking/rollout/policy.py:621:                if self.tid_head == "dam4sam":
+carla_uav_tracking/rollout/policy.py:622:                    dl = self._dam4sam_select(cset, obs.rgb, init_slot=lang_slot)
+carla_uav_tracking/rollout/policy.py:656:                                k_c = lang_slot if self.cold_single else k_best   # control: single-frame pick at tick K
+carla_uav_tracking/rollout/policy.py:660:                                if self._asd is not None and getattr(self._asd, "mode", "") == "filter" and not self.cold_single:
+carla_uav_tracking/rollout/policy.py:664:                                if self.tid_head == "fusion" and self._dam4sam_inited:
+carla_uav_tracking/rollout/policy.py:665:                                    self._dam4sam_cool = 0; self._cand_set_cur = cset; self._dam4sam_rgb = obs.rgb
+carla_uav_tracking/rollout/policy.py:666:                                    self._asd_gate_memory(k_c, which="dam4sam")
+carla_uav_tracking/rollout/policy.py:690:                            # ★confident-drift UPPER BOUND: perfect (GT) drift detection. conf-gate reanchor
+carla_uav_tracking/rollout/policy.py:706:                    self._tah_mem_prev = self._tah_mem                    # ASD-IF: snapshot for posterior-gated update
+carla_uav_tracking/rollout/policy.py:733:                # pick confidence = top1−top2 margin (used to gate commit-fly in track mode).
+carla_uav_tracking/rollout/policy.py:748:                                ra, bv = lang_slot, -1e9
+carla_uav_tracking/rollout/policy.py:750:                                    v = self._lang_score.get(c.idx, -1e9)
+carla_uav_tracking/rollout/policy.py:754:                                ra = lang_slot                  # single-frame language pick
+carla_uav_tracking/rollout/policy.py:776:                                                  [(tah_pick, tconf, "tah"), (self._fus_dam, self._dam4sam_iou, "dam"),
+carla_uav_tracking/rollout/policy.py:780:                            if self._asd.gate_tah and fo["gate"].get("tah") and self.gallery_seed == "committed":
+carla_uav_tracking/rollout/policy.py:781:                                self._asd_gate_memory(int(sh), which="tah")
+carla_uav_tracking/rollout/policy.py:782:                            if self._asd.gate_dam and (fo["gate"].get("dam") or self._fus_dam is None) \
+carla_uav_tracking/rollout/policy.py:783:                               and self.gallery_seed == "committed" and self._dam4sam_inited:
+carla_uav_tracking/rollout/policy.py:784:                                self._asd_gate_memory(int(sh), which="dam4sam")
+carla_uav_tracking/rollout/policy.py:788:                            self._reanchor_events += int(any(fo["gate"].values()))
+carla_uav_tracking/rollout/policy.py:792:                        mconf = self._dam4sam_iou if self.tid_head == "dam4sam" else self._pred_conf
+carla_uav_tracking/rollout/policy.py:796:                    if o["fire"] and o.get("kind") == "gate":
+carla_uav_tracking/rollout/policy.py:799:                        # gt-seeded (oracle memory) runs keep the oracle update by definition → PGIF gates the
+carla_uav_tracking/rollout/policy.py:800:                        # control commitment only; deployable (committed) runs also gate the memory update.
+carla_uav_tracking/rollout/policy.py:801:                        if self.v1_selfreset and self.tid_head == "dam4sam":
+carla_uav_tracking/rollout/policy.py:803:                            self._asd_gate_memory(int(self._pred_slot)); self._reanchor_events += 1
+carla_uav_tracking/rollout/policy.py:805:                    if o["fire"] and o.get("kind") == "gate":
+carla_uav_tracking/rollout/policy.py:806:                        if o.get("gate_memory", True) and self.gallery_seed == "committed":
+carla_uav_tracking/rollout/policy.py:807:                            self._asd_gate_memory(int(o["slot"]))
+carla_uav_tracking/rollout/policy.py:834:                    # Confidence gate (①): on a LOW-margin (ambiguous) pick, DON'T switch the
+carla_uav_tracking/rollout/policy.py:838:                    # borrow#2: CONSENSUS gate — commit-fly only if the pick is ALSO motion-consistent
+carla_uav_tracking/rollout/policy.py:839:                    # (appearance AND motion agree). ms[slot]=-dist/gate; require dist<conf_consensus·gate.
+carla_uav_tracking/rollout/policy.py:856:                    # (baseline) prior seeded from the GT target, gated by visibility; tid
+carla_uav_tracking/rollout/policy.py:861:                    apply = (not self._ex_gated) or (not visible)
+carla_uav_tracking/rollout/policy.py:882:        # the camera toward the committed target's projected horizontal offset; gated by confidence.
+carla_uav_tracking/rollout/policy.py:892:        return (dx, dy, dz, dyaw), search_mode, info
+carla_uav_tracking/rollout/metrics.py:4:closed-loop mis-follow is NOT per-frame argmax (that punishes single-frame flicker
+carla_uav_tracking/rollout/metrics.py:9:  mis_follow_inst      per-tick argmax≠target over target-present ticks (diagnostic, strict)
+carla_uav_tracking/rollout/metrics.py:10:  mis_follow_sustained committed≠target over target-present ticks (main; == MOT ID-switch)
+carla_uav_tracking/rollout/metrics.py:30:    return "target" if cand.is_target else f"distractor_{cand.idx}"
+carla_uav_tracking/rollout/metrics.py:179:        return self._off_run >= self.max_lost
+carla_uav_tracking/rollout/metrics.py:187:        return {
+carla_uav_tracking/rollout/metrics.py:189:            "mis_follow_inst": self._inst_wrong / present,
+carla_uav_tracking/rollout/metrics.py:190:            "mis_follow_sustained": self._sustain_wrong / present,
+carla_uav_tracking/rollout/metrics.py:195:            "max_wrong_run_s": self._max_wrong_run / self.fps,
+carla_uav_tracking/rollout/metrics.py:196:            "max_correct_run_s": self._max_correct_run / self.fps,   # longest continuous correct lock (committed)
+carla_uav_tracking/rollout/iter_gate.py:1:"""1003 iteration gate check — pre-registered hypotheses (1003_v1_v2_design.md / 1003_v3_design.md), deployable only,
+carla_uav_tracking/rollout/iter_gate.py:4:(or a single .partial) → works on running arms too (n is printed; verdicts on partial n are provisional).
+carla_uav_tracking/rollout/iter_gate.py:5:  python iter_gate.py [--json eval_out/iter_gate.json]"""
+carla_uav_tracking/rollout/iter_gate.py:19:    return 1 - sum(bn[k] * nd[k] for k in nd if k in bn) / t if t else float("nan")
+carla_uav_tracking/rollout/iter_gate.py:24:#               longW → primary; correct_l = 1 − mis_follow_inst (abstention counted as CORRECT; the metric used up to
+carla_uav_tracking/rollout/iter_gate.py:26:METRICS = {"correct": lambda e: 1 - e["mis_follow_sustained"],
+carla_uav_tracking/rollout/iter_gate.py:27:           "correct_l": lambda e: 1 - e["mis_follow_inst"],
+carla_uav_tracking/rollout/iter_gate.py:29:           "longC": lambda e: e["max_correct_run_s"],
+carla_uav_tracking/rollout/iter_gate.py:30:           "longW": lambda e: e["max_wrong_run_s"]}
+carla_uav_tracking/rollout/iter_gate.py:33:REF = {"dam4sam": ["paper_dep_dam4sam.json"], "pgif": ["paper_dep_tahrelm_pgif.json"],
+carla_uav_tracking/rollout/iter_gate.py:34:       "tahrelm": ["paper_dep_tahrelm.json"], "dam4sam_t10": ["paper_it_dam4sam_t10.json"],
+carla_uav_tracking/rollout/iter_gate.py:38:    ("V0 vs DAM4SAM", "pgif", "dam4sam", "correct", "greater"),
+carla_uav_tracking/rollout/iter_gate.py:39:    ("V0 vs DAM4SAM", "pgif", "dam4sam", "longC", "greater"),
+carla_uav_tracking/rollout/iter_gate.py:40:    ("V0 vs DAM4SAM", "pgif", "dam4sam", "longW", "less"),
+carla_uav_tracking/rollout/iter_gate.py:41:    ("H1a 非劣", "v1_t05", "dam4sam", "correct", "noninf"),
+carla_uav_tracking/rollout/iter_gate.py:42:    ("H1b-all", "v1_t05", "dam4sam", "longW", "less"),
+carla_uav_tracking/rollout/iter_gate.py:43:    ("H1c(探索)", "v1_t05", "dam4sam", "longC", "desc"),
+carla_uav_tracking/rollout/iter_gate.py:48:    ("H3a 非劣", "v3_t05", "dam4sam", "correct", "noninf"),
+carla_uav_tracking/rollout/iter_gate.py:49:    ("H3a 锁错", "v3_t05", "dam4sam", "longW", "less"),
+carla_uav_tracking/rollout/iter_gate.py:50:    ("H3a 连续正确", "v3_t05", "dam4sam", "longC", "desc"),
+carla_uav_tracking/rollout/iter_gate.py:56:    ("V3 vs gateTAH-only", "v3_t05", "v3gt_t05", "longW", "desc"),
+carla_uav_tracking/rollout/iter_gate.py:57:    ("H3a 非劣(V3+V2)", "v3v2_t05", "dam4sam", "correct", "noninf"),
+carla_uav_tracking/rollout/iter_gate.py:58:    ("H3a 锁错(V3+V2)", "v3v2_t05", "dam4sam", "longW", "less"),
+carla_uav_tracking/rollout/iter_gate.py:59:    ("超越 DAM4SAM", "v3_t05", "dam4sam", "correct", "greater"),
+carla_uav_tracking/rollout/iter_gate.py:60:    ("超越 DAM4SAM(V3+V2)", "v3v2_t05", "dam4sam", "correct", "greater"),
+carla_uav_tracking/rollout/iter_gate.py:61:    ("泛化 T03 正确", "v3_t03", "dam4sam_t03", "correct", "noninf"),
+carla_uav_tracking/rollout/iter_gate.py:62:    ("泛化 T03 锁错", "v3_t03", "dam4sam_t03", "longW", "less"),
+carla_uav_tracking/rollout/iter_gate.py:63:    ("泛化 T10 正确", "v3_t10", "dam4sam_t10", "correct", "noninf"),
+carla_uav_tracking/rollout/iter_gate.py:64:    ("泛化 T10 锁错", "v3_t10", "dam4sam_t10", "longW", "less"),
+carla_uav_tracking/rollout/iter_gate.py:71:    return json.load(open(path))["episodes"] if os.path.exists(path) else []
+carla_uav_tracking/rollout/iter_gate.py:76:    if name == "dam4sam_t03":   # pre-reboot part (91000–06) + post-reboot remainder (91007–19)
+carla_uav_tracking/rollout/iter_gate.py:77:        files = [os.path.join(EO, "paper_it_dam4sam_t03_part1.json")] + _parts("dam4sam_t03b")
+carla_uav_tracking/rollout/iter_gate.py:85:            if e.get("mis_follow_inst") is None or e.get("skipped"):
+carla_uav_tracking/rollout/iter_gate.py:88:    return out or None
+carla_uav_tracking/rollout/iter_gate.py:94:        return [full]
+carla_uav_tracking/rollout/iter_gate.py:98:        return m.group(1)
+carla_uav_tracking/rollout/iter_gate.py:106:        return [keep[k] for k in sorted(keep, key=int)]
+carla_uav_tracking/rollout/iter_gate.py:107:    return [full + ".partial"]
+carla_uav_tracking/rollout/iter_gate.py:113:    return float(x.mean()), float(np.percentile(b, 2.5)), float(np.percentile(b, 97.5))
+carla_uav_tracking/rollout/iter_gate.py:118:        return "✓" if lo > -0.05 else "✗"
+carla_uav_tracking/rollout/iter_gate.py:120:        return "✓" if hi < 0 else "✗"
+carla_uav_tracking/rollout/iter_gate.py:122:        return "✓" if lo > 0 else "✗"
+carla_uav_tracking/rollout/iter_gate.py:123:    return "—"
+carla_uav_tracking/rollout/iter_mech.py:5:TAHRelM and DAM4SAM picks (pre-registered H3c: measured on V3-ensemble = no feedback), mis-gates (a source that was
+carla_uav_tracking/rollout/iter_mech.py:25:            return json.load(open(f))["episodes"]
+carla_uav_tracking/rollout/iter_mech.py:26:    return []
+carla_uav_tracking/rollout/iter_mech.py:45:    return out
+carla_uav_tracking/rollout/iter_mech.py:51:        return float("nan")
+carla_uav_tracking/rollout/iter_mech.py:53:    return float((r[y].sum() - y.sum() * (y.sum() + 1) / 2) / (y.sum() * (~y).sum()))
+carla_uav_tracking/rollout/iter_mech.py:59:        return None
+carla_uav_tracking/rollout/iter_mech.py:75:        res["rho_err"] = float(np.corrcoef(et, ed)[0, 1]) if len(B) > 2 and et.std() > 0 and ed.std() > 0 else float("nan")
+carla_uav_tracking/rollout/iter_mech.py:79:        for s in ("tah", "dam"):   # gate events on a source = posterior ≠ its pick → its memory is rewritten
+carla_uav_tracking/rollout/iter_mech.py:80:            G = [r for r in T if r.get("gate", {}).get(s) and r["picks"].get(s) is not None]
+carla_uav_tracking/rollout/iter_mech.py:81:            res[f"gates_{s}"] = len(G)
+carla_uav_tracking/rollout/iter_mech.py:82:            res[f"misgate_{s}"] = float(np.mean([r["picks"][s] == r["true"] for r in G])) if G else float("nan")
+carla_uav_tracking/rollout/iter_mech.py:87:        res["misgate_mem"] = float(np.mean([r["mem"] == r["true"] for r in F])) if F else float("nan")
+carla_uav_tracking/rollout/iter_mech.py:96:        op.append(V[0][out_key] == V[0]["true"]); cr.append(1 - e["mis_follow_sustained"])
+carla_uav_tracking/rollout/iter_mech.py:101:    return res
+carla_uav_tracking/rollout/iter_mech.py:107:    keys = ["n_ep", "ticks", "acc_out", "acc_mem", "acc_tah", "acc_dam", "acc_lang", "present_dam", "rho_err",
+carla_uav_tracking/rollout/iter_mech.py:108:            "p_dam_wrong_given_tah_wrong", "both_wrong_same_id", "tah_eq_dam", "gates_tah", "misgate_tah", "gates_dam",
+carla_uav_tracking/rollout/iter_mech.py:109:            "misgate_dam", "fires", "misgate_mem", "auroc_iou", "open_ok", "correct_open_ok", "correct_open_wrong"]
+
+ succeeded in 6ms:
+acot_note/1003_iteration_workflow.md:15:| P3 | **冷启动锁错主导长尾** | 初始锁对:PGIF 正确比例 0.96/0.90/0.80;初始锁错:0.017/0.094/0.008(Town05 / Town10HD / reid),锁错开局占 7/19、11/20、7/19 | PGIF 会坚持错误的初始身份 |
+acot_note/1003_iteration_workflow.md:27:- **C3(方法,新增)**:**延迟承诺的冷启动**——开局先在 tracklet 上积累语言(+ 记忆)证据,证据充分才承诺,攻 P3。
+acot_note/1003_iteration_workflow.md:36:| **V0** | 冻结当前基线(TAHRelM + PGIF;所有臂 deployable 结果已有) | — | — | 无 |
+acot_note/1003_iteration_workflow.md:37:| **V1** | **PGIF ∘ DAM4SAM**:把 PGIF 包在 DAM4SAM 外层;重置钩子 = 用 ŝ 的框重新 `init` SAM2 | P1、P4,并检验 C2 的跨记忆泛化 | 正确比例不低于 DAM4SAM(非劣,Δ 下界 > −0.05),最长锁错显著低于 DAM4SAM | `dam4sam_service.py` 返回 SAM2 预测 IoU 作置信度;`policy.py` 加 dam4sam 的 PGIF 门控(重新 init) |
+acot_note/1003_iteration_workflow.md:38:| **V2** | **延迟承诺冷启动**:前 k 个决策步只积累语言证据(回火)、不承诺;可选:把阶段 0 的 LoRA r16 grounding 头作为语言打分器 | P3、P2 | 冷启动锁错比例下降;最长锁错均值显著下降 | `asd.py` 增加冷启动窗口;`policy.py` 冷启动路径 |
+acot_note/1003_iteration_workflow.md:39:| **V3** | **异构证据融合**:TAHRelM + DAM4SAM + 语言 三路观测进入同一个回火后验,门控两个记忆 | P1、P2、C2/C4 | 正确比例显著高于 DAM4SAM,最长锁错显著低于 DAM4SAM 与 PGIF(V0) | 两个记忆同时运行(DAM4SAM 服务 + TAHRelM),`asd.py` 多观测融合 |
+acot_note/1003_iteration_workflow.md:42:**去留规则**:某版本闭环未达到预注册假设 → 如实记为负结果(写进 roadmap),不进入下一版的组合;达到 → 作为下一版的基座。
+acot_note/1003_iteration_workflow.md:66:| 0:00–0:45 | 预检:Town03 加入场景配置并冒烟;DAM4SAM 服务返回置信度;V1/V2 设计文档 + R1^a、R2^a | Town03 冒烟(2 ep) | DAM4SAM · Town10HD(泛化对照所需) | TAHRelM 无纠偏 · Town03 |
+acot_note/1003_iteration_workflow.md:67:| 0:45–2:15 | 实现 V1、V2;R3^a(V3 设计) | **V1** · Town05 | **V2** · Town05 | DAM4SAM · Town03 |
+acot_note/1003_iteration_workflow.md:68:| 2:15–3:45 | G1/G2 判定;实现 V3 | V1 · Town10HD(若过 G1) | V2 · Town10HD(若过 G2) | PGIF(V0)· Town03 |
+acot_note/1003_iteration_workflow.md:69:| 3:45–5:15 | R1^b、R2^b | **V3** · Town05 | V1 · Town03 | V2 · Town03 |
+acot_note/1003_iteration_workflow.md:70:| 5:15–6:45 | G3 判定;V4 设计 + R4^a(可选) | V3 · Town10HD | V3 · Town03 | 最优版本扩种子 91020–39 |
+acot_note/1003_iteration_workflow.md:75:> 槽位按"上一步结果"动态调整:未过门控的版本,其泛化槽位让给下一版或扩种子。
+acot_note/1003_iteration_workflow.md:83:5. **诚实记录**:未达预期的版本作为负结果写入 roadmap,并给出机理解释。
+acot_note/1003_iteration_workflow.md:92:| V3 两个记忆同时运行显存/时间翻倍 | DAM4SAM 服务单独占 GPU 6;必要时 V3 只跑 Town05 + Town03 |
+acot_note/1003_iteration_workflow.md:93:| 只有 3 台 CARLA 健康,槽位不足 | 优先级:V1 > V2 > V3 主实验 > 泛化 > 扩种子 > V4 |
+acot_note/1003_iteration_workflow.md:100:- **文档**:`1003_iteration_roadmap.md` 完整记录每个版本(含负结果)。
+acot_note/1001_innovation-design.md:53:  ① ρ_t ← rank(c_t ; H) ∈ [0,1],  w_t ← 0.5 + ρ_t        # 尺度无关:不同记忆无需标定
+acot_note/1001_innovation-design.md:89:## 5. PoC 结果
+acot_note/1001_innovation-design.md:101:### 指标口径(三项客观指标)
+acot_note/1001_innovation-design.md:104:| **正确锁定比例** ↑ | 目标在画面内的帧中,**承诺身份**(K=5 滞回)为真目标的帧比例;模型弃权(本帧不给任何选择)时沿用上一承诺——与另两项指标同一"锁定"定义 | scorer,逐帧 10 Hz(1 − `mis_follow_sustained`)。**2026-10-02 口径修正**见下方说明 |
+acot_note/1001_innovation-design.md:108:> **口径修正(2026-10-02)**:此前正确锁定比例取 1 − `mis_follow_inst`,scorer 只把"选了错车"记为错,**弃权帧被计为正确**。会弃权的只有 DAM4SAM(SAM2 掩码为空或 160 px 关联门内无候选,约占目标在画面帧的 60%),其余各臂每帧都给出选择,三种口径相差 ≤ 0.01。DAM4SAM:原口径 0.786 → 承诺口径 0.367 → 严格口径(弃权算错)0.190。主口径改为承诺口径(与最长连续正确/最长锁错一致);原口径与严格口径在 §5.5 图中标出、全部数字见 `eval_out/deploy_compare.json`(`correct_l` / `correct_s`)与 `rollout/iter_gate.py`。
+acot_note/1001_innovation-design.md:112:### 5.1 主结果(TAHRelM,Town05,n=19 同种子配对)
+acot_note/1001_innovation-design.md:125:**冷启动分层(2026-10-02 更正)**:按各臂日志中首个可标注 tick 是否锁定真目标分层。此前版本的 tick 日志与种子错位(跳过的 episode 不触发策略 reset),曾错误得出"冷启动锁错子集也提升 0.365→0.521";按步数对齐后的正确结果:
+acot_note/1001_innovation-design.md:169:### 5.5 全部 WHICH 模块在可部署设定下的对比(2026-10-02 重跑,替代旧版 gt-seeded 对比)
+acot_note/1001_innovation-design.md:197:**后续(1003 迭代,已完成)**:把 PGIF 包在 DAM4SAM 外层(V1)、异构记忆融合(V3)等版本的闭环结果、门控判定与泛化实验见 `1003_iteration_roadmap.md`。
+acot_note/1001_innovation-design.md:206:4. **实证**:GT-free 收回 oracle 漂移检测上界 76% 的正确锁定比例增益;初始锁定正确时把正确锁定比例提到 0.96/0.90/0.80(三设定);锚/语言纠偏作为机理清楚的负结果;泛化与关联噪声敏感度曲线。
+acot_note/1001_innovation-design.md:215:- 经典 CUSUM / quickest change detection(Page 1954;Lorden 1971):本项目早期版本(ASD)曾采用,已证伪为负结果(附录 A)。
+acot_note/1001_innovation-design.md:238:| v1/v2 ASD | "记忆自置信不可辨识",用冻结外观锚 + 语言规格的多假设 CUSUM 纠偏 | 自置信 AUROC 0.71/0.82(D1);锚在漂移时刻指认目标≈随机(D2);闭环锚重锚 0.303(不显著) | 降为负结果,解释了语言/锚重锚为何失败 |
+acot_note/1003_v3_design.md:1:# 1003 · V3 设计文档:异构记忆 + 语言的回火证据融合(预注册;闭环前冻结)
+acot_note/1003_v3_design.md:3:> 2026-10-02 · 属于 `1003_iteration_workflow.md` 的 V3,是本轮迭代的**核心方法贡献**。所有实验 deployable(身份决策不用真值;候选框与车辆定位为仿真理想输入),CARLA 在线闭环,三项客观指标,配对 bootstrap 95% CI。V1/V2 的设计与审核见 `1003_v1_v2_design.md`、`codex/1003_R1a_R2a*.md`。
+acot_note/1003_v3_design.md:22:  - 若 ŝ ≠ s^DAM:用 ŝ 的框重新 init SAM2(冷却 3 步,与 V1 相同);
+acot_note/1003_v3_design.md:24:- **冷启动**:若 V2 通过门控 G2 → V3 继承 V2 的延迟承诺组件(K=5,λ_lang=0.9,先验截断 3);否则不加(预注册的条件分支,结果出来前确定)。
+acot_note/1003_v3_design.md:27:- **H3a(主)**:V3 正确锁定比例**不低于 DAM4SAM**(Δ 的 95% CI 下界 > −0.05)**且**最长锁错显著低于 DAM4SAM(CI 上界 < 0);
+acot_note/1003_v3_design.md:28:- **H3b**:V3 相对 V0(TAHRelM+PGIF)正确锁定比例显著更高(CI 下界 > 0);
+acot_note/1003_v3_design.md:29:- **H3c(机理,可证伪)**:在 V3 的 tick 日志中,TAHRelM 与 DAM4SAM 的"选错"指示之间的相关系数 ρ_err 报告并检验:预测 ρ_err < 0.5;若 ρ_err 高(≥ 0.7)而 V3 仍有增益,则增益不能归因于"误差独立的融合",须另找解释。
+acot_note/1003_v3_design.md:30:- **消融(预注册,时间允许按顺序跑)**:V3-noDAMgate(不重置 SAM2,只融合)、V3-nolang(α_lang = 0)。
+acot_note/1003_v3_design.md:33:- **多跟踪器融合 / 集成跟踪**(如基于投票或置信度的 tracker ensemble):通常在单帧或短窗做加权选择,**不把融合结果反馈去门控各成员的记忆更新**;V3 的融合后验同时决定"承诺谁"和"每个记忆该从谁学",直接针对各成员的确认偏差。
+acot_note/1003_v3_design.md:34:- **MHT / 身份管理**:维护多目标身份假设;V3 只维护单一指代身份的证据,观测来自异构的学习/非学习记忆与语言。
+acot_note/1003_v3_design.md:35:- **DAM4SAM 的 DRM**:改进的是 SAM2 内部的写入策略;V3 在记忆外部、跨记忆地做纠错与重置。
+acot_note/1003_v3_design.md:36:- **自训练确认偏差**:离线伪标签平滑;V3 是闭环在线、跨多个自更新记忆的版本,并给出"误差相关性决定融合增益"的可检验预测(H3c)。
+acot_note/1003_v3_design.md:48:2. **机理检验去闭环污染(H3c 改为解释性)**:新增 **V3-ensemble** 臂——同一 policy 同时运行两个记忆与语言,控制承诺 = 每步三路**等权单帧投票**(不回火、不回灌门控,两个记忆各自按自身选择自更新)。该臂既是"普通异构集成、无记忆反馈"的对照,也是测量**门控前**误差相关的干净来源:在其日志中报告 ρ_err(TAH 错 vs DAM 错的相关)、P(DAM 错 | TAH 错)、错锁区间重叠率。V3 内部的相关性只放附录。
+acot_note/1003_v3_design.md:50:   - **V3-commit-only**:回火融合只决定承诺,两个记忆都不门控 → 检验"把后验回灌给记忆"是否必要;
+acot_note/1003_v3_design.md:51:   - **V3-gateTAH-only**:只门控 TAHRelM,不重置 SAM2 → 检验"只门控一个记忆"与"群体确认偏差"(条目 4);
+acot_note/1003_v3_design.md:52:   - 判定:V3 显著优于 V3-ensemble(主)与 V3-commit-only,才能主张"融合后验回灌门控"是增益来源。
+acot_note/1003_v3_design.md:54:5. **V2 分支不再按评测结果选择**:V3 主表**同时报告** V3(无冷启动组件)与 V3+V2(K=5,λ=0.9,先验截断 3),两者都预注册。
+acot_note/1003_v3_design.md:55:6. 收窄表述:V3 是单一指代身份的后验累积,不声称解决多目标身份管理;H3a 同时报告最长连续正确锁定;DAM4SAM 门限 160 px、冷却 3 步沿用 V1,报告缺席比例/重置次数/耗时。
+acot_note/1003_v3_design.md:57:### V3 闭环臂(Town05,seeds 91000–19,n=19)
+acot_note/1003_v3_design.md:58:| 臂 | 融合 | 回火 | 门控 TAH | 门控 DAM | 冷启动 V2 |
+acot_note/1003_v3_design.md:60:| **V3** | 三路等权 | λ=0.98 | ✓ | ✓(re-init,冷却 3) | ✗ |
+acot_note/1003_v3_design.md:61:| **V3+V2** | 同上 | 同上 | ✓ | ✓ | ✓ |
+acot_note/1003_v3_design.md:62:| V3-ensemble | 三路等权单帧投票 | ✗ | ✗ | ✗ | ✗ |
+acot_note/1003_v3_design.md:63:| V3-commit-only | 三路等权 | λ=0.98 | ✗ | ✗ | ✗ |
+acot_note/1003_v3_design.md:64:| V3-gateTAH-only | 三路等权 | λ=0.98 | ✓ | ✗ | ✗ |
+acot_note/1003_v1_v2_design.md:1:# 1003 · V1 / V2 设计文档(预注册;闭环前冻结)
+acot_note/1003_v1_v2_design.md:3:> 2026-10-02 · 属于 `1003_iteration_workflow.md` 的 V1、V2。所有实验:deployable(身份决策不用真值;候选框与车辆定位为仿真理想输入),CARLA 在线闭环,Town05 seeds 91000–19(19 计分),三项客观指标(正确锁定比例、最长连续正确锁定、最长锁错),配对 bootstrap 95% CI。基线 V0 = TAHRelM + PGIF(`1001_innovation-design.md` v4)。
+acot_note/1003_v1_v2_design.md:11:冷启动分层(V0):初始锁对时正确比例 0.96/0.90/0.80,初始锁错时接近 0(Town05 / Town10HD / reid),锁错开局占 7/19、11/20、7/19。TAHRelM 的冷启动目前是**单帧**语言选车(第 1 个决策步的 grounding argmax 直接写入记忆)。
+acot_note/1003_v1_v2_design.md:15:## V1 · PGIF ∘ DAM4SAM:把后验门控推广到强外观记忆
+acot_note/1003_v1_v2_design.md:25:**预注册假设(Town05,n=19 配对,V1 vs DAM4SAM)**:
+acot_note/1003_v1_v2_design.md:29:- 失败解释预案:若 H1b 失败且冷启动锁错占主导 → 说明长尾来自初始身份错误而非漂移,转由 V2/V3 处理。
+acot_note/1003_v1_v2_design.md:31:**与相关工作的差异**:DAM4SAM 自身的 DRM 用"备选掩码与所选掩码分歧"来**选择写入哪些帧**,仍以 SAM2 的当前预测作为身份;V1 在 tracklet 层引入独立于该记忆的、按误差相关时间回火的身份后验,并在后验与记忆冲突时**重置**记忆——处理的是"记忆已经锁到错误实例"之后的纠错,而非写入策略。
+acot_note/1003_v1_v2_design.md:35:## V2 · 延迟承诺冷启动(sequential language commitment)
+acot_note/1003_v1_v2_design.md:37:**动机**:长尾错锁主要来自开局锁错(P3);单帧语言选车准确率约 0.42(离线 xattn,mis 0.579),而 PGIF 会忠实维持初始身份。把"开局选谁"也变成一个带回火的序贯证据决策。
+acot_note/1003_v1_v2_design.md:42:- 窗口结束:承诺 k* = argmax_k G_k,用其当前截图初始化 TAHRelM 记忆;PGIF 证据以 L_{k*} = G_{k*} 初始化(保留开局的语言支持度)。
+acot_note/1003_v1_v2_design.md:43:- 语言来源:沿用部署中的 Stage-2 grounding 头(冻结);LoRA r16 打分器作为可选 V2b(阶段 0 未显著,暂不预注册)。
+acot_note/1003_v1_v2_design.md:45:**预注册假设(Town05,n=19 配对,V2 vs V0)**:
+acot_note/1003_v1_v2_design.md:46:- H2a:开局锁错的 episode 数下降(描述性,配对比较各种子的开局是否锁对);
+acot_note/1003_v1_v2_design.md:50:**与相关工作的差异**:多目标跟踪中的"轨迹确认"(tentative → confirmed,如 DeepSORT 的 n_init)按检测连续性确认轨迹,不涉及"哪条轨迹是语言所指";指代多目标跟踪(RMOT/iKUN)逐帧做语言匹配。V2 把"语言指代"本身作为带回火的序贯证据决策,并把开局证据作为后续 PGIF 后验的先验。
+acot_note/1003_v1_v2_design.md:56:- `rollout/policy.py`:dam4sam 分支接入 ASD/PGIF(观测 = s^M、c = IoU;门控 = 重新 init);tah 分支冷启动窗口(V2)。
+acot_note/1003_v1_v2_design.md:57:- `rollout/asd.py`:PGIF 证据初始化接口(V2)。
+acot_note/1003_v1_v2_design.md:64:### V1 修订
+acot_note/1003_v1_v2_design.md:65:1. **机制对照(预注册,与 V1 同种子同时跑)**:
+acot_note/1003_v1_v2_design.md:66:   - **V1-commit-only**:PGIF 只改写控制承诺,不重置 SAM2(`gate_memory=false`)→ 检验"重置记忆"是否必要;
+acot_note/1003_v1_v2_design.md:67:   - **V1-selfreset**:在 V1 会触发的同一时刻,用 DAM4SAM **自己的选择**重新 init SAM2、不改变身份(`V1_SELFRESET=1`)→ 检验收益是否只是"re-init / 丢弃 DRM"本身。
+acot_note/1003_v1_v2_design.md:68:   - 判定:V1 优于 V1-selfreset(最长锁错或正确比例,配对 CI)才说明收益来自"改到后验所指的身份",而非重置本身。
+acot_note/1003_v1_v2_design.md:69:2. **冷启动分层(预注册)**:H1b 拆为 H1b-all(全部 episode)与 **H1b-drift(仅开局锁对的 episode)**;开局锁对与否由各臂 tick 日志首个可标注 tick 判定(`tick_align.py`)。V1 的主张限定为"抑制开局正确之后的漂移错锁";开局锁错交给 V2/V3。
+acot_note/1003_v1_v2_design.md:70:3. **置信度有效性**:报告 SAM2 预测 IoU 对"所选为真目标"的 AUROC(episode bootstrap CI,observe 日志 = DAM4SAM 基线臂的 tick 日志)。若 AUROC < 0.55,则在 roadmap 中注明 PGIF 在 DAM4SAM 上退化为等权驻留,并以此解释结果。
+acot_note/1003_v1_v2_design.md:73:### V2 修订
+acot_note/1003_v1_v2_design.md:74:1. **定位**:V2 是 PGIF 的**冷启动组件**,不单独作为贡献;整体贡献在 V3(融合)中评估。
+acot_note/1003_v1_v2_design.md:76:3. **对照(预注册)**:**V2-single@K**——窗口与飞行完全相同,但在第 K 步承诺**该步单帧语言选择**(不积累证据、无先验)→ V2 与它的差异只来自"序贯证据积累"。
+acot_note/1003_v1_v2_design.md:77:4. **H2a 改为可检验**:开局正确率(第 K 步承诺是否为真目标)V2 vs V2-single@K,配对 bootstrap 95% CI;窗口内的临时承诺计入最长锁错(scorer 按承诺身份逐帧计)。
+acot_note/1003_v1_v2_design.md:78:5. **先验截断**:PGIF 初始证据 L_k = min(G_k, 3.0)(≈ 3 票),防止错误开局获得过强先验;k* 只在可见 tracklet 中选(不可见则取可见中证据最多者)。
+acot_note/1003_v1_v2_design.md:84:| V1 | DAM4SAM + PGIF(重置 = 后验身份 re-init,冷却 3 步) |
+acot_note/1003_v1_v2_design.md:85:| V1-commit-only | DAM4SAM + PGIF,只改承诺 |
+acot_note/1003_v1_v2_design.md:86:| V1-selfreset | DAM4SAM,同时刻自身 re-init |
+acot_note/1003_v1_v2_design.md:87:| V2 | TAHRelM + PGIF + 延迟承诺(K=5,λ=0.9,先验截断 3) |
+acot_note/1003_v1_v2_design.md:88:| V2-single@K | 同 V2 窗口与飞行,第 K 步单帧承诺 |
+acot_note/1003_iteration_roadmap.md:1:# 1003 · 迭代升级路线(roadmap)· 闭环全部完成(2026-10-02 15:32),结论见「总结」
+acot_note/1003_iteration_roadmap.md:3:> 2026-10-02 09:12 起,12 h。workflow:`1003_iteration_workflow.md`。设计文档:`1003_v1_v2_design.md`、`1003_v3_design.md`。codex 审稿记录:`codex/1003_*.md`。闭环日志 `runs/asd/iter/`,结果 `carla_uav_tracking/rollout/eval_out/paper_it_*.json`。
+acot_note/1003_iteration_roadmap.md:8:| 版本 | 内容 | codex 创新点审核(R^a) | 闭环状态 | 门控结果 | 去留 |
+acot_note/1003_iteration_roadmap.md:11:| V1 | PGIF ∘ DAM4SAM(后验身份 re-init SAM2) | R1:MAJOR → R2:**NO MAJOR**(`codex/1003_R1a_R2a*.md`) | 完成(Town05 + commit-only 对照;selfreset 对照未跑) | H1a ✗(非劣未达)· H1b ✗(−9.4 s,n.s.) | 负结果:作为"PGIF 跨记忆可包装"的弱证据保留,不作贡献 |
+acot_note/1003_iteration_roadmap.md:12:| V2 | 延迟承诺冷启动(组件) | R1:MAJOR → R2:**NO MAJOR** | 完成(Town05;single@K 对照未跑) | H2b ✗ · H2c ✗ | 负结果,不进入组合 |
+acot_note/1003_iteration_roadmap.md:13:| V3 | 异构记忆 + 语言回火融合 + 后验回灌门控(核心) | R1:MAJOR → R2:**NO MAJOR**(`codex/1003_R3a*.md`) | 完成(Town05 五臂 + Town03/10HD) | H3a ✗ · H3b ✗(显著差于 V0)· 机制对照 ✗ · H3c 成立 | 负结果;机理发现(回灌门控使记忆误差同步)保留 |
+acot_note/1003_iteration_roadmap.md:18:### V1(PGIF ∘ DAM4SAM)
+acot_note/1003_iteration_roadmap.md:20:- 修订:新增 V1-commit-only、V1-selfreset 两个机制对照;H1b 拆为全部 / 开局锁对(drift)两层;报告 IoU 对正确选择的 AUROC。→ R2 NO MAJOR。
+acot_note/1003_iteration_roadmap.md:22:### V2(延迟承诺冷启动)
+acot_note/1003_iteration_roadmap.md:23:- R1 MAJOR:① 单独新颖性弱;② 窗口内"飞向临时 argmax"是混杂;③ 开局错误率需可检验;先验过强。
+acot_note/1003_iteration_roadmap.md:24:- 修订:定位为组件;窗口内飞行与 V0 相同(每步单帧语言选择);新增 V2-single@K 对照;开局正确率配对 bootstrap;先验截断 3。→ R2 NO MAJOR。
+acot_note/1003_iteration_roadmap.md:26:### V3(异构证据融合)
+acot_note/1003_iteration_roadmap.md:27:- R1 MAJOR:① 在 V3 内测误差相关性被闭环污染;② 缺普通集成 / 门控拆分对照;③ α 启发式;④ 群体确认偏差;⑤ 按评测结果继承 V2 的选择偏差。
+acot_note/1003_iteration_roadmap.md:28:- 修订:三路等权;新增 V3-ensemble(无回火、无回灌,兼作门控前误差相关的测量)、V3-commit-only、V3-gateTAH-only;V3 与 V3+V2 同表报告;记录错误门控、重置次数。→ R2 NO MAJOR(条目 2 部分解决:主张收窄为"融合后验回灌门控带来增益",不声称每个子机制都必要)。
+acot_note/1003_iteration_roadmap.md:33:- 离线冒烟(`rollout/smoke_iter.py`,录制 episode,开环,仅验证代码路径):V0/V1/V1-selfreset/V2/V2-single/V3/V3+V2/V3-ensemble 全部运行正常。
+acot_note/1003_iteration_roadmap.md:38:| 1(09:13–10:50) | TAHRelM 无纠偏 · Town03 ✅ | DAM4SAM · Town10HD | V0 · Town03 ❌(CARLA 2040 在第 17 个 episode 卡死,前 16 个结果未保存 → 待重跑) |
+acot_note/1003_iteration_roadmap.md:39:| 2(10:15–10:49) | V1 · Town05 ❌ 重启中断(8 ep 未保存) | V2 · Town05 ❌(0 ep) | DAM4SAM · Town03 ❌(7 ep 未保存) |
+acot_note/1003_iteration_roadmap.md:44:| S1(CARLA 2000,policy GPU1) | V1 · T05 → V3-commit-only · T05 → V3 · Town03 |
+acot_note/1003_iteration_roadmap.md:45:| S2(CARLA 2010,policy GPU4) | V2 · T05 → V3-gateTAH-only · T05 → V3 · Town10HD |
+acot_note/1003_iteration_roadmap.md:46:| S3(CARLA 2040,policy GPU7) | V3 · T05 → V3+V2 · T05 → V0 · Town03(重跑) |
+acot_note/1003_iteration_roadmap.md:47:| S4(CARLA 2020,policy GPU1) | V3-ensemble · T05 → DAM4SAM · Town03 → V1-commit-only · T05 |
+acot_note/1003_iteration_roadmap.md:49:## ★ 方法学发现(12:10):「正确锁定比例」对弃权的处理不一致,DAM4SAM 的 0.786 主要来自弃权
+acot_note/1003_iteration_roadmap.md:51:- **问题**:现用的正确锁定比例 = 1 − `mis_follow_inst`。scorer 只把「选了错车」记为错,弃权帧(`pred_slot = −1`,即没有任何选择)记为**正确**。
+acot_note/1003_iteration_roadmap.md:53:  - 其余各臂(含 PGIF、V1~V3 的融合输出)每帧都会给出选择。
+acot_note/1003_iteration_roadmap.md:75:  - 主口径建议用承诺口径,理由是与另两项指标一致,并非看结果后挑选。
+acot_note/1003_iteration_roadmap.md:77:  - 1001 文档 §5.5 主表暂不改动。
+acot_note/1003_iteration_roadmap.md:78:- **未解释的残余**:seed 91003 上,4 次独立运行(V0、V1、V3、V3-ens)的首帧语言选择都是 0 号干扰车。DAM4SAM 基线在这个种子上严格口径仍为 0.85,说明它当时的初始化很可能是对的。原因未查明,可能是 DAM4SAM 基线的首个决策 tick 不同,没有 tick 日志无法核对。
+acot_note/1003_iteration_roadmap.md:82:  - **现象**:重启后 V1 · T05、V3 · T05、V3-ensemble · T05 都在 ep0 结束后卡住,复现两次。卡住时 CARLA 帧不前进,新 client 看到 0 个 actor(同步模式下无 tick 的表象)。只有 V2 · T05 正常。
+acot_note/1003_iteration_roadmap.md:83:  - **根因**:py-spy 栈显示卡在 `scene_manager._destroy_all_traffic` 的 `set_autopilot(False)`。这个调用没有传 TM 端口,于是默认连到 8000。8000 已被 V2 的 client(连 CARLA 2010)占用,其余 worker 因此变成跨服务器的远程 TM,随后阻塞。卡住与 DAM4SAM 无关,只取决于谁先抢到 8000。
+acot_note/1003_iteration_roadmap.md:84:  - **修复**:`scene_manager.py`、`targets/vehicle_target.py` 两处 `set_autopilot(False)` 改传各 worker 的 TM 端口。随后结束卡住的 client,watchdog 从 seed 91001 续跑(p2),ep0 结果保留在 p1 的 `.partial` 中。
+acot_note/1003_iteration_roadmap.md:86:- **约 10:49 宿主机重启**:所有容器(含 `cyh-carla`、`dam4sam-svc`)退出码 255;V1 · T05(8 ep)、DAM4SAM · T03(7 ep)因在"逐 episode 保存"补丁之前启动而未保存,V2 · T05 未开始。11:00 `docker start` 恢复容器、重启 CARLA 与 4 个 DAM4SAM 服务,按上表重排;日志归档于 `runs/asd/iter/lost_reboot/`。总时间表顺延约 1.8 h。
+acot_note/1003_iteration_roadmap.md:89:## 结果(全部 deployable;正确锁定比例为承诺口径,见上文「方法学发现」;统计 `rollout/iter_gate.py` → `eval_out/iter_gate.json`,机理 `rollout/iter_mech.py` → `eval_out/iter_mech.json`)
+acot_note/1003_iteration_roadmap.md:92:| 臂 | 正确锁定比例 [95% CI] | 严格口径 | 最长连续正确(s) | 最长锁错(s) | 开局锁对 | 开局对 / 错时的正确比例 |
+acot_note/1003_iteration_roadmap.md:96:| V1 · PGIF∘DAM4SAM | 0.450 [0.24, 0.67] | 0.183 | 19.4 | 17.3 | 9/19 | 0.95 / 0.00 |
+acot_note/1003_iteration_roadmap.md:97:| V1-commit-only | 0.389 [0.18, 0.60] | 0.153 | 16.1 | 20.0 | 9/19 | 0.82 / 0.00 |
+acot_note/1003_iteration_roadmap.md:98:| V2 · 延迟承诺 | 0.504 [0.29, 0.71] | 0.508 | 25.2 | 19.6 | 10/19 | 0.95 / 0.01 |
+acot_note/1003_iteration_roadmap.md:99:| V3 · 融合 + 回灌门控 | 0.368 [0.16, 0.58] | 0.372 | 11.9 | 22.8 | 7/19 | 0.99 / 0.00 |
+acot_note/1003_iteration_roadmap.md:100:| V3+V2 | 0.392 [0.19, 0.59] | 0.391 | 18.2 | 19.0 | 8/19 | 0.88 / 0.03 |
+acot_note/1003_iteration_roadmap.md:101:| V3-ensemble(逐帧投票,无回火无回灌) | 0.415 [0.26, 0.57] | 0.418 | 6.6 | **8.6** | 9/19 | 0.72 / 0.15 |
+acot_note/1003_iteration_roadmap.md:102:| V3-commit-only(回火融合只管承诺) | 0.480 [0.29, 0.67] | 0.481 | 18.2 | 22.5 | 10/19 | 0.78 / 0.15 |
+acot_note/1003_iteration_roadmap.md:103:| V3-gateTAH-only | 0.530 [0.32, 0.74] | 0.541 | 23.8 | 16.5 | 11/19 | 0.91 / 0.00 |
+acot_note/1003_iteration_roadmap.md:105:¹ V0 的开局与分层取自 `runs/asd/deploy_all/tahrelm_pgif.jsonl` 首个 tick(语言首帧选择)与 `1001` §5.1。
+acot_note/1003_iteration_roadmap.md:110:| H1a 非劣(下界 > −0.05) | V1 − DAM4SAM | +0.08 [−0.15, +0.31] / −0.12 / −0.01 | — | ✗(CI 过宽,未证非劣) |
+acot_note/1003_iteration_roadmap.md:111:| H1b-all | V1 − DAM4SAM | — | −9.4 s [−22.2, +3.4] | ✗(方向对,不显著) |
+acot_note/1003_iteration_roadmap.md:112:| V1 机制 | V1 − V1-commit-only | +0.06 [−0.18, +0.30] | −2.7 s [−16.5, +10.3] | ✗(重置 SAM2 未显示额外收益) |
+acot_note/1003_iteration_roadmap.md:113:| H2b / H2c | V2 − V0 | −0.07 [−0.24, +0.10] | +4.2 s [−2.4, +11.4] | ✗ / ✗ |
+acot_note/1003_iteration_roadmap.md:114:| H3a | V3 − DAM4SAM | +0.00 [−0.20, +0.20](严格 +0.18 [−0.01, +0.37]) | −3.9 s [−13.7, +6.8] | ✗ |
+acot_note/1003_iteration_roadmap.md:115:| H3b | V3 − V0 | **−0.21 [−0.41, −0.05]** | — | ✗(显著更差) |
+acot_note/1003_iteration_roadmap.md:116:| V3 > ensemble | V3 − V3-ensemble | −0.05 [−0.19, +0.11] | **+14.2 s [+5.2, +24.4]** | ✗(锁错显著更长) |
+acot_note/1003_iteration_roadmap.md:117:| V3 > commit-only | V3 − V3-commit-only | −0.11 [−0.28, +0.05] | +0.3 s | ✗ |
+acot_note/1003_iteration_roadmap.md:118:| H3a(V3+V2) | V3+V2 − DAM4SAM | +0.03 [−0.21, +0.25] | −7.7 s [−19.7, +4.5] | ✗ |
+acot_note/1003_iteration_roadmap.md:124:| V3 · Town03 | 0.398 | 15.1 | 17.5 | vs DAM4SAM:**+0.14 [+0.01, +0.30]** / **−11.0 s [−20.2, −2.7]** |
+acot_note/1003_iteration_roadmap.md:128:| V3 · Town10HD | 0.387 | 13.5 | 24.3 | vs DAM4SAM:+0.09 [−0.07, +0.26](严格 +0.29 [+0.13, +0.46]) / +1.8 s |
+acot_note/1003_iteration_roadmap.md:131:- V3 在两张新地图上的正确比例都高于 DAM4SAM。Town03 上正确比例和最长锁错都显著更好,Town10HD 上只有严格口径显著。
+acot_note/1003_iteration_roadmap.md:132:- 但 V3 在 Town05 上显著差于 V0。新地图上缺少 V0 · Town10HD 臂,无法判断 V3 是否优于 V0。因此泛化结果只能支持"融合/PGIF 家族优于 DAM4SAM",不能支持"V3 优于 V0"。
+acot_note/1003_iteration_roadmap.md:134:### 机理诊断(tick 日志,`iter_mech.py`)
+acot_note/1003_iteration_roadmap.md:135:1. **开局身份决定一切(所有臂一致)**:
+acot_note/1003_iteration_roadmap.md:136:   - 开局锁对的 episode,承诺正确比例为 0.72–0.99,其中带门控的臂为 0.88–0.99;开局锁错的只有 0–0.17。
+acot_note/1003_iteration_roadmap.md:137:   - 各臂开局锁对数都在 7–11/19 之间,由首帧语言选择决定,单帧语言准确率约 0.22–0.33。
+acot_note/1003_iteration_roadmap.md:138:   - 同一种子的首帧语言选择在多次运行间基本可复现:91003、91006、91007、91008 在 V0、V1、V3、V3-ens 中都错选同一辆车。但也有少数种子翻转(91001、91005),导致臂间开局数相差 ±2–4 集,对应正确比例相差约 ±0.1–0.2。
+acot_note/1003_iteration_roadmap.md:139:   - 因此 n=19 的臂间差异有很大一部分是开局这一步的随机性。H3b 的显著负差中,V3 只有 7/19 开局锁对,V0 有 11/19,这一项占了主要部分。
+acot_note/1003_iteration_roadmap.md:140:2. **回灌门控使记忆误差同步(群体确认偏差,预注册条目 4 的直接证据)**:
+acot_note/1003_iteration_roadmap.md:142:   | 指标 | V3-ensemble(无回灌) | V3(回灌门控两个记忆) |
+acot_note/1003_iteration_roadmap.md:144:   | TAHRelM 与 DAM4SAM 的误差相关 ρ_err | 0.34(H3c 预测 < 0.5,**成立**) | 0.72 |
+acot_note/1003_iteration_roadmap.md:148:   - V3 的 DAM4SAM 重置中,23% 把原本正确的 SAM2 改到了错误身份。
+acot_note/1003_iteration_roadmap.md:149:   - 结果是:开局锁对时 V3 几乎完美(0.99);开局锁错时,两个记忆被同步到同一个错误身份,无法再互相纠正(0.00)。
+acot_note/1003_iteration_roadmap.md:150:   - 不回灌的 ensemble 和 commit-only 在开局锁错时还能恢复到 0.15,代价是开局锁对时降到 0.72–0.78。
+acot_note/1003_iteration_roadmap.md:151:   - 回灌门控因此是一个**取舍**:用"锁错后的可纠正性"换"锁对时的保持力",不是净增益。
+acot_note/1003_iteration_roadmap.md:152:3. **V1 退化**:
+acot_note/1003_iteration_roadmap.md:154:   - V1 与 DAM4SAM 的差异落在运行间方差之内(V1 − commit-only 不显著)。
+acot_note/1003_iteration_roadmap.md:155:4. **V2 无效**:
+acot_note/1003_iteration_roadmap.md:156:   - 窗口内单帧语言准确率约 0.25–0.33,而且同一场景下的错误高度相关。累积 5 个 tick 没有提高开局正确率(V2 为 10/19,V0 的首帧语言为 11/19)。
+acot_note/1003_iteration_roadmap.md:157:   - V2-single@K 对照未跑,H2a 无法正式检验。
+acot_note/1003_iteration_roadmap.md:159:## 总结(诚实结论)
+acot_note/1003_iteration_roadmap.md:163:   - 1003 的三个新版本都**没有超过 V0**。V3 在 Town05 上显著更差,而且主要差在开局随机性上。
+acot_note/1003_iteration_roadmap.md:166:   - (b) 机理:多记忆融合时,把后验回灌给所有记忆会使它们的误差相关性从 0.34 升到 0.72,形成群体确认偏差。这是命题 1 从单记忆到多记忆的自然推广,有直接测量。
+acot_note/1003_iteration_roadmap.md:167:   - (c) 瓶颈定位:开局语言 grounding(首帧约 50% 准确)决定了 0.9 以上与接近 0 两种结局。记忆和融合层面的改进,在开局锁错时都无能为力。
+acot_note/1003_iteration_roadmap.md:168:3. **下一步的唯一有效杠杆是开局身份**:
+acot_note/1003_iteration_roadmap.md:170:   - 或者设计开局锁错后的可恢复机制,例如不回灌、保持来源多样性的融合 + 后验门控控制承诺,也就是 commit-only 方向。
+acot_note/1003_iteration_roadmap.md:171:   - 同时需要扩种子(n≈40),压低开局随机性带来的方差。
+
+exec
+/bin/sh -lc "ls -lh eval_out/paper_it_*.json eval_out/paper_dep_*.json runs/asd/iter/*.jsonl 2>/dev/null | sed -n '1,120p'" in /nvidia/hque/code/cyhe/uav-acot-track
+ succeeded in 0ms:
+-rw-r--r-- 1 nobody nogroup 261K Oct  2 15:17 runs/asd/iter/pgif_t03_p1.jsonl
+-rw-r--r-- 1 nobody nogroup 5.4K Oct  2 11:23 runs/asd/iter/v1_t05_p1.jsonl
+-rw-r--r-- 1 nobody nogroup  81K Oct  2 12:54 runs/asd/iter/v1_t05_p2.jsonl
+-rw-r--r-- 1 nobody nogroup  64K Oct  2 14:49 runs/asd/iter/v1nog_t05_p1.jsonl
+-rw-r--r-- 1 nobody nogroup 248K Oct  2 12:17 runs/asd/iter/v2_t05.jsonl
+-rw-r--r-- 1 nobody nogroup 324K Oct  2 15:32 runs/asd/iter/v3_t03_p1.jsonl
+-rw-r--r-- 1 nobody nogroup 7.8K Oct  2 11:23 runs/asd/iter/v3_t05_p1.jsonl
+-rw-r--r-- 1 nobody nogroup 308K Oct  2 12:49 runs/asd/iter/v3_t05_p2.jsonl
+-rw-r--r-- 1 nobody nogroup 369K Oct  2 15:14 runs/asd/iter/v3_t10_p1.jsonl
+-rw-r--r-- 1 nobody nogroup 402K Oct  2 14:23 runs/asd/iter/v3com_t05_p1.jsonl
+-rw-r--r-- 1 nobody nogroup 9.5K Oct  2 11:24 runs/asd/iter/v3ens_t05_p1.jsonl
+-rw-r--r-- 1 nobody nogroup 261K Oct  2 12:43 runs/asd/iter/v3ens_t05_p2.jsonl
+-rw-r--r-- 1 nobody nogroup 375K Oct  2 13:48 runs/asd/iter/v3gt_t05_p1.jsonl
+-rw-r--r-- 1 nobody nogroup 342K Oct  2 14:05 runs/asd/iter/v3v2_t05_p1.jsonl
+
+codex
+第一轮检索里已经看到一个关键点：代码注释和 note 都承认 `1-mis_follow_inst` 把 DAM4SAM 弃权算成“没有错选”，而当前 gate 脚本主口径改成了 `1-mis_follow_sustained`。接下来我会直接读 scorer 的状态机，确认这是否真等价于“弃权帧沿用上一承诺”。
+exec
+/bin/sh -lc "sed -n '1,230p' carla_uav_tracking/rollout/metrics.py" in /nvidia/hque/code/cyhe/uav-acot-track
+ succeeded in 0ms:
+"""RolloutScorer — score a closed-loop episode from GT, per guide §6 / design §7.2.
+
+The controller never sees GT; the scorer does, every tick. Key rule (§3.4 族B, §7):
+closed-loop mis-follow is NOT per-frame argmax (that punishes single-frame flicker
+from flow-matching stochasticity). We maintain a COMMITTED target with K-frame
+hysteresis; a new candidate only takes over after winning K consecutive ticks.
+
+Reported:
+  mis_follow_inst      per-tick argmax≠target over target-present ticks (diagnostic, strict)
+  mis_follow_sustained committed≠target over target-present ticks (main; == MOT ID-switch)
+  id_switches          # times the committed target flips to a wrong car (held ≥K)
+  success              reached episode end with no committed-wrong run ≥ T_fail_s and
+                       never lost the target past truncation
+  track_frames         ticks the target stayed in frame
+  centering_rate       fraction of in-frame ticks with the target in the central region
+  reacquire_*          convergence time (delay OK) vs lock-wrong rate (hard failure, §7)
+  shortcut_*           "always nearest car" / "target dead-center" occupancy (捷径 checks, §7)
+
+The scorer maps the policy's predicted candidate SLOT → identity via the shuffled
+CandidateSet (cands[slot].is_target / .idx); it does not read any slot ordering
+into the control path.
+"""
+
+from __future__ import annotations
+
+import numpy as np
+
+
+def _identity_key(cand) -> str:
+    return "target" if cand.is_target else f"distractor_{cand.idx}"
+
+
+class RolloutScorer:
+    def __init__(self, fps: int = 10, commit_k: int = 5, t_fail_s: float = 2.0,
+                 max_lost_s: float = 5.0, central_frac: float = 0.3):
+        self.fps = fps
+        self.commit_k = commit_k
+        self.t_fail = int(t_fail_s * fps)
+        self.max_lost = int(max_lost_s * fps)
+        self.central_frac = central_frac
+
+    def reset(self, metadata: dict | None = None):
+        self.meta = metadata or {}
+        self.n = 0
+        # committed-target hysteresis
+        self._committed = None
+        self._challenger = None
+        self._chal_count = 0
+        self._id_switches = 0
+        self._wrong_run = 0          # consecutive committed-wrong ticks (target present)
+        self._max_wrong_run = 0
+        self._correct_run = 0           # committed==target consecutive in-frame ticks (symmetric to wrong run)
+        self._max_correct_run = 0
+        self._off_run = 0            # consecutive target-off-screen ticks
+        self._failed = False
+        # counters
+        self._present = 0            # target-present (in-frame) ticks
+        self._inst_wrong = 0
+        self._sustain_wrong = 0
+        self._central = 0
+        self._nearest_pred = 0       # ticks the pred == nearest candidate (shortcut)
+        self._nearest_denom = 0
+        self._central_target = 0     # ticks target is dead-center (shortcut)
+        self._dist_sum = 0.0
+        self._dist_n = 0
+        # per-frame grounding stratifiers (why is online mis_follow > offline?):
+        self._byN = {}          # N candidates -> [wrong, total]
+        self._byC = {"central": [0, 0], "off": [0, 0]}   # target central vs off-center
+        self._byD = {}          # target depth bucket -> [wrong, total]
+        # re-acquisition tracking: EVERY target-loss is one attempt, resolved on
+        # recovery (success) or left as timeout at episode end (no-WM baseline needs
+        # the failures, not just the successes).
+        self._was_lost = False
+        self._reacq_open = False
+        self._reacq_start = 0
+        self._reacq_wrong_counted = False
+        self._reacq_attempts = 0
+        self._reacq_success = 0      # re-locked the TRUE target
+        self._reacq_wrong = 0        # committed to a WRONG car during recovery (≥1 tick)
+        self._reacq_conv = []        # convergence frames, successful re-acquisitions only
+
+    # ------------------------------------------------------------------
+    def update(self, *, step: int, target_present: bool, target_central: bool,
+               in_loss_window: bool, info, uav_target_dist: float | None = None):
+        """info: policy.ActInfo (cand_set + pred_slot). target_present: target in-frame."""
+        self.n = step + 1
+        cset = getattr(info, "cand_set", None)
+        pred_slot = getattr(info, "pred_slot", -1)
+        pred_cand = cset.cands[pred_slot] if (cset is not None and 0 <= pred_slot < len(cset.cands)) else None
+        pred_key = _identity_key(pred_cand) if pred_cand is not None else None
+
+        # --- hysteresis commit ---
+        if pred_key is not None:
+            if self._committed is None:
+                self._committed = pred_key
+            elif pred_key == self._committed:
+                self._challenger, self._chal_count = None, 0
+            else:
+                if pred_key == self._challenger:
+                    self._chal_count += 1
+                else:
+                    self._challenger, self._chal_count = pred_key, 1
+                if self._chal_count >= self.commit_k:
+                    if self._committed == "target" and pred_key != "target":
+                        self._id_switches += 1
+                    self._committed = pred_key
+                    self._challenger, self._chal_count = None, 0
+
+        # --- off-screen / truncation bookkeeping ---
+        if target_present:
+            self._off_run = 0
+        else:
+            self._off_run += 1
+
+        # --- mis-follow accounting (only over target-present ticks) ---
+        if target_present:
+            self._present += 1
+            if target_central:
+                self._central += 1
+                self._central_target += 1
+            if pred_cand is not None and not pred_cand.is_target:
+                self._inst_wrong += 1
+            # per-frame stratified mis_follow (matches offline argmax≠target over target-present)
+            ti = getattr(cset, "true_idx", -1) if cset is not None else -1
+            if cset is not None and ti >= 0:
+                N = len(cset.cands)
+                wrong = int(pred_slot != ti)
+                nb = min(N, 6)
+                b = self._byN.setdefault(nb, [0, 0]); b[0] += wrong; b[1] += 1
+                ck = "central" if target_central else "off"
+                self._byC[ck][0] += wrong; self._byC[ck][1] += 1
+                td = float(cset.cands[ti].depth)
+                db = "d<30" if td < 30 else ("d30-60" if td < 60 else "d>=60")
+                bd = self._byD.setdefault(db, [0, 0]); bd[0] += wrong; bd[1] += 1
+            committed_wrong = self._committed is not None and self._committed != "target"
+            if committed_wrong:
+                self._sustain_wrong += 1
+                self._wrong_run += 1
+                self._max_wrong_run = max(self._max_wrong_run, self._wrong_run)
+                if self._wrong_run >= self.t_fail:
+                    self._failed = True
+            else:
+                self._wrong_run = 0
+            if self._committed == "target":
+                self._correct_run += 1
+                self._max_correct_run = max(self._max_correct_run, self._correct_run)
+            else:
+                self._correct_run = 0
+            # shortcut: does pred coincide with the nearest (smallest-depth) candidate?
+            if cset is not None and len(cset.cands) > 1 and pred_cand is not None:
+                nearest = min(range(len(cset.cands)), key=lambda i: cset.cands[i].depth)
+                self._nearest_pred += int(pred_slot == nearest)
+                self._nearest_denom += 1
+        else:
+            self._correct_run = 0           # target out of frame ends a correct-lock run (conservative)
+
+        if uav_target_dist is not None:
+            self._dist_sum += float(uav_target_dist); self._dist_n += 1
+
+        # --- re-acquisition: each target-loss is one attempt, resolved on recovery ---
+        lost_now = (not target_present) or in_loss_window
+        if lost_now and not self._was_lost:            # a loss STARTS → open a new attempt
+            self._reacq_open = True
+            self._reacq_start = step
+            self._reacq_wrong_counted = False
+            self._reacq_attempts += 1
+        if self._reacq_open:
+            if (not self._reacq_wrong_counted and target_present
+                    and self._committed is not None and self._committed != "target"):
+                self._reacq_wrong += 1                  # locked a wrong car while recovering (once/attempt)
+                self._reacq_wrong_counted = True
+            if (not lost_now) and target_present and self._committed == "target":
+                self._reacq_success += 1                # correctly re-acquired the TRUE target
+                self._reacq_conv.append(step - self._reacq_start)
+                self._reacq_open = False                # attempt resolved
+        self._was_lost = lost_now
+
+    def should_truncate(self) -> bool:
+        return self._off_run >= self.max_lost
+
+    # ------------------------------------------------------------------
+    def finalize(self) -> dict:
+        present = max(self._present, 1)
+        att = self._reacq_attempts
+        conv = self._reacq_conv
+        success = (not self._failed) and (self._off_run < self.max_lost)
+        return {
+            "success": bool(success),
+            "mis_follow_inst": self._inst_wrong / present,
+            "mis_follow_sustained": self._sustain_wrong / present,
+            "id_switches": self._id_switches,
+            "track_frames": self._present,
+            "track_seconds": self._present / self.fps,
+            "centering_rate": self._central / present,
+            "max_wrong_run_s": self._max_wrong_run / self.fps,
+            "max_correct_run_s": self._max_correct_run / self.fps,   # longest continuous correct lock (committed)
+            "mean_uav_target_dist": (self._dist_sum / self._dist_n) if self._dist_n else None,
+            # re-acquisition (guide §7): each target-loss = one attempt (deliberate loss
+            # window OR model-caused loss). success = re-locked TRUE target; the no-WM
+            # baseline's failure modes are timeout (never re-acquired) + lock-wrong.
+            "reacquire_attempts": att,
+            "reacquire_success_rate": (self._reacq_success / att) if att else None,
+            "reacquire_timeout_rate": ((att - self._reacq_success) / att) if att else None,
+            "reacquire_lock_wrong_rate": (self._reacq_wrong / att) if att else None,
+            "reacquire_convergence_s_mean": (float(np.mean(conv)) / self.fps) if conv else None,
+            # shortcut checks (§7): high ⇒ a shortcut survived, re-harden data (§2.3)
+            "shortcut_nearest_rate": (self._nearest_pred / self._nearest_denom) if self._nearest_denom else None,
+            "shortcut_target_central_rate": self._central_target / present,
+            # per-frame grounding stratifiers (online-vs-offline diagnosis)
+            "mis_by_N": {k: v[0] / v[1] for k, v in self._byN.items() if v[1]},
+            "n_dist": {k: v[1] for k, v in self._byN.items()},
+            "mis_by_central": {k: (v[0] / v[1] if v[1] else None) for k, v in self._byC.items()},
+            "c_dist": {k: v[1] for k, v in self._byC.items()},
+            "mis_by_depth": {k: v[0] / v[1] for k, v in self._byD.items() if v[1]},
+            "d_dist": {k: v[1] for k, v in self._byD.items()},
+            "steps": self.n,
+        }
+
+exec
+/bin/sh -lc "find . -path '*eval_out*' -maxdepth 5 -type f \\( -name 'paper_it_*.json' -o -name 'paper_dep_*.json' -o -name 'iter_gate.json' -o -name 'iter_mech.json' -o -name 'deploy_compare.json' \\) | sort" in /nvidia/hque/code/cyhe/uav-acot-track
+exec
+/bin/sh -lc "sed -n '430,490p' carla_uav_tracking/rollout/policy.py && sed -n '610,675p' carla_uav_tracking/rollout/policy.py && sed -n '760,810p' carla_uav_tracking/rollout/policy.py" in /nvidia/hque/code/cyhe/uav-acot-track
+ succeeded in 1ms:
+            self._assoc_uv = uv[ti].copy()
+            if fn is not None:
+                t = fn[ti]
+                self._assoc_feat = t if self._assoc_feat is None else \
+                    (0.9 * self._assoc_feat + 0.1 * t) / (np.linalg.norm(0.9 * self._assoc_feat + 0.1 * t) + 1e-8)
+        return score.astype(np.float32)
+
+    def _dam4sam_select(self, cset, rgb, init_slot=None):
+        """EXTERNAL BASELINE: DAM4SAM (CVPR'25 SOTA distractor-aware SAM2 memory) as the WHICH module,
+        served over a socket bridge (separate torch2.1/SAM2 env). On the first target-visible frame,
+        init the tracker with the GT target box (same oracle-seed privilege as reid/assoc); each S2
+        tick, track → predicted target box → assign the candidate whose center is nearest (within a
+        gate) → pred_slot. Returns (N,) scores (higher=nearer the DAM4SAM box); -1e9 gate for far."""
+        from rollout.bridge import send_msg, recv_msg
+        cands = cset.cands
+        n = len(cands)
+        # init box: gallery_seed='gt' (oracle, legacy) = GT target box; 'committed' (DEPLOYABLE) = the language pick's box
+        ti = init_slot if self.gallery_seed == "committed" else cset.true_idx
+        bbox = None
+        if not self._dam4sam_inited:
+            if ti is not None and ti >= 0:                              # init from the chosen target box
+                c = cands[ti]
+                box = (c.u - c.w / 2.0, c.v - c.h / 2.0, c.w, c.h)
+                send_msg(self._dam4sam_sock, {"cmd": "init", "rgb": np.asarray(rgb, np.uint8), "box": box})
+                bbox = recv_msg(self._dam4sam_sock).get("bbox")
+                self._dam4sam_inited = True
+                self._dam4sam_iou = 0.5                                 # init frame: no predicted IoU yet
+            else:
+                return np.full(n, -1e9, np.float32)                     # target never seen yet → no pick
+        else:
+            send_msg(self._dam4sam_sock, {"cmd": "track", "rgb": np.asarray(rgb, np.uint8)})
+            resp = recv_msg(self._dam4sam_sock); bbox = resp.get("bbox")
+            iou = resp.get("iou")
+            self._dam4sam_iou = float(iou) if iou is not None and iou == iou else 0.0   # SAM2 predicted IoU = confidence
+        self._dam4sam_rgb = rgb                                         # for the PGIF reset hook (re-init on ŝ)
+        self._dam4sam_cool = max(0, getattr(self, "_dam4sam_cool", 0) - 1)
+        if bbox is None:
+            return np.full(n, -1e9, np.float32)                         # lost (empty mask) → hold
+        bx, by, bw, bh = bbox
+        pc = np.array([bx + bw / 2.0, by + bh / 2.0])                   # DAM4SAM predicted center
+        uv = np.array([[c.u, c.v] for c in cands], np.float64)
+        dist = np.linalg.norm(uv - pc[None], axis=1)
+        gate = float(self.assoc_gate_px)
+        return np.where(dist < gate, -dist / gate, -1e9).astype(np.float32)
+
+    def _update_commit(self, cset):
+        """Commit the tid-selected candidate IDENTITY with K-frame hysteresis (Plan A).
+        A challenger identity must win commit_k consecutive S2 ticks to take over; during
+        a loss (no valid pick) the current commitment is held."""
+        sel = None
+        if cset is not None and 0 <= self._pred_slot < len(cset.cands):
+            sel = int(cset.cands[self._pred_slot].idx)          # -1 = target, else distractor idx
+        if sel is None:
+            return                                              # loss -> hold commitment
+        if self._committed_idx is None or sel == self._committed_idx:
+            self._committed_idx = sel; self._chal = None; self._chal_n = 0
+        else:
+            self._chal_n = self._chal_n + 1 if sel == self._chal else 1
+            self._chal = sel
+            if self._chal_n >= self.commit_k:
+                self._committed_idx = sel; self._chal = None; self._chal_n = 0
+                                                         for c in cset.cands], np.float32)
+                # external baseline: DeepSORT/OC-SORT-style association (motion + appearance),
+                # a common tracking-by-detection identity mechanism — the natural comparison for
+                # our temporal appearance-memory re-ID. Same z_ex/control path; only WHICH differs.
+                if self.tid_head == "assoc":
+                    al = self._assoc_select(cset, obs.rgb, init_slot=lang_slot)
+                    self._tid_logits = al
+                    self._pred_slot = int(al.argmax())
+                if self.tid_head == "fusion":                          # V3: DAM4SAM runs alongside TAHRelM
+                    dl = self._dam4sam_select(cset, obs.rgb, init_slot=lang_slot)
+                    self._fus_dam = int(dl.argmax()) if float(dl.max()) > -1e8 else None
+                if self.tid_head == "dam4sam":
+                    dl = self._dam4sam_select(cset, obs.rgb, init_slot=lang_slot)
+                    self._tid_logits = dl
+                    self._pred_slot = int(dl.argmax()) if float(dl.max()) > -1e8 else -1
+                if self.tid_head in ("tah", "fusion"):                # path-B: learned TAHRel association
+                    from train.reid_resolution_probe import _dino_feats
+                    Wi, Hi = self.image_cfg["width"], self.image_cfg["height"]
+                    fe = _dino_feats(self._tah_dino if hasattr(self, "_tah_dino") else self._dino,
+                                     obs.rgb, cset.cands, Wi, Hi, 224, 1.3, self.device).astype(np.float64)
+                    fe = fe / (np.linalg.norm(fe, axis=1, keepdims=True) + 1e-8)
+                    self._asd_fe = fe
+                    feat = torch.tensor(fe, dtype=torch.float32, device=self.device)
+                    pos = torch.tensor(np.array([[c.u / Wi, c.v / Hi, c.depth / 100.0] for c in cset.cands], np.float32),
+                                       device=self.device)
+                    self._tah_last = (feat, pos)
+                    with torch.no_grad():
+                        logits, conf, _ = self._tah.step(feat, pos, self._tah_mem)
+                    self._tid_logits = logits.float().cpu().numpy()
+                    self._pred_slot = int(logits.argmax())
+                    self._pred_conf = float(conf)
+                    if self.gallery_seed == "committed":
+                        # DEPLOYABLE (GT-free): the tah memory is empty at cold-start → its logits are
+                        # meaningless (mlp of zeros → const) → LANGUAGE grounds the initial lock. Then a
+                        # language RE-ANCHOR on a sustained low-margin (ambiguous / drifting) streak: reset
+                        # the drifted memory + re-pick via language (mirrors the reid deployable path).
+                        # gt-seeded skips both (oracle memory every frame). See eval_out/paper_ext_tahrelm_committed.
+                        cold = (self._tah_mem is None) or (self._tah_mem.get("app") is None)
+                        self._cold_active = cold and self.cold_window > 0 and self._cold_n < self.cold_window
+                        if self._cold_active:
+                            # V2 DEFERRED COMMITMENT: integrate tempered, rank-weighted LANGUAGE votes per tracklet for
+                            # cold_window ticks; fly toward the provisional argmax but do NOT write identity memory.
+                            k_best = self._cold_vote([int(c.idx) for c in cset.cands], lang_logits, lang_slot)
+                            self._pred_slot = lang_slot               # window flight = per-tick language pick (as V0)
+                            self._cold_n += 1
+                            if self._cold_n >= self.cold_window:      # commit: seed memory + PGIF evidence
+                                k_c = lang_slot if self.cold_single else k_best   # control: single-frame pick at tick K
+                                self._pred_slot = k_c
+                                self._committed_idx = int(cset.cands[k_c].idx)
+                                self._tah_mem = self._tah.update(self._tah.reset(self.device), feat[k_c], pos[k_c])
+                                if self._asd is not None and getattr(self._asd, "mode", "") == "filter" and not self.cold_single:
+                                    self._asd.belief = {k: min(v, 3.0) for k, v in self._cold_G.items()}   # capped prior
+                                self._cold_active = False
+                                self._cold_done_now = True
+                                if self.tid_head == "fusion" and self._dam4sam_inited:
+                                    self._dam4sam_cool = 0; self._cand_set_cur = cset; self._dam4sam_rgb = obs.rgb
+                                    self._asd_gate_memory(k_c, which="dam4sam")
+                        elif cold:
+                            self._pred_slot = lang_slot                       # language cold-start
+                            if self.reanchor == "anchor" and self._tah_anchor is None:
+                                self._tah_anchor = feat[lang_slot].clone()    # freeze initial target appearance
+                        elif self.reanchor == "anchor":
+                            # GT-FREE confident-drift detector: the running memory can drift to a look-alike;
+                            # the FROZEN initial anchor can't. Detect drift when the anchor's best-match
+                            # candidate persistently disagrees with the running-memory pick → reset memory +
+                            # re-anchor to the anchor's match. Approximates the GT-drift upper bound w/o labels.
+                            self._reid_bank = []                                 # drop the drifted gallery
+                            bank_update(self._reid_bank, self._reid_fn[ra], self.reid_bank, 0.9)  # re-seed from re-anchor pick
+                            self._reid_score = {}                                # clear stale temporal EMA
+                            self._committed_idx = int(cset.cands[ra].idx)        # force commit to re-anchored id
+                            self._pred_conf = 1.0                                # high-confidence assertion → control commits
+                            self._lowconf_run = 0
+                            self._reanchor_events += 1
+                # ★ ASD: memory-agnostic confident-drift correction (wraps whichever memory picked _pred_slot).
+                if self._asd is not None and len(cset.cands) > 0 and 0 <= self._pred_slot < len(cset.cands) \
+                   and not self._cold_active:
+                    self._cand_set_cur = cset
+                    if self.tid_head == "fusion":
+                        srt = np.sort(np.asarray(self._tid_logits)); tconf = float(srt[-1] - srt[-2]) if srt.size >= 2 else 0.0
+                        ls = np.sort(np.asarray(lang_logits)); lconf = float(ls[-1] - ls[-2]) if ls.size >= 2 else 0.0
+                        tah_pick = self._pred_slot
+                        fo = self._asd.step_multi([int(c.idx) for c in cset.cands],
+                                                  [(tah_pick, tconf, "tah"), (self._fus_dam, self._dam4sam_iou, "dam"),
+                                                   (lang_slot, lconf, "lang")], true_slot=cset.true_idx, t=int(obs.step))
+                        sh = fo["slot"]
+                        if sh is not None:
+                            if self._asd.gate_tah and fo["gate"].get("tah") and self.gallery_seed == "committed":
+                                self._asd_gate_memory(int(sh), which="tah")
+                            if self._asd.gate_dam and (fo["gate"].get("dam") or self._fus_dam is None) \
+                               and self.gallery_seed == "committed" and self._dam4sam_inited:
+                                self._asd_gate_memory(int(sh), which="dam4sam")
+                            self._pred_slot = int(sh)
+                            self._committed_idx = int(cset.cands[self._pred_slot].idx)
+                            self._pred_conf = 1.0
+                            self._reanchor_events += int(any(fo["gate"].values()))
+                        o = {"fire": False}
+                    else:
+                        fe_ = self._asd_feats(cset, obs.rgb) if self._asd.mode != "filter" else None
+                        mconf = self._dam4sam_iou if self.tid_head == "dam4sam" else self._pred_conf
+                        o = self._asd.step(fe_, [int(c.idx) for c in cset.cands], self._pred_slot,
+                                           mem_conf=mconf, lang=lang_logits,
+                                           true_slot=cset.true_idx, t=int(obs.step))
+                    if o["fire"] and o.get("kind") == "gate":
+                        # ASD-IF posterior gating: the memory learns from (and control commits to) the filter's MAP
+                        # tracklet, not its own raw pick → breaks the self-confirming update loop.
+                        # gt-seeded (oracle memory) runs keep the oracle update by definition → PGIF gates the
+                        # control commitment only; deployable (committed) runs also gate the memory update.
+                        if self.v1_selfreset and self.tid_head == "dam4sam":
+                            # CONTROL: re-init SAM2 at the same moments but on its OWN pick (no identity change)
+                            self._asd_gate_memory(int(self._pred_slot)); self._reanchor_events += 1
+                            o = {"fire": False}
+                    if o["fire"] and o.get("kind") == "gate":
+                        if o.get("gate_memory", True) and self.gallery_seed == "committed":
+                            self._asd_gate_memory(int(o["slot"]))
+                        self._pred_slot = int(o["slot"])
+                        self._committed_idx = int(cset.cands[self._pred_slot].idx)
+                        self._pred_conf = 1.0
+
+ succeeded in 17ms:
+./carla_uav_tracking/rollout/eval_out/deploy_compare.json
+./carla_uav_tracking/rollout/eval_out/iter_gate.json
+./carla_uav_tracking/rollout/eval_out/iter_mech.json
+./carla_uav_tracking/rollout/eval_out/paper_dep_borrow1.json
+./carla_uav_tracking/rollout/eval_out/paper_dep_dam4sam.json
+./carla_uav_tracking/rollout/eval_out/paper_dep_deepsort.json
+./carla_uav_tracking/rollout/eval_out/paper_dep_l4.json
+./carla_uav_tracking/rollout/eval_out/paper_dep_l5.json
+./carla_uav_tracking/rollout/eval_out/paper_dep_ocsort.json
+./carla_uav_tracking/rollout/eval_out/paper_dep_tahdag.json
+./carla_uav_tracking/rollout/eval_out/paper_dep_tahrelm.json
+./carla_uav_tracking/rollout/eval_out/paper_dep_tahrelm_pgif.json
+./carla_uav_tracking/rollout/eval_out/paper_dep_xattn.json
+./carla_uav_tracking/rollout/eval_out/paper_it_dam4sam_t03_part1.json
+./carla_uav_tracking/rollout/eval_out/paper_it_dam4sam_t03b.json
+./carla_uav_tracking/rollout/eval_out/paper_it_dam4sam_t03b_p1.json
+./carla_uav_tracking/rollout/eval_out/paper_it_dam4sam_t10.json
+./carla_uav_tracking/rollout/eval_out/paper_it_pgif_t03.json
+./carla_uav_tracking/rollout/eval_out/paper_it_pgif_t03_p1.json
+./carla_uav_tracking/rollout/eval_out/paper_it_tahrelm_t03.json
+./carla_uav_tracking/rollout/eval_out/paper_it_v1_t05.json
+./carla_uav_tracking/rollout/eval_out/paper_it_v1_t05_p2.json
+./carla_uav_tracking/rollout/eval_out/paper_it_v1nog_t05.json
+./carla_uav_tracking/rollout/eval_out/paper_it_v1nog_t05_p1.json
+./carla_uav_tracking/rollout/eval_out/paper_it_v2_t05.json
+./carla_uav_tracking/rollout/eval_out/paper_it_v3_t03.json
+./carla_uav_tracking/rollout/eval_out/paper_it_v3_t03_p1.json
+./carla_uav_tracking/rollout/eval_out/paper_it_v3_t05.json
+./carla_uav_tracking/rollout/eval_out/paper_it_v3_t05_p2.json
+./carla_uav_tracking/rollout/eval_out/paper_it_v3_t10.json
+./carla_uav_tracking/rollout/eval_out/paper_it_v3_t10_p1.json
+./carla_uav_tracking/rollout/eval_out/paper_it_v3com_t05.json
+./carla_uav_tracking/rollout/eval_out/paper_it_v3com_t05_p1.json
+./carla_uav_tracking/rollout/eval_out/paper_it_v3ens_t05.json
+./carla_uav_tracking/rollout/eval_out/paper_it_v3ens_t05_p2.json
+./carla_uav_tracking/rollout/eval_out/paper_it_v3gt_t05.json
+./carla_uav_tracking/rollout/eval_out/paper_it_v3gt_t05_p1.json
+./carla_uav_tracking/rollout/eval_out/paper_it_v3v2_t05.json
+./carla_uav_tracking/rollout/eval_out/paper_it_v3v2_t05_p1.json
+
+exec
+/bin/sh -lc "sed -n '95,120p' acot_note/1001_innovation-design.md && sed -n '169,196p' acot_note/1001_innovation-design.md" in /nvidia/hque/code/cyhe/uav-acot-track
+ succeeded in 0ms:
+| **离线** | 已采集数据(`runs/tah_cache.pt` 64 ep + DAgger 23 ep) | 训练时用 GT 身份(teacher forcing) | 否(逐帧打分,不飞行) | 训练/验证 TAHRelM(val 0.990);PGIF 开环回放分析(§5.4) |
+| **gt-seeded(oracle 记忆)** | **CARLA 在线闭环** | **每个决策步用 GT 目标的 crop/位置更新** | 是 | 上界:记忆永不漂移 |
+| **deployable** | **CARLA 在线闭环** | **用模型自己的承诺身份更新**;冷启动用语言选车 | 是 | 部署条件下的身份表现:身份决策不用 GT(候选框与车辆定位仍为仿真理想输入) |
+
+实现:`policy.py --gallery-seed {gt, committed}`。TAHRelM 记忆更新源 `us = true_idx if gallery_seed != "committed" else _pred_slot`(`policy.py:636`);reid gallery 同理(`policy.py:299`);committed 模式冷启动用语言 grounding(`policy.py:594` 起)。两种在线设定的闭环、因果性(只用过去信息)与打分完全相同,GT 只在环境侧用于打分;区别仅在于 gt-seeded 额外把 GT 喂给身份记忆。gt-seeded 下 PGIF 只门控控制承诺(记忆按定义仍由 GT 更新,`policy.py:709`)。
+
+### 指标口径(三项客观指标)
+| 指标 | 定义 | 来源 / 分辨率 |
+|---|---|---|
+| **正确锁定比例** ↑ | 目标在画面内的帧中,**承诺身份**(K=5 滞回)为真目标的帧比例;模型弃权(本帧不给任何选择)时沿用上一承诺——与另两项指标同一"锁定"定义 | scorer,逐帧 10 Hz(1 − `mis_follow_sustained`)。**2026-10-02 口径修正**见下方说明 |
+| **最长连续正确锁定时长** ↑ | 每个 episode 内连续锁定真目标的最长时长;目标出画即断开(偏保守) | 本轮各臂由决策 tick 日志计算(1 tick = 0.6s,经步数对齐到种子,`rollout/tick_align.py`);scorer 已新增逐帧字段 `max_correct_run_s`,此后实验直接记录 |
+| **最长锁错时长** ↓ | 每个 episode 内承诺身份(K=5 滞回)持续为错误车辆的最长时长 | scorer,逐帧(`max_wrong_run_s`) |
+
+> **口径修正(2026-10-02)**:此前正确锁定比例取 1 − `mis_follow_inst`,scorer 只把"选了错车"记为错,**弃权帧被计为正确**。会弃权的只有 DAM4SAM(SAM2 掩码为空或 160 px 关联门内无候选,约占目标在画面帧的 60%),其余各臂每帧都给出选择,三种口径相差 ≤ 0.01。DAM4SAM:原口径 0.786 → 承诺口径 0.367 → 严格口径(弃权算错)0.190。主口径改为承诺口径(与最长连续正确/最长锁错一致);原口径与严格口径在 §5.5 图中标出、全部数字见 `eval_out/deploy_compare.json`(`correct_l` / `correct_s`)与 `rollout/iter_gate.py`。
+
+一致性校验:tick 日志算出的正确比例与 scorer 逐帧值相关 r = 0.998–1.000;最长锁错 r = 0.87–0.99(差异来自 scorer 用滞回后的承诺身份)。全部数字:`rollout/pgif_three_metrics.py` → `eval_out/pgif_three_metrics.json`;配对 bootstrap 95% CI。
+
+### 5.1 主结果(TAHRelM,Town05,n=19 同种子配对)
+
+| 臂 | 正确锁定比例 ↑ | 最长连续正确锁定 ↑(均值 / 中位) | 最长锁错 ↓(均值 / 中位) |
+|---|---|---|---|
+| 无纠偏 | 0.272 | 5.9s / 1.8s | 15.7s / 11.6s |
+| **PGIF** | **0.613** | **30.3s / 21.0s** | 10.8s / **0.8s** |
+| 相对无纠偏 Δ [95% CI] | **+0.341 [+0.177,+0.512]** | **+24.4s [+12.0,+37.7]** | −5.0s [−14.0,+5.1](不显著) |
+| GT 漂移检测上界(参照) | 0.721 | 未记录 | 1.9s / 2.2s |
+
+### 5.5 全部 WHICH 模块在可部署设定下的对比(2026-10-02 重跑,替代旧版 gt-seeded 对比)
+
+> **"deployable"的确切含义(措辞更正,2026-10-02)**:指**身份决策链路不使用真值**——不告诉模型哪辆是目标,身份记忆/轨迹状态/初始化只来自模型自己的选择(冷启动用语言)。但以下两项仍由仿真理想提供,对所有臂相同:① 候选框(由真值车辆位置投影 = 理想检测器 + 理想持久关联,`candidates.py::build_candidates`);② WHERE 使用被承诺车辆的世界坐标(`policy.py::_committed_world`)。因此此前"决策时不使用任何真值"的表述过强,应为"身份决策不使用真值,感知与定位假设理想"。
+> **为什么重跑**:旧版对比(`907_baseline_compare_906.md` 图 1,2026-09-06)中的 8 个方法都运行在 **gt-seeded** 设定——身份记忆/轨迹状态每一步用真值目标刷新,等于给模型一条作弊通道,不能作为方法比较。本节所有臂(含外部 baseline)均为 **deployable**:冷启动用语言选车,之后只用模型自己的承诺身份更新记忆;CARLA 在线闭环,同种子 91000–19(19 个计分 episode),三项指标由新版 scorer 逐帧记录(`max_correct_run_s` 与 `max_wrong_run_s` 均以承诺身份为准,目标出画即断开)。外部方法的可部署化:OC-SORT/DeepSORT 轨迹状态改为用自己关联到的车更新,DAM4SAM 改为用语言选中车辆的框初始化(`policy.py` `_assoc_select` / `_dam4sam_select` 的 `init_slot`)。批量脚本 `runs/asd/deploy_all/chains.sh`;统计 `rollout/deploy_compare.py` → `eval_out/deploy_compare.json`。
+
+![deployable comparison](figs/fig_deploy_compare.png)
+
+*图 2 · 全部模块在可部署设定下的三项指标(误差线 = 种子 bootstrap 95% CI;橙色虚线 = PGIF 均值;正确锁定比例为承诺口径,◇ = DAM4SAM 的原口径值,其弃权帧被计为正确)。源 `figs/fig_deploy_compare.py`。*
+
+| 方法 | 类别 | 正确锁定比例(承诺)↑ [95% CI] | 最长连续正确锁定 ↑(均值 / 中位,s) | 最长锁错 ↓(均值 / 中位,s) | **PGIF − 该方法**(配对 Δ [95% CI]):正确比例 / 最长正确 / 最长锁错 |
+|---|---|---|---|---|---|
+| xattn(单帧语言) | 语言基线 | 0.271 [0.20, 0.35] | 2.2 / 1.8 | 10.0 / 9.8 | +0.30 [+0.12, +0.48] / +19.01 [+9.27, +29.62] / +5.44 [-3.07, +14.80] |
+| l4(reid+置信门) | 我们的 | 0.429 [0.30, 0.56] | 9.2 / 2.8 | 7.9 / 5.7 | +0.15 [-0.02, +0.31] / +12.04 [+4.69, +20.21] / +7.50 [-0.53, +16.74] |
+| l5(+时序EMA) | 我们的 | 0.372 [0.21, 0.54] | 6.1 / 2.4 | 12.8 / 9.6 | +0.20 [+0.04, +0.39] / +15.19 [+6.83, +24.86] / +2.58 [-4.89, +10.59] |
+| borrow#1(+运动共识) | 我们的 | 0.450 [0.27, 0.63] | 11.1 / 3.2 | 8.8 / 8.2 | +0.13 [+0.00, +0.27] / +10.18 [+3.71, +18.04] / +6.61 [-0.61, +14.51] |
+| TAH+DAgger | 我们的 | 0.261 [0.16, 0.37] | 6.8 / 2.4 | 14.6 / 9.3 | +0.32 [+0.15, +0.49] / +14.47 [+6.44, +23.52] / +0.87 [-6.56, +9.13] |
+| TAHRelM 无纠偏 | 我们的 | 0.320 [0.21, 0.44] | 8.6 / 5.2 | 15.1 / 13.1 | +0.26 [+0.08, +0.43] / +12.68 [+3.29, +23.44] / +0.29 [-7.47, +9.35] |
+| OC-SORT | 外部 | 0.229 [0.16, 0.31] | 4.9 / 3.6 | 14.0 / 12.5 | +0.35 [+0.15, +0.54] / +16.38 [+7.06, +26.35] / +1.38 [-8.16, +12.08] |
+| DeepSORT | 外部 | 0.286 [0.17, 0.42] | 8.0 / 4.2 | 17.0 / 12.7 | +0.29 [+0.09, +0.50] / +13.29 [+2.52, +24.43] / -1.60 [-10.62, +8.42] |
+| DAM4SAM | 外部 | 0.367 [0.19, 0.55] | 13.3 / 6.4 | 26.7 / 21.6 | +0.21 [-0.00, +0.41] / +7.97 [-2.28, +18.43] / -11.26 [-23.19, +0.65] |
+| **TAHRelM+PGIF(ours)** | **ours** | 0.576 [0.37, 0.78] | 21.3 / 11.5 | 15.4 / 0.9 | — |
+
+**读法(如实,承诺口径)**:
+- **PGIF vs 我们的其他模块与 OC-SORT/DeepSORT**:正确锁定比例与最长连续正确锁定上,PGIF 对 xattn、l5、TAH+DAgger、TAHRelM 无纠偏、OC-SORT、DeepSORT 均**显著更好**(CI 不含 0);对 borrow#1 正确比例 +0.13 [+0.00, +0.27]、对 l4 +0.15 [−0.02, +0.31] 处于显著边界,最长连续正确均显著更好。**最长锁错上 PGIF 与它们都无显著差异**,l4(7.9s)、borrow#1(8.8s)的均值低于 PGIF(15.4s)——PGIF 的中位数仅 0.9s,均值被少数冷启动锁错的长尾拉高。
+- **DAM4SAM(外部 SOTA,SAM2-L 记忆)**:三项指标上 PGIF 方向均更好——正确锁定比例 +0.21 [−0.00, +0.41](边界)、最长连续正确 +8.0s [−2.3, +18.4]、最长锁错 −11.3s [−23.2, +0.7](均不显著)。DAM4SAM 的最长锁错均值 26.7s、中位 21.6s,为所有方法中最长——"粘滞记忆":锁错后长期不改。**此前"DAM4SAM 正确比例显著高于 PGIF(0.786 vs 0.583)"的结论来自旧口径把 DAM4SAM 的弃权帧(约 60%)算作正确,已撤回**;严格口径(弃权算错)下 PGIF 显著更好(+0.39 [+0.16, +0.61])。仍不声称"全面显著优于",n=19 下只有严格口径达到显著。
+- **作弊设定严重高估了外部方法**:OC-SORT/DeepSORT 在 gt-seeded 下正确比例约 0.75,可部署下只有 0.23/0.29。
+- 全部 10 个臂均已完成(20 episode,19 计分,0 报错)。重算:`rollout/deploy_compare.py` → `figs/fig_deploy_compare.py` → `figs/update_s55_table.py`。
+
+
+exec
+/bin/sh -lc "sed -n '45,180p' acot_note/1003_iteration_roadmap.md" in /nvidia/hque/code/cyhe/uav-acot-track
+ succeeded in 0ms:
+| S2(CARLA 2010,policy GPU4) | V2 · T05 → V3-gateTAH-only · T05 → V3 · Town10HD |
+| S3(CARLA 2040,policy GPU7) | V3 · T05 → V3+V2 · T05 → V0 · Town03(重跑) |
+| S4(CARLA 2020,policy GPU1) | V3-ensemble · T05 → DAM4SAM · Town03 → V1-commit-only · T05 |
+
+## ★ 方法学发现(12:10):「正确锁定比例」对弃权的处理不一致,DAM4SAM 的 0.786 主要来自弃权
+
+- **问题**:现用的正确锁定比例 = 1 − `mis_follow_inst`。scorer 只把「选了错车」记为错,弃权帧(`pred_slot = −1`,即没有任何选择)记为**正确**。
+  - DAM4SAM 在 SAM2 掩码为空、或预测框 160 px 内没有候选时会弃权。
+  - 其余各臂(含 PGIF、V1~V3 的融合输出)每帧都会给出选择。
+  - 另外两项指标(最长连续正确、最长锁错)都按**承诺身份**计算,弃权时沿用上一承诺。三项指标的「锁定」定义因此不一致。
+- **证据**(`rollout/iter_gate.py`,用 scorer 的逐帧分桶计数 `n_dist × mis_by_N` 重算严格口径):
+
+| 臂(Town05,n=19) | 宽松(弃权算对,原口径) | 承诺(弃权沿用承诺,与另两项一致) | 严格(弃权算错) |
+|---|---|---|---|
+| DAM4SAM | 0.786 | 0.367 | 0.190 |
+| TAHRelM+PGIF(V0) | 0.583 | 0.576 | 0.584 |
+| TAHRelM | 0.326 | 0.320 | 0.326 |
+| DeepSORT / OC-SORT | 0.297 / 0.238 | 0.286 / 0.229 | 0.296 / 0.240 |
+| DAM4SAM · Town10HD | 0.598 | 0.299 | 0.103 |
+
+  - 除 DAM4SAM 外,各臂三种口径的差别 ≤ 0.01。DAM4SAM 约 60% 的目标在画面帧处于弃权状态。
+  - V0 − DAM4SAM 配对差(n=19):
+    - 承诺口径 +0.209 [−0.001, +0.415]
+    - 严格口径 +0.394 [+0.167, +0.610]
+    - 宽松口径 −0.203 [−0.384, −0.027]
+    - 最长连续正确 +8.0 s [−2.4, +18.5]
+    - 最长锁错 −11.3 s [−23.3, +0.7]
+- **影响**:原定的「正确比例上超过 DAM4SAM」这一目标,是相对一个口径伪影定义的。换成与另两项一致的承诺口径后,V0 在三项指标上方向全部优于 DAM4SAM;严格口径下显著,承诺口径下临界。
+- **处理**:
+  - 预注册假设原用宽松口径。从现在起三种口径**并列报告**,不在三者之间挑选。
+  - 主口径建议用承诺口径,理由是与另两项指标一致,并非看结果后挑选。
+  - 主口径的最终选择待用户确认,并交 codex R^b 审核。
+  - 1001 文档 §5.5 主表暂不改动。
+- **未解释的残余**:seed 91003 上,4 次独立运行(V0、V1、V3、V3-ens)的首帧语言选择都是 0 号干扰车。DAM4SAM 基线在这个种子上严格口径仍为 0.85,说明它当时的初始化很可能是对的。原因未查明,可能是 DAM4SAM 基线的首个决策 tick 不同,没有 tick 日志无法核对。
+
+## 运维事件
+- **11:01–11:34 episode 间确定性卡死(已定位并修复)**:
+  - **现象**:重启后 V1 · T05、V3 · T05、V3-ensemble · T05 都在 ep0 结束后卡住,复现两次。卡住时 CARLA 帧不前进,新 client 看到 0 个 actor(同步模式下无 tick 的表象)。只有 V2 · T05 正常。
+  - **根因**:py-spy 栈显示卡在 `scene_manager._destroy_all_traffic` 的 `set_autopilot(False)`。这个调用没有传 TM 端口,于是默认连到 8000。8000 已被 V2 的 client(连 CARLA 2010)占用,其余 worker 因此变成跨服务器的远程 TM,随后阻塞。卡住与 DAM4SAM 无关,只取决于谁先抢到 8000。
+  - **修复**:`scene_manager.py`、`targets/vehicle_target.py` 两处 `set_autopilot(False)` 改传各 worker 的 TM 端口。随后结束卡住的 client,watchdog 从 seed 91001 续跑(p2),ep0 结果保留在 p1 的 `.partial` 中。
+  - **旁注**:10:16 CARLA 2040 的超时可能是同一原因,未单独验证。
+- **约 10:49 宿主机重启**:所有容器(含 `cyh-carla`、`dam4sam-svc`)退出码 255;V1 · T05(8 ep)、DAM4SAM · T03(7 ep)因在"逐 episode 保存"补丁之前启动而未保存,V2 · T05 未开始。11:00 `docker start` 恢复容器、重启 CARLA 与 4 个 DAM4SAM 服务,按上表重排;日志归档于 `runs/asd/iter/lost_reboot/`。总时间表顺延约 1.8 h。
+- 10:16 CARLA 2040 仿真超时(60 s 无响应),V0 · Town03 中断。`run_rollout.py` 原先只在全部 episode 结束后写 JSON → 已改为每个 episode 结束写 `<out>.json.partial`(对此后启动的臂生效)。V0 · Town03 安排在后续空闲槽位重跑。
+
+## 结果(全部 deployable;正确锁定比例为承诺口径,见上文「方法学发现」;统计 `rollout/iter_gate.py` → `eval_out/iter_gate.json`,机理 `rollout/iter_mech.py` → `eval_out/iter_mech.json`)
+
+### Town05 主表(seeds 91000–19,19 个计分 episode)
+| 臂 | 正确锁定比例 [95% CI] | 严格口径 | 最长连续正确(s) | 最长锁错(s) | 开局锁对 | 开局对 / 错时的正确比例 |
+|---|---|---|---|---|---|---|
+| **V0 · TAHRelM+PGIF** | **0.576** [0.37, 0.78] | 0.584 | **21.3** | 15.4 | 11/19¹ | 0.96 / ≈0¹ |
+| DAM4SAM | 0.367 [0.19, 0.56] | 0.190 | 13.3 | 26.7 | — | — |
+| V1 · PGIF∘DAM4SAM | 0.450 [0.24, 0.67] | 0.183 | 19.4 | 17.3 | 9/19 | 0.95 / 0.00 |
+| V1-commit-only | 0.389 [0.18, 0.60] | 0.153 | 16.1 | 20.0 | 9/19 | 0.82 / 0.00 |
+| V2 · 延迟承诺 | 0.504 [0.29, 0.71] | 0.508 | 25.2 | 19.6 | 10/19 | 0.95 / 0.01 |
+| V3 · 融合 + 回灌门控 | 0.368 [0.16, 0.58] | 0.372 | 11.9 | 22.8 | 7/19 | 0.99 / 0.00 |
+| V3+V2 | 0.392 [0.19, 0.59] | 0.391 | 18.2 | 19.0 | 8/19 | 0.88 / 0.03 |
+| V3-ensemble(逐帧投票,无回火无回灌) | 0.415 [0.26, 0.57] | 0.418 | 6.6 | **8.6** | 9/19 | 0.72 / 0.15 |
+| V3-commit-only(回火融合只管承诺) | 0.480 [0.29, 0.67] | 0.481 | 18.2 | 22.5 | 10/19 | 0.78 / 0.15 |
+| V3-gateTAH-only | 0.530 [0.32, 0.74] | 0.541 | 23.8 | 16.5 | 11/19 | 0.91 / 0.00 |
+
+¹ V0 的开局与分层取自 `runs/asd/deploy_all/tahrelm_pgif.jsonl` 首个 tick(语言首帧选择)与 `1001` §5.1。
+
+### 预注册假设判定(配对 bootstrap 95% CI,n=19;正确比例三口径并列,判定以承诺口径为主)
+| 假设 | 比较 | 正确比例 Δ(承诺 / 宽松 / 严格) | 最长锁错 Δ | 判定 |
+|---|---|---|---|---|
+| H1a 非劣(下界 > −0.05) | V1 − DAM4SAM | +0.08 [−0.15, +0.31] / −0.12 / −0.01 | — | ✗(CI 过宽,未证非劣) |
+| H1b-all | V1 − DAM4SAM | — | −9.4 s [−22.2, +3.4] | ✗(方向对,不显著) |
+| V1 机制 | V1 − V1-commit-only | +0.06 [−0.18, +0.30] | −2.7 s [−16.5, +10.3] | ✗(重置 SAM2 未显示额外收益) |
+| H2b / H2c | V2 − V0 | −0.07 [−0.24, +0.10] | +4.2 s [−2.4, +11.4] | ✗ / ✗ |
+| H3a | V3 − DAM4SAM | +0.00 [−0.20, +0.20](严格 +0.18 [−0.01, +0.37]) | −3.9 s [−13.7, +6.8] | ✗ |
+| H3b | V3 − V0 | **−0.21 [−0.41, −0.05]** | — | ✗(显著更差) |
+| V3 > ensemble | V3 − V3-ensemble | −0.05 [−0.19, +0.11] | **+14.2 s [+5.2, +24.4]** | ✗(锁错显著更长) |
+| V3 > commit-only | V3 − V3-commit-only | −0.11 [−0.28, +0.05] | +0.3 s | ✗ |
+| H3a(V3+V2) | V3+V2 − DAM4SAM | +0.03 [−0.21, +0.25] | −7.7 s [−19.7, +4.5] | ✗ |
+| (参照)V0 vs DAM4SAM | V0 − DAM4SAM | +0.21 [−0.00, +0.42] / −0.20 / **+0.39 [+0.16, +0.61]** | −11.3 s [−23.2, +0.6] | 方向全优;仅严格口径显著 |
+
+### 泛化(训练集外地图,20 ep,与同地图 DAM4SAM / TAHRelM 配对)
+| 设定 | 正确锁定比例 | 最长连续正确(s) | 最长锁错(s) | 配对 Δ(正确比例 / 最长锁错) |
+|---|---|---|---|---|
+| V3 · Town03 | 0.398 | 15.1 | 17.5 | vs DAM4SAM:**+0.14 [+0.01, +0.30]** / **−11.0 s [−20.2, −2.7]** |
+| DAM4SAM · Town03 | 0.254(宽松 0.732,严格 0.155) | 9.0 | 28.5 | — |
+| V0 · Town03 | 0.408 | 15.8 | 22.7 | vs TAHRelM:+0.10 [−0.04, +0.25] |
+| TAHRelM 无纠偏 · Town03 | 0.312 | 6.1 | 12.0 | — |
+| V3 · Town10HD | 0.387 | 13.5 | 24.3 | vs DAM4SAM:+0.09 [−0.07, +0.26](严格 +0.29 [+0.13, +0.46]) / +1.8 s |
+| DAM4SAM · Town10HD | 0.299(宽松 0.598,严格 0.103) | 11.1 | 22.5 | — |
+
+- V3 在两张新地图上的正确比例都高于 DAM4SAM。Town03 上正确比例和最长锁错都显著更好,Town10HD 上只有严格口径显著。
+- 但 V3 在 Town05 上显著差于 V0。新地图上缺少 V0 · Town10HD 臂,无法判断 V3 是否优于 V0。因此泛化结果只能支持"融合/PGIF 家族优于 DAM4SAM",不能支持"V3 优于 V0"。
+
+### 机理诊断(tick 日志,`iter_mech.py`)
+1. **开局身份决定一切(所有臂一致)**:
+   - 开局锁对的 episode,承诺正确比例为 0.72–0.99,其中带门控的臂为 0.88–0.99;开局锁错的只有 0–0.17。
+   - 各臂开局锁对数都在 7–11/19 之间,由首帧语言选择决定,单帧语言准确率约 0.22–0.33。
+   - 同一种子的首帧语言选择在多次运行间基本可复现:91003、91006、91007、91008 在 V0、V1、V3、V3-ens 中都错选同一辆车。但也有少数种子翻转(91001、91005),导致臂间开局数相差 ±2–4 集,对应正确比例相差约 ±0.1–0.2。
+   - 因此 n=19 的臂间差异有很大一部分是开局这一步的随机性。H3b 的显著负差中,V3 只有 7/19 开局锁对,V0 有 11/19,这一项占了主要部分。
+2. **回灌门控使记忆误差同步(群体确认偏差,预注册条目 4 的直接证据)**:
+
+   | 指标 | V3-ensemble(无回灌) | V3(回灌门控两个记忆) |
+   |---|---|---|
+   | TAHRelM 与 DAM4SAM 的误差相关 ρ_err | 0.34(H3c 预测 < 0.5,**成立**) | 0.72 |
+   | 两记忆选同一车的比例 | 0.43 | 0.76 |
+   | 两者同时错且错到同一辆车 | 0.22 | 0.48 |
+
+   - V3 的 DAM4SAM 重置中,23% 把原本正确的 SAM2 改到了错误身份。
+   - 结果是:开局锁对时 V3 几乎完美(0.99);开局锁错时,两个记忆被同步到同一个错误身份,无法再互相纠正(0.00)。
+   - 不回灌的 ensemble 和 commit-only 在开局锁错时还能恢复到 0.15,代价是开局锁对时降到 0.72–0.78。
+   - 回灌门控因此是一个**取舍**:用"锁错后的可纠正性"换"锁对时的保持力",不是净增益。
+3. **V1 退化**:
+   - SAM2 预测 IoU 对"DAM4SAM 选对"的 AUROC 只有 0.53,低于预注册阈值 0.55。按预注册说明,PGIF 在 DAM4SAM 上退化为近似等权驻留,540 个 tick 只改写了 24 次。
+   - V1 与 DAM4SAM 的差异落在运行间方差之内(V1 − commit-only 不显著)。
+4. **V2 无效**:
+   - 窗口内单帧语言准确率约 0.25–0.33,而且同一场景下的错误高度相关。累积 5 个 tick 没有提高开局正确率(V2 为 10/19,V0 的首帧语言为 11/19)。
+   - V2-single@K 对照未跑,H2a 无法正式检验。
+
+## 总结(诚实结论)
+1. **原定目标"超越 DAM4SAM"在口径修正后已由 V0 达成方向性优势**:
+   - 正确比例:承诺口径 +0.21(边界),严格口径显著。
+   - 最长连续正确 +8.0 s,最长锁错 −11.3 s,两者均不显著。
+   - 1003 的三个新版本都**没有超过 V0**。V3 在 Town05 上显著更差,而且主要差在开局随机性上。
+2. **可写进论文的新增贡献**(需 codex R^b 审核):
+   - (a) 方法学:身份跟踪评测中弃权帧的口径问题。SAM2 类记忆跟踪器会大量弃权,原口径会让 DAM4SAM 显得高出约 0.4。
+   - (b) 机理:多记忆融合时,把后验回灌给所有记忆会使它们的误差相关性从 0.34 升到 0.72,形成群体确认偏差。这是命题 1 从单记忆到多记忆的自然推广,有直接测量。
+   - (c) 瓶颈定位:开局语言 grounding(首帧约 50% 准确)决定了 0.9 以上与接近 0 两种结局。记忆和融合层面的改进,在开局锁错时都无能为力。
+3. **下一步的唯一有效杠杆是开局身份**:
+   - 需要提高首帧或冷启动窗口的语言 grounding 准确率。阶段 0 的 LoRA 未显著有效,需要更强的 grounding。
+   - 或者设计开局锁错后的可恢复机制,例如不回灌、保持来源多样性的融合 + 后验门控控制承诺,也就是 commit-only 方向。
+   - 同时需要扩种子(n≈40),压低开局随机性带来的方差。
+
+exec
+/bin/sh -lc "cat carla_uav_tracking/rollout/eval_out/iter_gate.json && printf '\\n---MECH---\\n' && cat carla_uav_tracking/rollout/eval_out/iter_mech.json" in /nvidia/hque/code/cyhe/uav-acot-track
+ succeeded in 0ms:
+{
+  "arms": {
+    "dam4sam": {
+      "n": 19,
+      "correct": [
+        0.36668413555140833,
+        0.19268042680179115,
+        0.5577116209563668
+      ],
+      "correct_l": [
+        0.7859476825407968,
+        0.6533705748031885,
+        0.8987128297203175
+      ],
+      "correct_s": [
+        0.18965222247262695,
+        0.0861759460467405,
+        0.3174439825897246
+      ],
+      "longC": [
+        13.284210526315789,
+        6.778815789473685,
+        20.684473684210506
+      ],
+      "longW": [
+        26.689473684210526,
+        16.857763157894738,
+        37.373684210526314
+      ]
+    },
+    "dam4sam_t03": {
+      "n": 20,
+      "correct": [
+        0.2538566761426586,
+        0.09863439145699457,
+        0.43058182091578745
+      ],
+      "correct_l": [
+        0.7321759294633787,
+        0.6154990559493524,
+        0.8370393071452586
+      ],
+      "correct_s": [
+        0.15468852629472712,
+        0.06342694885389547,
+        0.26654131036193623
+      ],
+      "longC": [
+        8.974999999999998,
+        3.174875,
+        15.589999999999998
+      ],
+      "longW": [
+        28.5,
+        20.614875,
+        36.14
+      ]
+    },
+    "dam4sam_t10": {
+      "n": 20,
+      "correct": [
+        0.2985974037671272,
+        0.10850547730829421,
+        0.49859740376712713
+      ],
+      "correct_l": [
+        0.5978773258346545,
+        0.423503942653183,
+        0.7655912558046951
+      ],
+      "correct_s": [
+        0.10289082655002306,
+        0.03211744821167309,
+        0.18576065621422905
+      ],
+      "longC": [
+        11.135,
+        4.009875,
+        19.17512499999999
+      ],
+      "longW": [
+        22.529999999999998,
+        12.405000000000001,
+        34.0
+      ]
+    },
+    "pgif": {
+      "n": 19,
+      "correct": [
+        0.5756628870633238,
+        0.36591317254622246,
+        0.7841957224892219
+      ],
+      "correct_l": [
+        0.5833771269995309,
+        0.3726293111897479,
+        0.7901639224759882
+      ],
+      "correct_s": [
+        0.5837819250650336,
+        0.3727160012236299,
+        0.7921452992539306
+      ],
+      "longC": [
+        21.25263157894737,
+        11.16828947368421,
+        32.11578947368421
+      ],
+      "longW": [
+        15.426315789473685,
+        6.431447368421052,
+        25.894736842105264
+      ]
+    },
+    "pgif_t03": {
+      "n": 20,
+      "correct": [
+        0.408036869416727,
+        0.21107676228125427,
+        0.6076154177055763
+      ],
+      "correct_l": [
+        0.41390039804246415,
+        0.21358654959849652,
+        0.6148461363550717
+      ],
+      "correct_s": [
+        0.41686342595638826,
+        0.21684705893609024,
+        0.6190110186188191
+      ],
+      "longC": [
+        15.84,
+        6.669875,
+        27.09037499999997
+      ],
+      "longW": [
+        22.684999999999995,
+        12.87,
+        33.114999999999995
+      ]
+    },
+    "tahrelm_t03": {
+      "n": 20,
+      "correct": [
+        0.3119121264717144,
+        0.18496827763982113,
+        0.4502666142609852
+      ],
+      "correct_l": [
+        0.3049936612288118,
+        0.1807339263266293,
+        0.44573544559941103
+      ],
+      "correct_s": [
+        0.30536832615811893,
+        0.17849912630252357,
+        0.4461689587467025
+      ],
+      "longC": [
+        6.095,
+        3.28,
+        9.345
+      ],
+      "longW": [
+        11.959999999999999,
+        8.149874999999998,
+        16.119999999999997
+      ]
+    },
+    "v1_t05": {
+      "n": 19,
+      "correct": [
+        0.45,
+        0.2394736842105263,
+        0.6657894736842105
+      ],
+      "correct_l": [
+        0.6708157791969999,
+        0.4956006169585147,
+        0.8371720059363933
+      ],
+      "correct_s": [
+        0.18269853449356557,
+        0.06940756978687672,
+        0.3145118994809546
+      ],
+      "longC": [
+        19.378947368421052,
+        8.378947368421052,
+        31.700131578947357
+      ],
+      "longW": [
+        17.278947368421054,
+        8.610394736842105,
+        27.00526315789474
+      ]
+    },
+    "v1nog_t05": {
+      "n": 19,
+      "correct": [
+        0.38853303489685703,
+        0.179443758805605,
+        0.5990593506863306
+      ],
+      "correct_l": [
+        0.7082849008022252,
+        0.5348127460201787,
+        0.862637525017419
+      ],
+      "correct_s": [
+        0.15331522672891723,
+        0.06255952178852289,
+        0.26175335253739673
+      ],
+      "longC": [
+        16.142105263157895,
+        6.757894736842106,
+        27.23197368421049
+      ],
+      "longW": [
+        19.97894736842105,
+        10.478947368421052,
+        30.968552631578934
+      ]
+    },
+    "v2_t05": {
+      "n": 19,
+      "correct": [
+        0.5041740814640984,
+        0.2941941739793886,
+        0.7122219248814939
+      ],
+      "correct_l": [
+        0.5061166444277899,
+        0.29833815652656626,
+        0.725346962724429
+      ],
+      "correct_s": [
+        0.5080009775866684,
+        0.3008275932186732,
+        0.7174185070812401
+      ],
+      "longC": [
+        25.15789473684211,
+        11.068157894736844,
+        40.984210526315785
+      ],
+      "longW": [
+        19.62105263157895,
+        9.099868421052632,
+        31.289473684210527
+      ]
+    },
+    "v3_t03": {
+      "n": 20,
+      "correct": [
+        0.3976627361778233,
+        0.19977676306443432,
+        0.6001789617486338
+      ],
+      "correct_l": [
+        0.40455181101898663,
+        0.20428771364349635,
+        0.6053956835936737
+      ],
+      "correct_s": [
+        0.3751394615571186,
+        0.16461314576764494,
+        0.5856657773465923
+      ],
+      "longC": [
+        15.059999999999997,
+        5.1,
+        26.770249999999983
+      ],
+      "longW": [
+        17.479999999999997,
+        9.064875,
+        26.714999999999996
+      ]
+    },
+    "v3_t05": {
+      "n": 19,
+      "correct": [
+        0.36806937897420827,
+        0.15934331240946403,
+        0.5785907859078591
+      ],
+      "correct_l": [
+        0.3733928073275042,
+        0.16373723457208622,
+        0.5837764901117004
+      ],
+      "correct_s": [
+        0.3718992555330542,
+        0.1614711329878853,
+        0.5824255713225279
+      ],
+      "longC": [
+        11.9,
+        2.8051315789473685,
+        23.705394736842095
+      ],
+      "longW": [
+        22.78421052631579,
+        12.863026315789474,
+        33.33710526315788
+      ]
+    },
+    "v3_t10": {
+      "n": 20,
+      "correct": [
+        0.38710899864638154,
+        0.18947790032787806,
+        0.5912665785285054
+      ],
+      "correct_l": [
+        0.3900296594624323,
+        0.19277699935210088,
+        0.5991309563219599
+      ],
+      "correct_s": [
+        0.39080193223530696,
+        0.19264819944598338,
+        0.6033240997229917
+      ],
+      "longC": [
+        13.495,
+        6.139875,
+        21.55512499999999
+      ],
+      "longW": [
+        24.32,
+        14.129750000000001,
+        35.11
+      ]
+    },
+    "v3com_t05": {
+      "n": 19,
+      "correct": [
+        0.47992180810409535,
+        0.29358979835785365,
+        0.6666012650794984
+      ],
+      "correct_l": [
+        0.4810621554159706,
+        0.2947918184504386,
+        0.6691254998180274
+      ],
+      "correct_s": [
+        0.48102690948315785,
+        0.2956363756967247,
+        0.6684447033675676
+      ],
+      "longC": [
+        18.157894736842106,
+        9.589473684210526,
+        27.815921052631566
+      ],
+      "longW": [
+        22.505263157894735,
+        13.242105263157896,
+        32.431710526315776
+      ]
+    },
+    "v3ens_t05": {
+      "n": 19,
+      "correct": [
+        0.41482239632342016,
+        0.2628827630124929,
+        0.5752845406384207
+      ],
+      "correct_l": [
+        0.4201313089936013,
+        0.26879480437817244,
+        0.5802373950858529
+      ],
+      "correct_s": [
+        0.41830559761749325,
+        0.26747315226000523,
+        0.5758986919073004
+      ],
+      "longC": [
+        6.557894736842105,
+        3.736842105263158,
+        9.842105263157896
+      ],
+      "longW": [
+        8.605263157894738,
+        5.500000000000001,
+        11.810526315789474
+      ]
+    },
+    "v3gt_t05": {
+      "n": 19,
+      "correct": [
+        0.5303574420599396,
+        0.31659164118565725,
+        0.7369430530419039
+      ],
+      "correct_l": [
+        0.5368254794066576,
+        0.3203041730067163,
+        0.7409947882502167
+      ],
+      "correct_s": [
+        0.5405592473613732,
+        0.3255824671756147,
+        0.7490664409697981
+      ],
+      "longC": [
+        23.794736842105266,
+        11.357894736842105,
+        37.35802631578946
+      ],
+      "longW": [
+        16.48421052631579,
+        8.084078947368422,
+        26.168552631578937
+      ]
+    },
+    "v3v2_t05": {
+      "n": 19,
+      "correct": [
+        0.3916779535124911,
+        0.19270386807642972,
+        0.5924173633665212
+      ],
+      "correct_l": [
+        0.3904673407155054,
+        0.1914833202201852,
+        0.5965694608779191
+      ],
+      "correct_s": [
+        0.39129252852313573,
+        0.1914679058819428,
+        0.5951574120773733
+      ],
+      "longC": [
+        18.178947368421053,
+        7.231578947368422,
+        30.04223684210525
+      ],
+      "longW": [
+        18.95263157894737,
+        9.689342105263156,
+        29.636973684210524
+      ]
+    }
+  },
+  "tests": [
+    {
+      "id": "V0 vs DAM4SAM",
+      "arm": "pgif",
+      "ref": "dam4sam",
+      "metric": "correct",
+      "kind": "greater",
+      "n": 19,
+      "delta": [
+        0.20897875151191544,
+        -0.002937423859963013,
+        0.4140863789401025
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "V0 vs DAM4SAM",
+      "arm": "pgif",
+      "ref": "dam4sam",
+      "metric": "correct_l",
+      "kind": "greater",
+      "n": 19,
+      "delta": [
+        -0.20257055554126596,
+        -0.384721251850549,
+        -0.026780547652999122
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "V0 vs DAM4SAM",
+      "arm": "pgif",
+      "ref": "dam4sam",
+      "metric": "correct_s",
+      "kind": "greater",
+      "n": 19,
+      "delta": [
+        0.3941297025924067,
+        0.16432936377940005,
+        0.6046546404136106
+      ],
+      "verdict": "✓"
+    },
+    {
+      "id": "V0 vs DAM4SAM",
+      "arm": "pgif",
+      "ref": "dam4sam",
+      "metric": "longC",
+      "kind": "greater",
+      "n": 19,
+      "delta": [
+        7.968421052631579,
+        -2.226447368421053,
+        18.215789473684207
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "V0 vs DAM4SAM",
+      "arm": "pgif",
+      "ref": "dam4sam",
+      "metric": "longW",
+      "kind": "less",
+      "n": 19,
+      "delta": [
+        -11.263157894736842,
+        -23.431578947368422,
+        0.6736842105263159
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "H1a 非劣",
+      "arm": "v1_t05",
+      "ref": "dam4sam",
+      "metric": "correct",
+      "kind": "noninf",
+      "n": 19,
+      "delta": [
+        0.0833158644485917,
+        -0.1503866425343505,
+        0.30641630894830213
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "H1a 非劣",
+      "arm": "v1_t05",
+      "ref": "dam4sam",
+      "metric": "correct_l",
+      "kind": "noninf",
+      "n": 19,
+      "delta": [
+        -0.11513190334379711,
+        -0.28049633234979315,
+        0.030443194671264093
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "H1a 非劣",
+      "arm": "v1_t05",
+      "ref": "dam4sam",
+      "metric": "correct_s",
+      "kind": "noninf",
+      "n": 19,
+      "delta": [
+        -0.006953687979061397,
+        -0.1376736748985927,
+        0.1104720671863631
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "H1b-all",
+      "arm": "v1_t05",
+      "ref": "dam4sam",
+      "metric": "longW",
+      "kind": "less",
+      "n": 19,
+      "delta": [
+        -9.410526315789474,
+        -22.05828947368421,
+        3.447368421052631
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "H1c(探索)",
+      "arm": "v1_t05",
+      "ref": "dam4sam",
+      "metric": "longC",
+      "kind": "desc",
+      "n": 19,
+      "delta": [
+        6.09473684210526,
+        -5.394736842105263,
+        18.300131578947358
+      ],
+      "verdict": "—"
+    },
+    {
+      "id": "V1 vs commit-only",
+      "arm": "v1_t05",
+      "ref": "v1nog_t05",
+      "metric": "longW",
+      "kind": "less",
+      "n": 19,
+      "delta": [
+        -2.6999999999999993,
+        -16.47921052631579,
+        10.189473684210526
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "V1 vs commit-only",
+      "arm": "v1_t05",
+      "ref": "v1nog_t05",
+      "metric": "correct",
+      "kind": "desc",
+      "n": 19,
+      "delta": [
+        0.061466965103142965,
+        -0.18014190767019939,
+        0.3032058058759611
+      ],
+      "verdict": "—"
+    },
+    {
+      "id": "V1 vs commit-only",
+      "arm": "v1_t05",
+      "ref": "v1nog_t05",
+      "metric": "correct_l",
+      "kind": "desc",
+      "n": 19,
+      "delta": [
+        -0.03746912160522546,
+        -0.20552053578409413,
+        0.12227214817668572
+      ],
+      "verdict": "—"
+    },
+    {
+      "id": "V1 vs commit-only",
+      "arm": "v1_t05",
+      "ref": "v1nog_t05",
+      "metric": "correct_s",
+      "kind": "desc",
+      "n": 19,
+      "delta": [
+        0.029383307764648318,
+        -0.05483907250819635,
+        0.11521162805922164
+      ],
+      "verdict": "—"
+    },
+    {
+      "id": "H2b",
+      "arm": "v2_t05",
+      "ref": "pgif",
+      "metric": "longW",
+      "kind": "less",
+      "n": 19,
+      "delta": [
+        4.194736842105263,
+        -2.436973684210526,
+        11.405263157894735
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "H2c 非劣",
+      "arm": "v2_t05",
+      "ref": "pgif",
+      "metric": "correct",
+      "kind": "noninf",
+      "n": 19,
+      "delta": [
+        -0.07148880559922531,
+        -0.2475090129482588,
+        0.09359400068769143
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "H2c 非劣",
+      "arm": "v2_t05",
+      "ref": "pgif",
+      "metric": "correct_l",
+      "kind": "noninf",
+      "n": 19,
+      "delta": [
+        -0.07726048257174095,
+        -0.2561288052916057,
+        0.0886552051618546
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "H2c 非劣",
+      "arm": "v2_t05",
+      "ref": "pgif",
+      "metric": "correct_s",
+      "kind": "noninf",
+      "n": 19,
+      "delta": [
+        -0.07578094747836524,
+        -0.25365436073102327,
+        0.09208169792066054
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "H3a 非劣",
+      "arm": "v3_t05",
+      "ref": "dam4sam",
+      "metric": "correct",
+      "kind": "noninf",
+      "n": 19,
+      "delta": [
+        0.0013852434227999801,
+        -0.20266349165828407,
+        0.1969661500463467
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "H3a 非劣",
+      "arm": "v3_t05",
+      "ref": "dam4sam",
+      "metric": "correct_l",
+      "kind": "noninf",
+      "n": 19,
+      "delta": [
+        -0.41255487521329265,
+        -0.5925839235446806,
+        -0.2334054200889086
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "H3a 非劣",
+      "arm": "v3_t05",
+      "ref": "dam4sam",
+      "metric": "correct_s",
+      "kind": "noninf",
+      "n": 19,
+      "delta": [
+        0.18224703306042725,
+        -0.01289198474098878,
+        0.3712118653214981
+      ],
+      "verdict": "✓"
+    },
+    {
+      "id": "H3a 锁错",
+      "arm": "v3_t05",
+      "ref": "dam4sam",
+      "metric": "longW",
+      "kind": "less",
+      "n": 19,
+      "delta": [
+        -3.905263157894737,
+        -13.694999999999999,
+        6.805526315789451
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "H3a 连续正确",
+      "arm": "v3_t05",
+      "ref": "dam4sam",
+      "metric": "longC",
+      "kind": "desc",
+      "n": 19,
+      "delta": [
+        -1.3842105263157898,
+        -12.24736842105263,
+        10.389605263157886
+      ],
+      "verdict": "—"
+    },
+    {
+      "id": "H3b",
+      "arm": "v3_t05",
+      "ref": "pgif",
+      "metric": "correct",
+      "kind": "greater",
+      "n": 19,
+      "delta": [
+        -0.20759350808911545,
+        -0.4128998676821476,
+        -0.04917794003318295
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "H3b",
+      "arm": "v3_t05",
+      "ref": "pgif",
+      "metric": "correct_l",
+      "kind": "greater",
+      "n": 19,
+      "delta": [
+        -0.20998431967202671,
+        -0.41581986112603414,
+        -0.05181335824866306
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "H3b",
+      "arm": "v3_t05",
+      "ref": "pgif",
+      "metric": "correct_s",
+      "kind": "greater",
+      "n": 19,
+      "delta": [
+        -0.21188266953197946,
+        -0.42085624509033775,
+        -0.05253338570306363
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "V3 > ensemble",
+      "arm": "v3_t05",
+      "ref": "v3ens_t05",
+      "metric": "correct",
+      "kind": "greater",
+      "n": 19,
+      "delta": [
+        -0.046753017349211834,
+        -0.18877132073937056,
+        0.10571693717937605
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "V3 > ensemble",
+      "arm": "v3_t05",
+      "ref": "v3ens_t05",
+      "metric": "correct_l",
+      "kind": "greater",
+      "n": 19,
+      "delta": [
+        -0.046738501666097075,
+        -0.19180998834775,
+        0.10366366509196705
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "V3 > ensemble",
+      "arm": "v3_t05",
+      "ref": "v3ens_t05",
+      "metric": "correct_s",
+      "kind": "greater",
+      "n": 19,
+      "delta": [
+        -0.04640634208443909,
+        -0.18930217140021047,
+        0.10377938478674457
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "V3 > ensemble",
+      "arm": "v3_t05",
+      "ref": "v3ens_t05",
+      "metric": "longW",
+      "kind": "less",
+      "n": 19,
+      "delta": [
+        14.178947368421055,
+        5.147236842105263,
+        24.363289473684198
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "V3 > commit-only",
+      "arm": "v3_t05",
+      "ref": "v3com_t05",
+      "metric": "correct",
+      "kind": "greater",
+      "n": 19,
+      "delta": [
+        -0.11185242912988705,
+        -0.2817033744172779,
+        0.0494746014671831
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "V3 > commit-only",
+      "arm": "v3_t05",
+      "ref": "v3com_t05",
+      "metric": "correct_l",
+      "kind": "greater",
+      "n": 19,
+      "delta": [
+        -0.1076693480884664,
+        -0.2793650045632128,
+        0.0574817509644714
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "V3 > commit-only",
+      "arm": "v3_t05",
+      "ref": "v3com_t05",
+      "metric": "correct_s",
+      "kind": "greater",
+      "n": 19,
+      "delta": [
+        -0.10912765395010361,
+        -0.284312810665088,
+        0.05421143729228164
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "V3 > commit-only",
+      "arm": "v3_t05",
+      "ref": "v3com_t05",
+      "metric": "longW",
+      "kind": "less",
+      "n": 19,
+      "delta": [
+        0.2789473684210531,
+        -9.69473684210526,
+        10.189605263157883
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "V3 vs gateTAH-only",
+      "arm": "v3_t05",
+      "ref": "v3gt_t05",
+      "metric": "longW",
+      "kind": "desc",
+      "n": 19,
+      "delta": [
+        6.300000000000001,
+        -2.5789473684210513,
+        16.39486842105262
+      ],
+      "verdict": "—"
+    },
+    {
+      "id": "H3a 非劣(V3+V2)",
+      "arm": "v3v2_t05",
+      "ref": "dam4sam",
+      "metric": "correct",
+      "kind": "noninf",
+      "n": 19,
+      "delta": [
+        0.024993817961082826,
+        -0.21311846624512623,
+        0.2458127211268966
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "H3a 非劣(V3+V2)",
+      "arm": "v3v2_t05",
+      "ref": "dam4sam",
+      "metric": "correct_l",
+      "kind": "noninf",
+      "n": 19,
+      "delta": [
+        -0.39548034182529146,
+        -0.573726803506881,
+        -0.22059873025773252
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "H3a 非劣(V3+V2)",
+      "arm": "v3v2_t05",
+      "ref": "dam4sam",
+      "metric": "correct_s",
+      "kind": "noninf",
+      "n": 19,
+      "delta": [
+        0.2016403060505088,
+        -0.0031556882139758533,
+        0.41051949747741673
+      ],
+      "verdict": "✓"
+    },
+    {
+      "id": "H3a 锁错(V3+V2)",
+      "arm": "v3v2_t05",
+      "ref": "dam4sam",
+      "metric": "longW",
+      "kind": "less",
+      "n": 19,
+      "delta": [
+        -7.7368421052631575,
+        -19.610657894736843,
+        4.542499999999968
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "超越 DAM4SAM",
+      "arm": "v3_t05",
+      "ref": "dam4sam",
+      "metric": "correct",
+      "kind": "greater",
+      "n": 19,
+      "delta": [
+        0.0013852434227999801,
+        -0.20358806490683753,
+        0.1953163950184404
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "超越 DAM4SAM",
+      "arm": "v3_t05",
+      "ref": "dam4sam",
+      "metric": "correct_l",
+      "kind": "greater",
+      "n": 19,
+      "delta": [
+        -0.41255487521329265,
+        -0.59322520878609,
+        -0.2373692470543259
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "超越 DAM4SAM",
+      "arm": "v3_t05",
+      "ref": "dam4sam",
+      "metric": "correct_s",
+      "kind": "greater",
+      "n": 19,
+      "delta": [
+        0.18224703306042725,
+        -0.009928604403203787,
+        0.3714338674461363
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "超越 DAM4SAM(V3+V2)",
+      "arm": "v3v2_t05",
+      "ref": "dam4sam",
+      "metric": "correct",
+      "kind": "greater",
+      "n": 19,
+      "delta": [
+        0.024993817961082826,
+        -0.21073269824469223,
+        0.2476000957082489
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "超越 DAM4SAM(V3+V2)",
+      "arm": "v3v2_t05",
+      "ref": "dam4sam",
+      "metric": "correct_l",
+      "kind": "greater",
+      "n": 19,
+      "delta": [
+        -0.39548034182529146,
+        -0.5772884637272949,
+        -0.22359761946733403
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "超越 DAM4SAM(V3+V2)",
+      "arm": "v3v2_t05",
+      "ref": "dam4sam",
+      "metric": "correct_s",
+      "kind": "greater",
+      "n": 19,
+      "delta": [
+        0.2016403060505088,
+        -0.005738234743790771,
+        0.41267202369721023
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "泛化 T03 正确",
+      "arm": "v3_t03",
+      "ref": "dam4sam_t03",
+      "metric": "correct",
+      "kind": "noninf",
+      "n": 20,
+      "delta": [
+        0.14380606003516466,
+        0.013124222122766635,
+        0.30039969925915355
+      ],
+      "verdict": "✓"
+    },
+    {
+      "id": "泛化 T03 正确",
+      "arm": "v3_t03",
+      "ref": "dam4sam_t03",
+      "metric": "correct_l",
+      "kind": "noninf",
+      "n": 20,
+      "delta": [
+        -0.3276241184443921,
+        -0.48656090300110855,
+        -0.1687542517441612
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "泛化 T03 正确",
+      "arm": "v3_t03",
+      "ref": "dam4sam_t03",
+      "metric": "correct_s",
+      "kind": "noninf",
+      "n": 20,
+      "delta": [
+        0.21230943387845844,
+        0.06830290000747338,
+        0.3712094173454615
+      ],
+      "verdict": "✓"
+    },
+    {
+      "id": "泛化 T03 锁错",
+      "arm": "v3_t03",
+      "ref": "dam4sam_t03",
+      "metric": "longW",
+      "kind": "less",
+      "n": 20,
+      "delta": [
+        -11.020000000000001,
+        -20.134999999999998,
+        -2.6648750000000128
+      ],
+      "verdict": "✓"
+    },
+    {
+      "id": "泛化 T10 正确",
+      "arm": "v3_t10",
+      "ref": "dam4sam_t10",
+      "metric": "correct",
+      "kind": "noninf",
+      "n": 20,
+      "delta": [
+        0.08851159487925439,
+        -0.07182789701508532,
+        0.2587490955269664
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "泛化 T10 正确",
+      "arm": "v3_t10",
+      "ref": "dam4sam_t10",
+      "metric": "correct_l",
+      "kind": "noninf",
+      "n": 20,
+      "delta": [
+        -0.20784766637222205,
+        -0.4465124631039947,
+        0.04626966770076796
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "泛化 T10 正确",
+      "arm": "v3_t10",
+      "ref": "dam4sam_t10",
+      "metric": "correct_s",
+      "kind": "noninf",
+      "n": 20,
+      "delta": [
+        0.2879111056852839,
+        0.13445574088351323,
+        0.4585280165374938
+      ],
+      "verdict": "✓"
+    },
+    {
+      "id": "泛化 T10 锁错",
+      "arm": "v3_t10",
+      "ref": "dam4sam_t10",
+      "metric": "longW",
+      "kind": "less",
+      "n": 20,
+      "delta": [
+        1.7899999999999998,
+        -5.290249999999999,
+        9.249999999999998
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "V0 泛化 T03",
+      "arm": "pgif_t03",
+      "ref": "tahrelm_t03",
+      "metric": "correct",
+      "kind": "desc",
+      "n": 20,
+      "delta": [
+        0.09612474294501268,
+        -0.039730516796417564,
+        0.24618559474386176
+      ],
+      "verdict": "—"
+    },
+    {
+      "id": "V0 泛化 T03",
+      "arm": "pgif_t03",
+      "ref": "tahrelm_t03",
+      "metric": "correct_l",
+      "kind": "desc",
+      "n": 20,
+      "delta": [
+        0.10890673681365234,
+        -0.024636753016549096,
+        0.2596649234109139
+      ],
+      "verdict": "—"
+    },
+    {
+      "id": "V0 泛化 T03",
+      "arm": "pgif_t03",
+      "ref": "tahrelm_t03",
+      "metric": "correct_s",
+      "kind": "desc",
+      "n": 20,
+      "delta": [
+        0.11149509979826928,
+        -0.022708432375633674,
+        0.2612902419640279
+      ],
+      "verdict": "—"
+    }
+  ]
+}
+---MECH---
+[
+ {
+  "arm": "v1_t05",
+  "n_ep": 19,
+  "ticks": 540,
+  "acc_out": 0.4462962962962963,
+  "acc_mem": 0.4351851851851852,
+  "fires": 24,
+  "misgate_mem": 0.08333333333333333,
+  "auroc_iou": 0.5325427275898151,
+  "open_ok": "9/19",
+  "correct_open_ok": 0.9500000000000001,
+  "correct_open_wrong": 0.0
+ },
+ {
+  "arm": "v1nog_t05",
+  "n_ep": 19,
+  "ticks": 394,
+  "acc_out": 0.4720812182741117,
+  "acc_mem": 0.4619289340101523,
+  "fires": 25,
+  "misgate_mem": 0.08,
+  "auroc_iou": 0.656100974497201,
+  "open_ok": "9/19",
+  "correct_open_ok": 0.820236407004476,
+  "correct_open_wrong": 0.0
+ },
+ {
+  "arm": "v2_t05",
+  "n_ep": 19,
+  "ticks": 1412,
+  "acc_out": 0.5814447592067988,
+  "acc_mem": 0.5601983002832861,
+  "fires": 250,
+  "misgate_mem": 0.228,
+  "open_ok": "10/19",
+  "correct_open_ok": 0.9457955541225648,
+  "correct_open_wrong": 0.013483556288024556
+ },
+ {
+  "arm": "v3_t05",
+  "n_ep": 19,
+  "ticks": 1120,
+  "acc_out": 0.3517857142857143,
+  "acc_tah": 0.3392857142857143,
+  "present_tah": 1.0,
+  "acc_dam": 0.3302325581395349,
+  "present_dam": 0.7678571428571429,
+  "acc_lang": 0.24196428571428572,
+  "present_lang": 1.0,
+  "rho_err": 0.7223759858402324,
+  "p_dam_wrong_given_tah_wrong": 0.91651865008881,
+  "both_wrong_same_id": 0.48023255813953486,
+  "tah_eq_dam": 0.7558139534883721,
+  "gates_tah": 230,
+  "misgate_tah": 0.2,
+  "gates_dam": 131,
+  "misgate_dam": 0.22900763358778625,
+  "open_ok": "7/19",
+  "correct_open_ok": 0.9940631890790959,
+  "correct_open_wrong": 0.002906323079690585
+ },
+ {
+  "arm": "v3v2_t05",
+  "n_ep": 19,
+  "ticks": 1235,
+  "acc_out": 0.5384615384615384,
+  "acc_tah": 0.4898785425101215,
+  "present_tah": 1.0,
+  "acc_dam": 0.4430512016718913,
+  "present_dam": 0.7748987854251013,
+  "acc_lang": 0.27530364372469635,
+  "present_lang": 1.0,
+  "rho_err": 0.6890893931412859,
+  "p_dam_wrong_given_tah_wrong": 0.893223819301848,
+  "both_wrong_same_id": 0.3176593521421108,
+  "tah_eq_dam": 0.7063740856844305,
+  "gates_tah": 281,
+  "misgate_tah": 0.16725978647686832,
+  "gates_dam": 223,
+  "misgate_dam": 0.09865470852017937,
+  "open_ok": "8/19",
+  "correct_open_ok": 0.8832380684873181,
+  "correct_open_wrong": 0.034179688076253295
+ },
+ {
+  "arm": "v3ens_t05",
+  "n_ep": 19,
+  "ticks": 988,
+  "acc_out": 0.37449392712550605,
+  "acc_tah": 0.3360323886639676,
+  "present_tah": 1.0,
+  "acc_dam": 0.43302752293577984,
+  "present_dam": 0.5516194331983806,
+  "acc_lang": 0.24392712550607287,
+  "present_lang": 1.0,
+  "rho_err": 0.334834900091402,
+  "p_dam_wrong_given_tah_wrong": 0.6772486772486772,
+  "both_wrong_same_id": 0.22385321100917432,
+  "tah_eq_dam": 0.43302752293577984,
+  "gates_tah": 210,
+  "misgate_tah": 0.18571428571428572,
+  "gates_dam": 179,
+  "misgate_dam": 0.3407821229050279,
+  "open_ok": "9/19",
+  "correct_open_ok": 0.7146347793064115,
+  "correct_open_wrong": 0.14499125163872786
+ },
+ {
+  "arm": "v3com_t05",
+  "n_ep": 19,
+  "ticks": 1505,
+  "acc_out": 0.49700996677740866,
+  "acc_tah": 0.4232558139534884,
+  "present_tah": 1.0,
+  "acc_dam": 0.36,
+  "present_dam": 0.38205980066445183,
+  "acc_lang": 0.3295681063122924,
+  "present_lang": 1.0,
+  "rho_err": 0.6719999501646245,
+  "p_dam_wrong_given_tah_wrong": 0.8828337874659401,
+  "both_wrong_same_id": 0.1808695652173913,
+  "tah_eq_dam": 0.46608695652173915,
+  "gates_tah": 664,
+  "misgate_tah": 0.125,
+  "gates_dam": 81,
+  "misgate_dam": 0.024691358024691357,
+  "open_ok": "10/19",
+  "correct_open_ok": 0.7807301472311441,
+  "correct_open_wrong": 0.14569032018515224
+ },
+ {
+  "arm": "v3gt_t05",
+  "n_ep": 19,
+  "ticks": 1391,
+  "acc_out": 0.5930984902947519,
+  "acc_tah": 0.503235082674335,
+  "present_tah": 1.0,
+  "acc_dam": 0.5273972602739726,
+  "present_dam": 0.41984184040258804,
+  "acc_lang": 0.2314881380301941,
+  "present_lang": 1.0,
+  "rho_err": 0.7228562810710252,
+  "p_dam_wrong_given_tah_wrong": 0.8397212543554007,
+  "both_wrong_same_id": 0.3681506849315068,
+  "tah_eq_dam": 0.8167808219178082,
+  "gates_tah": 360,
+  "misgate_tah": 0.15,
+  "gates_dam": 29,
+  "misgate_dam": 0.3103448275862069,
+  "open_ok": "11/19",
+  "correct_open_ok": 0.9129326386398301,
+  "correct_open_wrong": 0.004316546762589926
+ },
+ {
+  "arm": "v3_t03",
+  "n_ep": 19,
+  "ticks": 1218,
+  "acc_out": 0.5188834154351396,
+  "acc_tah": 0.4827586206896552,
+  "present_tah": 1.0,
+  "acc_dam": 0.41271820448877805,
+  "present_dam": 0.6584564860426929,
+  "acc_lang": 0.22085385878489328,
+  "present_lang": 1.0,
+  "rho_err": 0.772834716290982,
+  "p_dam_wrong_given_tah_wrong": 0.9170305676855895,
+  "both_wrong_same_id": 0.4401496259351621,
+  "tah_eq_dam": 0.8054862842892768,
+  "gates_tah": 216,
+  "misgate_tah": 0.2175925925925926,
+  "gates_dam": 112,
+  "misgate_dam": 0.17857142857142858,
+  "open_ok": "7/19",
+  "correct_open_ok": 0.7047392194933179,
+  "correct_open_wrong": 0.16894977168949774
+ },
+ {
+  "arm": "v3_t10",
+  "n_ep": 20,
+  "ticks": 1267,
+  "acc_out": 0.36306235201262826,
+  "acc_tah": 0.34964483030781374,
+  "present_tah": 1.0,
+  "acc_dam": 0.32389162561576357,
+  "present_dam": 0.6408839779005525,
+  "acc_lang": 0.27940015785319655,
+  "present_lang": 1.0,
+  "rho_err": 0.6788489331609013,
+  "p_dam_wrong_given_tah_wrong": 0.9090909090909091,
+  "both_wrong_same_id": 0.46921182266009853,
+  "tah_eq_dam": 0.7339901477832512,
+  "gates_tah": 257,
+  "misgate_tah": 0.2178988326848249,
+  "gates_dam": 148,
+  "misgate_dam": 0.11486486486486487,
+  "open_ok": "7/20",
+  "correct_open_ok": 0.9928684117325091,
+  "correct_open_wrong": 0.0609308531384667
+ },
+ {
+  "arm": "pgif_t03",
+  "n_ep": 20,
+  "ticks": 1414,
+  "acc_out": 0.43847241867043846,
+  "acc_mem": 0.36775106082036774,
+  "fires": 335,
+  "misgate_mem": 0.1701492537313433,
+  "open_ok": "9/20",
+  "correct_open_ok": 0.8865909901467225,
+  "correct_open_wrong": 0.01649258881945802
+ }
+]
+codex
+有两处细节已经浮出来：`policy._dam4sam_select` 在未初始化、空 mask、或 160px 门内无候选时确实返回全 `-1e9`，DAM4SAM 分支随后把 `pred_slot=-1`；scorer 的 instant 错误只在 `pred_cand` 存在且不是 target 时累加，所以弃权不会算 instant 错。承诺口径则由 scorer/策略的 hysteresis commitment 保持上一身份，这个事实链是闭合的。
+exec
+/bin/sh -lc "sed -n '1,140p' carla_uav_tracking/rollout/iter_mech.py" in /nvidia/hque/code/cyhe/uav-acot-track
+ succeeded in 0ms:
+"""1003 mechanism diagnostics from the per-tick ASD logs (runs/asd/iter/<arm>[_p<k>].jsonl), aligned to scorer seeds
+(skipped episodes never reset the policy → logged episodes map in order onto the NON-skipped seeds of the same part).
+Per arm: tick accuracy of every source and of the final output, opening correctness (first logged tick), and the
+committed correct-lock ratio stratified by opening correctness. Fusion arms (V3 family): error correlation between
+TAHRelM and DAM4SAM picks (pre-registered H3c: measured on V3-ensemble = no feedback), mis-gates (a source that was
+RIGHT gets rewritten to a WRONG posterior identity). V1: AUROC of the SAM2 predicted IoU for "DAM4SAM pick is right".
+  python iter_mech.py [--json eval_out/iter_mech.json]"""
+import argparse
+import glob
+import json
+import os
+import re
+
+import numpy as np
+
+EO = os.path.join(os.path.dirname(__file__), "eval_out")
+LG = os.path.join(os.path.dirname(__file__), "..", "..", "runs", "asd", "iter")
+ARMS = ["v1_t05", "v1nog_t05", "v2_t05", "v3_t05", "v3v2_t05", "v3ens_t05", "v3com_t05", "v3gt_t05",
+        "v3_t03", "v3_t10", "pgif_t03"]
+
+
+def _json_of(path):
+    for f in (path, path + ".partial"):
+        if os.path.exists(f):
+            return json.load(open(f))["episodes"]
+    return []
+
+
+def aligned(arm):
+    """→ {seed: (scorer episode, [tick records])}."""
+    out = {}
+    logs = sorted(glob.glob(os.path.join(LG, f"{arm}_p[0-9].jsonl"))) or [os.path.join(LG, f"{arm}.jsonl")]
+    for jl in logs:
+        if not os.path.exists(jl):
+            continue
+        m = re.search(r"_p(\d)\.jsonl$", jl)
+        eps = _json_of(os.path.join(EO, f"paper_it_{arm}_p{m.group(1)}.json" if m else f"paper_it_{arm}.json"))
+        scored = [e for e in eps if not e.get("skipped")]
+        E = {}
+        for line in open(jl):
+            r = json.loads(line)
+            E.setdefault(r["ep"], []).append(r)
+        for k, e in zip(sorted(E), scored):
+            out.setdefault(int(e["episode_seed"]), (e, E[k]))
+    return out
+
+
+def auroc(score, label):
+    s, y = np.asarray(score, float), np.asarray(label, bool)
+    if y.all() or (~y).all():
+        return float("nan")
+    r = np.argsort(np.argsort(s)) + 1.0
+    return float((r[y].sum() - y.sum() * (y.sum() + 1) / 2) / (y.sum() * (~y).sum()))
+
+
+def arm_stats(arm):
+    A = aligned(arm)
+    if not A:
+        return None
+    vis = lambda R: [r for r in R if r.get("true") is not None and r["true"] >= 0]
+    fused = any("picks" in r for _, R in A.values() for r in R)
+    out_key = "map" if fused else "anc"
+    res = {"arm": arm, "n_ep": len(A)}
+    T = [r for _, R in A.values() for r in vis(R)]
+    res["ticks"] = len(T)
+    res["acc_out"] = float(np.mean([r[out_key] == r["true"] for r in T]))
+    if fused:
+        for s in ("tah", "dam", "lang"):
+            P = [r for r in T if r["picks"].get(s) is not None and r["picks"][s] >= 0]
+            res[f"acc_{s}"] = float(np.mean([r["picks"][s] == r["true"] for r in P])) if P else float("nan")
+            res[f"present_{s}"] = len(P) / max(len(T), 1)
+        B = [r for r in T if r["picks"].get("tah") is not None and r["picks"].get("dam") is not None]
+        et = np.array([r["picks"]["tah"] != r["true"] for r in B], float)
+        ed = np.array([r["picks"]["dam"] != r["true"] for r in B], float)
+        res["rho_err"] = float(np.corrcoef(et, ed)[0, 1]) if len(B) > 2 and et.std() > 0 and ed.std() > 0 else float("nan")
+        res["p_dam_wrong_given_tah_wrong"] = float(ed[et == 1].mean()) if (et == 1).any() else float("nan")
+        res["both_wrong_same_id"] = float(np.mean([r["picks"]["tah"] == r["picks"]["dam"] != r["true"] for r in B]))
+        res["tah_eq_dam"] = float(np.mean([r["picks"]["tah"] == r["picks"]["dam"] for r in B]))
+        for s in ("tah", "dam"):   # gate events on a source = posterior ≠ its pick → its memory is rewritten
+            G = [r for r in T if r.get("gate", {}).get(s) and r["picks"].get(s) is not None]
+            res[f"gates_{s}"] = len(G)
+            res[f"misgate_{s}"] = float(np.mean([r["picks"][s] == r["true"] for r in G])) if G else float("nan")
+    else:
+        res["acc_mem"] = float(np.mean([r["mem"] == r["true"] for r in T]))
+        res["fires"] = int(sum(bool(r.get("fire")) or r["mem"] != r["anc"] for r in T))
+        F = [r for r in T if r["mem"] != r["anc"]]
+        res["misgate_mem"] = float(np.mean([r["mem"] == r["true"] for r in F])) if F else float("nan")
+        if arm.startswith("v1"):
+            res["auroc_iou"] = auroc([r["conf"] for r in T], [r["mem"] == r["true"] for r in T])
+    # opening correctness (first logged visible tick) and committed correct-lock ratio by stratum
+    op, cr = [], []
+    for e, R in A.values():
+        V = vis(R)
+        if not V:
+            continue
+        op.append(V[0][out_key] == V[0]["true"]); cr.append(1 - e["mis_follow_sustained"])
+    op, cr = np.array(op, bool), np.array(cr, float)
+    res["open_ok"] = f"{int(op.sum())}/{len(op)}"
+    res["correct_open_ok"] = float(cr[op].mean()) if op.any() else float("nan")
+    res["correct_open_wrong"] = float(cr[~op].mean()) if (~op).any() else float("nan")
+    return res
+
+
+def main():
+    ap = argparse.ArgumentParser(); ap.add_argument("--json"); a = ap.parse_args()
+    R = [x for x in (arm_stats(arm) for arm in ARMS) if x]
+    keys = ["n_ep", "ticks", "acc_out", "acc_mem", "acc_tah", "acc_dam", "acc_lang", "present_dam", "rho_err",
+            "p_dam_wrong_given_tah_wrong", "both_wrong_same_id", "tah_eq_dam", "gates_tah", "misgate_tah", "gates_dam",
+            "misgate_dam", "fires", "misgate_mem", "auroc_iou", "open_ok", "correct_open_ok", "correct_open_wrong"]
+    print("| 指标 | " + " | ".join(r["arm"] for r in R) + " |\n|---|" + "---|" * len(R))
+    for k in keys:
+        cells = []
+        for r in R:
+            v = r.get(k, "")
+            cells.append(f"{v:.3f}" if isinstance(v, float) else str(v))
+        print(f"| {k} | " + " | ".join(cells) + " |")
+    if a.json:
+        json.dump(R, open(a.json, "w"), indent=1)
+
+
+if __name__ == "__main__":
+    main()
+
+exec
+/bin/sh -lc "sed -n '1,150p' carla_uav_tracking/rollout/iter_gate.py" in /nvidia/hque/code/cyhe/uav-acot-track
+exec
+/bin/sh -lc "sed -n '15,90p' acot_note/1003_v1_v2_design.md && sed -n '20,65p' acot_note/1003_v3_design.md" in /nvidia/hque/code/cyhe/uav-acot-track
+ succeeded in 0ms:
+"""1003 iteration gate check — pre-registered hypotheses (1003_v1_v2_design.md / 1003_v3_design.md), deployable only,
+three objective metrics, paired seed-bootstrap 95% CI on the seeds common to arm and reference.
+Arms are read from eval_out/paper_it_<name>.json, else merged from the watchdog parts paper_it_<name>_p*.json[.partial]
+(or a single .partial) → works on running arms too (n is printed; verdicts on partial n are provisional).
+  python iter_gate.py [--json eval_out/iter_gate.json]"""
+import argparse
+import glob
+import json
+import os
+import re
+
+import numpy as np
+
+EO = os.path.join(os.path.dirname(__file__), "eval_out")
+def _strict(e):
+    """per-frame pick == target over target-present frames; ABSTENTION (no pick) counts as NOT correct."""
+    nd, bn = e.get("n_dist") or {}, e.get("mis_by_N") or {}
+    t = sum(nd.values())
+    return 1 - sum(bn[k] * nd[k] for k in nd if k in bn) / t if t else float("nan")
+
+
+# correct-lock ratio, three definitions (they differ ONLY for trackers that abstain, e.g. DAM4SAM loses its mask):
+#   correct   = committed identity == target (abstention holds the last commitment) — SAME notion of lock as longC /
+#               longW → primary; correct_l = 1 − mis_follow_inst (abstention counted as CORRECT; the metric used up to
+#               1003 and in the pre-registration); correct_s = strict (abstention counted as WRONG).
+METRICS = {"correct": lambda e: 1 - e["mis_follow_sustained"],
+           "correct_l": lambda e: 1 - e["mis_follow_inst"],
+           "correct_s": _strict,
+           "longC": lambda e: e["max_correct_run_s"],
+           "longW": lambda e: e["max_wrong_run_s"]}
+LABEL = {"correct": "正确锁定比例(承诺)", "correct_l": "正确比例(宽松·弃权算对)", "correct_s": "正确比例(严格·弃权算错)",
+         "longC": "最长连续正确(s)", "longW": "最长锁错(s)"}
+REF = {"dam4sam": ["paper_dep_dam4sam.json"], "pgif": ["paper_dep_tahrelm_pgif.json"],
+       "tahrelm": ["paper_dep_tahrelm.json"], "dam4sam_t10": ["paper_it_dam4sam_t10.json"],
+       "tahrelm_t03": ["paper_it_tahrelm_t03.json"]}
+# (id, arm, reference, metric, kind)  kind: noninf = Δ lower > −0.05 · less = Δ upper < 0 · greater = Δ lower > 0 · desc
+TESTS = [
+    ("V0 vs DAM4SAM", "pgif", "dam4sam", "correct", "greater"),
+    ("V0 vs DAM4SAM", "pgif", "dam4sam", "longC", "greater"),
+    ("V0 vs DAM4SAM", "pgif", "dam4sam", "longW", "less"),
+    ("H1a 非劣", "v1_t05", "dam4sam", "correct", "noninf"),
+    ("H1b-all", "v1_t05", "dam4sam", "longW", "less"),
+    ("H1c(探索)", "v1_t05", "dam4sam", "longC", "desc"),
+    ("V1 vs commit-only", "v1_t05", "v1nog_t05", "longW", "less"),
+    ("V1 vs commit-only", "v1_t05", "v1nog_t05", "correct", "desc"),
+    ("H2b", "v2_t05", "pgif", "longW", "less"),
+    ("H2c 非劣", "v2_t05", "pgif", "correct", "noninf"),
+    ("H3a 非劣", "v3_t05", "dam4sam", "correct", "noninf"),
+    ("H3a 锁错", "v3_t05", "dam4sam", "longW", "less"),
+    ("H3a 连续正确", "v3_t05", "dam4sam", "longC", "desc"),
+    ("H3b", "v3_t05", "pgif", "correct", "greater"),
+    ("V3 > ensemble", "v3_t05", "v3ens_t05", "correct", "greater"),
+    ("V3 > ensemble", "v3_t05", "v3ens_t05", "longW", "less"),
+    ("V3 > commit-only", "v3_t05", "v3com_t05", "correct", "greater"),
+    ("V3 > commit-only", "v3_t05", "v3com_t05", "longW", "less"),
+    ("V3 vs gateTAH-only", "v3_t05", "v3gt_t05", "longW", "desc"),
+    ("H3a 非劣(V3+V2)", "v3v2_t05", "dam4sam", "correct", "noninf"),
+    ("H3a 锁错(V3+V2)", "v3v2_t05", "dam4sam", "longW", "less"),
+    ("超越 DAM4SAM", "v3_t05", "dam4sam", "correct", "greater"),
+    ("超越 DAM4SAM(V3+V2)", "v3v2_t05", "dam4sam", "correct", "greater"),
+    ("泛化 T03 正确", "v3_t03", "dam4sam_t03", "correct", "noninf"),
+    ("泛化 T03 锁错", "v3_t03", "dam4sam_t03", "longW", "less"),
+    ("泛化 T10 正确", "v3_t10", "dam4sam_t10", "correct", "noninf"),
+    ("泛化 T10 锁错", "v3_t10", "dam4sam_t10", "longW", "less"),
+    ("V0 泛化 T03", "pgif_t03", "tahrelm_t03", "correct", "desc"),
+]
+RNG = np.random.default_rng(20261003)
+
+
+def _eps(path):
+    return json.load(open(path))["episodes"] if os.path.exists(path) else []
+
+
+def load(name):
+    """seed → episode; first occurrence wins; skipped / unscored episodes dropped."""
+    if name == "dam4sam_t03":   # pre-reboot part (91000–06) + post-reboot remainder (91007–19)
+        files = [os.path.join(EO, "paper_it_dam4sam_t03_part1.json")] + _parts("dam4sam_t03b")
+    elif name in REF:
+        files = [os.path.join(EO, f) for f in REF[name]]
+    else:
+        files = _parts(name)
+    out = {}
+    for f in files:
+        for e in _eps(f):
+            if e.get("mis_follow_inst") is None or e.get("skipped"):
+                continue
+            out.setdefault(int(e["episode_seed"]), e)
+    return out or None
+
+
+def _parts(name):
+    full = os.path.join(EO, f"paper_it_{name}.json")
+    if os.path.exists(full):
+        return [full]
+    def part_no(p):
+        m = re.search(r"_p(\d+)\.json", p)
+        assert m is not None, p
+        return m.group(1)
+    parts = sorted(glob.glob(os.path.join(EO, f"paper_it_{name}_p[0-9]*.json*")), key=lambda p: int(part_no(p)))
+    keep = {}
+    for p in parts:   # prefer the final .json of a part over its .partial
+        k = part_no(p)
+        if k not in keep or not p.endswith(".partial"):
+            keep[k] = p
+    if keep:
+        return [keep[k] for k in sorted(keep, key=int)]
+    return [full + ".partial"]
+
+
+def ci_mean(x):
+    x = np.asarray(x, float); x = x[np.isfinite(x)]   # strict ratio is NaN for an episode without scored frames
+    b = x[RNG.integers(0, len(x), (20000, len(x)))].mean(1)
+    return float(x.mean()), float(np.percentile(b, 2.5)), float(np.percentile(b, 97.5))
+
+
+def verdict(kind, lo, hi):
+    if kind == "noninf":
+        return "✓" if lo > -0.05 else "✗"
+    if kind == "less":
+        return "✓" if hi < 0 else "✗"
+    if kind == "greater":
+        return "✓" if lo > 0 else "✗"
+    return "—"
+
+
+def main():
+    ap = argparse.ArgumentParser(); ap.add_argument("--json"); a = ap.parse_args()
+    names = sorted({t[1] for t in TESTS} | {t[2] for t in TESTS})
+    D = {n: load(n) for n in names}
+    res = {"arms": {}, "tests": []}
+    print("| 臂 | n | " + " | ".join(LABEL.values()) + " |\n|---|---|" + "---|" * len(LABEL))
+    for n in names:
+        A = D[n]
+        if A is None:
+            continue
+        m = {k: ci_mean([f(e) for e in A.values()]) for k, f in METRICS.items()}
+        res["arms"][n] = {"n": len(A), **{k: list(v) for k, v in m.items()}}
+        print(f"| {n} | {len(A)} | " + " | ".join(f"{v[0]:.3f} [{v[1]:.3f}, {v[2]:.3f}]" for v in m.values()) + " |")
+    print("\n| 假设 | 臂 − 参照 | 指标 | n 配对 | Δ [95% CI] | 判定 |\n|---|---|---|---|---|---|")
+    tests = []
+    for t in TESTS:   # every correct-ratio hypothesis is reported under all three definitions
+        tests += [(t[0], t[1], t[2], k, t[4]) for k in ("correct", "correct_l", "correct_s")] if t[3] == "correct" else [t]
+    for tid, arm, ref, k, kind in tests:
+        A, B = D[arm], D[ref]
+        if A is None or B is None:
+            print(f"| {tid} | {arm} − {ref} | {LABEL[k]} | — | pending | — |"); continue
+        S = sorted(set(A) & set(B))
+        if len(S) < 3:
+            print(f"| {tid} | {arm} − {ref} | {LABEL[k]} | {len(S)} | pending | — |"); continue
+        d = np.array([METRICS[k](A[s]) - METRICS[k](B[s]) for s in S])
+
+ succeeded in 0ms:
+## V1 · PGIF ∘ DAM4SAM:把后验门控推广到强外观记忆
+
+**动机**:DAM4SAM 的长时间错锁(26.7 s)是 SAM2 记忆"用自己的预测掩码更新自己"造成的确认偏差,与 PGIF 在 TAHRelM 上处理的是同一机制(命题 1)。若 PGIF 的门控能在不同类型的记忆上起作用,则 C2"记忆无关的闭环身份门控"得到直接验证,同时有望保留 DAM4SAM 的高正确比例并压缩其错锁。
+
+**方法(与 V0 的 PGIF 完全相同的规则与超参)**:
+- 观测:DAM4SAM 每个决策步的选择 s^M = 与 SAM2 预测框中心最近的候选(160 px 门限内);置信度 c = SAM2 对所选掩码的**预测 IoU**(服务新增返回字段)。无匹配时该步不更新证据。
+- 回火证据:L_k ← 0.98·L_k;L_{s^M} += 0.5 + rank(c; 最近 30 步)。
+- 门控:ŝ = argmax_{可见 k} L_k;若 ŝ ≠ s^M → **重置钩子 = 用 ŝ 的候选框重新 init SAM2**(丢弃 RAM/DRM 记忆),控制承诺 ŝ。
+- 预注册附加参数:重置冷却 3 个决策步(避免频繁 re-init 抹掉 DRM);只在 committed 模式启用。
+
+**预注册假设(Town05,n=19 配对,V1 vs DAM4SAM)**:
+- H1a:正确锁定比例**非劣**——Δ 的 95% CI 下界 > −0.05;
+- H1b:最长锁错**显著降低**——Δ 的 95% CI 上界 < 0;
+- H1c(探索性):最长连续正确锁定不下降。
+- 失败解释预案:若 H1b 失败且冷启动锁错占主导 → 说明长尾来自初始身份错误而非漂移,转由 V2/V3 处理。
+
+**与相关工作的差异**:DAM4SAM 自身的 DRM 用"备选掩码与所选掩码分歧"来**选择写入哪些帧**,仍以 SAM2 的当前预测作为身份;V1 在 tracklet 层引入独立于该记忆的、按误差相关时间回火的身份后验,并在后验与记忆冲突时**重置**记忆——处理的是"记忆已经锁到错误实例"之后的纠错,而非写入策略。
+
+---
+
+## V2 · 延迟承诺冷启动(sequential language commitment)
+
+**动机**:长尾错锁主要来自开局锁错(P3);单帧语言选车准确率约 0.42(离线 xattn,mis 0.579),而 PGIF 会忠实维持初始身份。把"开局选谁"也变成一个带回火的序贯证据决策。
+
+**方法**:
+- 冷启动窗口:前 K = 5 个决策步(≈3 s)**不写入身份记忆**;每步对可见 tracklet 累积语言证据 G_k ← 0.9·G_k + (0.5 + rank(语言 margin; 窗口内)) · 1[k = 语言 argmax](与 PGIF 同形式的回火投票,λ_lang = 0.9 预注册)。
+- 窗口内控制:承诺当前 argmax_k G_k(临时承诺,仅用于飞行;记忆不更新)。
+- 窗口结束:承诺 k* = argmax_k G_k,用其当前截图初始化 TAHRelM 记忆;PGIF 证据以 L_{k*} = G_{k*} 初始化(保留开局的语言支持度)。
+- 语言来源:沿用部署中的 Stage-2 grounding 头(冻结);LoRA r16 打分器作为可选 V2b(阶段 0 未显著,暂不预注册)。
+
+**预注册假设(Town05,n=19 配对,V2 vs V0)**:
+- H2a:开局锁错的 episode 数下降(描述性,配对比较各种子的开局是否锁对);
+- H2b:最长锁错均值显著下降(Δ 的 95% CI 上界 < 0);
+- H2c:正确锁定比例不下降(Δ 下界 > −0.05)。
+
+**与相关工作的差异**:多目标跟踪中的"轨迹确认"(tentative → confirmed,如 DeepSORT 的 n_init)按检测连续性确认轨迹,不涉及"哪条轨迹是语言所指";指代多目标跟踪(RMOT/iKUN)逐帧做语言匹配。V2 把"语言指代"本身作为带回火的序贯证据决策,并把开局证据作为后续 PGIF 后验的先验。
+
+---
+
+## 统一实现清单
+- `external/DAM4SAM/dam4sam_tracker.py`:输出所选掩码的预测 IoU(已改);`rollout/dam4sam_service.py` 返回 `iou`(已改)。
+- `rollout/policy.py`:dam4sam 分支接入 ASD/PGIF(观测 = s^M、c = IoU;门控 = 重新 init);tah 分支冷启动窗口(V2)。
+- `rollout/asd.py`:PGIF 证据初始化接口(V2)。
+- 单测:合成序列上冷启动窗口选出语言证据最多的 tracklet;dam4sam 门控在冷却期内不重复 re-init。
+
+---
+
+## R1 审核后的修订(2026-10-02,第二轮预注册;codex 意见见 `codex/1003_R1a_R2a.md`)
+
+### V1 修订
+1. **机制对照(预注册,与 V1 同种子同时跑)**:
+   - **V1-commit-only**:PGIF 只改写控制承诺,不重置 SAM2(`gate_memory=false`)→ 检验"重置记忆"是否必要;
+   - **V1-selfreset**:在 V1 会触发的同一时刻,用 DAM4SAM **自己的选择**重新 init SAM2、不改变身份(`V1_SELFRESET=1`)→ 检验收益是否只是"re-init / 丢弃 DRM"本身。
+   - 判定:V1 优于 V1-selfreset(最长锁错或正确比例,配对 CI)才说明收益来自"改到后验所指的身份",而非重置本身。
+2. **冷启动分层(预注册)**:H1b 拆为 H1b-all(全部 episode)与 **H1b-drift(仅开局锁对的 episode)**;开局锁对与否由各臂 tick 日志首个可标注 tick 判定(`tick_align.py`)。V1 的主张限定为"抑制开局正确之后的漂移错锁";开局锁错交给 V2/V3。
+3. **置信度有效性**:报告 SAM2 预测 IoU 对"所选为真目标"的 AUROC(episode bootstrap CI,observe 日志 = DAM4SAM 基线臂的 tick 日志)。若 AUROC < 0.55,则在 roadmap 中注明 PGIF 在 DAM4SAM 上退化为等权驻留,并以此解释结果。
+4. 报告每 episode 重置次数、单 episode 耗时(`duration_seconds`);H1c 不作为通过门槛。
+
+### V2 修订
+1. **定位**:V2 是 PGIF 的**冷启动组件**,不单独作为贡献;整体贡献在 V3(融合)中评估。
+2. **去除飞行混杂**:窗口内飞行改为与 V0 相同——每步跟随**单帧语言选择**(不再飞向临时 argmax);窗口内不写记忆;窗口结束时承诺 argmax_k G_k。
+3. **对照(预注册)**:**V2-single@K**——窗口与飞行完全相同,但在第 K 步承诺**该步单帧语言选择**(不积累证据、无先验)→ V2 与它的差异只来自"序贯证据积累"。
+4. **H2a 改为可检验**:开局正确率(第 K 步承诺是否为真目标)V2 vs V2-single@K,配对 bootstrap 95% CI;窗口内的临时承诺计入最长锁错(scorer 按承诺身份逐帧计)。
+5. **先验截断**:PGIF 初始证据 L_k = min(G_k, 3.0)(≈ 3 票),防止错误开局获得过强先验;k* 只在可见 tracklet 中选(不可见则取可见中证据最多者)。
+6. K = 5、λ_lang = 0.9 为先验设定(未在评测种子上调);敏感性列为后续。
+
+### 闭环臂(Town05,seeds 91000–19,n=19)
+| 臂 | 设定 |
+|---|---|
+| V1 | DAM4SAM + PGIF(重置 = 后验身份 re-init,冷却 3 步) |
+| V1-commit-only | DAM4SAM + PGIF,只改承诺 |
+| V1-selfreset | DAM4SAM,同时刻自身 re-init |
+| V2 | TAHRelM + PGIF + 延迟承诺(K=5,λ=0.9,先验截断 3) |
+| V2-single@K | 同 V2 窗口与飞行,第 K 步单帧承诺 |
+| 对照(已有/在跑) | DAM4SAM、V0(TAHRelM+PGIF)、TAHRelM 无纠偏(`eval_out/paper_dep_*.json`) |
+- **后验门控两个记忆**:ŝ = argmax_{可见 k} L_k;
+  - 若 ŝ ≠ s^TAH:TAHRelM 本步改用 ŝ 的截图重做更新(与 V0 相同);
+  - 若 ŝ ≠ s^DAM:用 ŝ 的框重新 init SAM2(冷却 3 步,与 V1 相同);
+  - 控制承诺 ŝ。
+- **冷启动**:若 V2 通过门控 G2 → V3 继承 V2 的延迟承诺组件(K=5,λ_lang=0.9,先验截断 3);否则不加(预注册的条件分支,结果出来前确定)。
+
+## 3. 预注册假设(Town05,seeds 91000–19,n=19 配对)
+- **H3a(主)**:V3 正确锁定比例**不低于 DAM4SAM**(Δ 的 95% CI 下界 > −0.05)**且**最长锁错显著低于 DAM4SAM(CI 上界 < 0);
+- **H3b**:V3 相对 V0(TAHRelM+PGIF)正确锁定比例显著更高(CI 下界 > 0);
+- **H3c(机理,可证伪)**:在 V3 的 tick 日志中,TAHRelM 与 DAM4SAM 的"选错"指示之间的相关系数 ρ_err 报告并检验:预测 ρ_err < 0.5;若 ρ_err 高(≥ 0.7)而 V3 仍有增益,则增益不能归因于"误差独立的融合",须另找解释。
+- **消融(预注册,时间允许按顺序跑)**:V3-noDAMgate(不重置 SAM2,只融合)、V3-nolang(α_lang = 0)。
+
+## 4. 与相关工作的差异
+- **多跟踪器融合 / 集成跟踪**(如基于投票或置信度的 tracker ensemble):通常在单帧或短窗做加权选择,**不把融合结果反馈去门控各成员的记忆更新**;V3 的融合后验同时决定"承诺谁"和"每个记忆该从谁学",直接针对各成员的确认偏差。
+- **MHT / 身份管理**:维护多目标身份假设;V3 只维护单一指代身份的证据,观测来自异构的学习/非学习记忆与语言。
+- **DAM4SAM 的 DRM**:改进的是 SAM2 内部的写入策略;V3 在记忆外部、跨记忆地做纠错与重置。
+- **自训练确认偏差**:离线伪标签平滑;V3 是闭环在线、跨多个自更新记忆的版本,并给出"误差相关性决定融合增益"的可检验预测(H3c)。
+
+## 5. 实现
+- `rollout/policy.py`:新 `tid_head = "fusion"`:同一 tick 运行 TAHRelM(含记忆)与 DAM4SAM 客户端;语言 logits 来自现有 grounding 头。
+- `rollout/asd.py`:`step_multi(aidx, [(slot, conf, source), ...])`——逐源维护置信度窗口,按 §2 融合;返回 ŝ 与每个源是否需要门控。
+- 日志:每 tick 记录三路选择、置信度、ŝ 与真值(仅离线打分),用于 H3c。
+
+---
+
+## R3a 审核后的修订(第二轮预注册;意见见 `codex/1003_R3a.md`)
+
+1. **源权重去启发式**:主设定改为**三路等权**(α_TAH = α_DAM = α_lang = 1),不做任何选择;报告各源对"选中真目标"的 AUROC、缺席率(DAM 无匹配、语言无候选)。α 敏感性列为后续(不在评测种子上调)。
+2. **机理检验去闭环污染(H3c 改为解释性)**:新增 **V3-ensemble** 臂——同一 policy 同时运行两个记忆与语言,控制承诺 = 每步三路**等权单帧投票**(不回火、不回灌门控,两个记忆各自按自身选择自更新)。该臂既是"普通异构集成、无记忆反馈"的对照,也是测量**门控前**误差相关的干净来源:在其日志中报告 ρ_err(TAH 错 vs DAM 错的相关)、P(DAM 错 | TAH 错)、错锁区间重叠率。V3 内部的相关性只放附录。
+3. **门控拆分对照(预注册)**:
+   - **V3-commit-only**:回火融合只决定承诺,两个记忆都不门控 → 检验"把后验回灌给记忆"是否必要;
+   - **V3-gateTAH-only**:只门控 TAHRelM,不重置 SAM2 → 检验"只门控一个记忆"与"群体确认偏差"(条目 4);
+   - 判定:V3 显著优于 V3-ensemble(主)与 V3-commit-only,才能主张"融合后验回灌门控"是增益来源。
+4. **群体确认偏差监测**:日志记录门控前后两源分歧率、错误门控次数(把正确的源改到错误身份)、SAM2 重置次数;报告错误门控占比。
+5. **V2 分支不再按评测结果选择**:V3 主表**同时报告** V3(无冷启动组件)与 V3+V2(K=5,λ=0.9,先验截断 3),两者都预注册。
+6. 收窄表述:V3 是单一指代身份的后验累积,不声称解决多目标身份管理;H3a 同时报告最长连续正确锁定;DAM4SAM 门限 160 px、冷却 3 步沿用 V1,报告缺席比例/重置次数/耗时。
+
+### V3 闭环臂(Town05,seeds 91000–19,n=19)
+| 臂 | 融合 | 回火 | 门控 TAH | 门控 DAM | 冷启动 V2 |
+|---|---|---|---|---|---|
+| **V3** | 三路等权 | λ=0.98 | ✓ | ✓(re-init,冷却 3) | ✗ |
+| **V3+V2** | 同上 | 同上 | ✓ | ✓ | ✓ |
+| V3-ensemble | 三路等权单帧投票 | ✗ | ✗ | ✗ | ✗ |
+| V3-commit-only | 三路等权 | λ=0.98 | ✗ | ✗ | ✗ |
+| V3-gateTAH-only | 三路等权 | λ=0.98 | ✓ | ✗ | ✗ |
+
+codex
+我现在看到一个审稿风险：roadmap 在表格里诚实写了 V1-selfreset 和 V2-single@K 未跑，但“预注册假设判定”里没有显式保留对应判定为 pending/缺失，容易让读者只看到已跑对照而低估缺口。这个会进 major/minor 取决于最终贡献声明强度。
+exec
+/bin/sh -lc 'rg -n "selfreset|single@K|COLD_SINGLE|V1_SELFRESET|v2single|single" carla_uav_tracking/rollout/eval_out runs/asd/iter acot_note/1003_iteration_roadmap.md' in /nvidia/hque/code/cyhe/uav-acot-track
+ succeeded in 0ms:
+acot_note/1003_iteration_roadmap.md:11:| V1 | PGIF ∘ DAM4SAM(后验身份 re-init SAM2) | R1:MAJOR → R2:**NO MAJOR**(`codex/1003_R1a_R2a*.md`) | 完成(Town05 + commit-only 对照;selfreset 对照未跑) | H1a ✗(非劣未达)· H1b ✗(−9.4 s,n.s.) | 负结果:作为"PGIF 跨记忆可包装"的弱证据保留,不作贡献 |
+acot_note/1003_iteration_roadmap.md:12:| V2 | 延迟承诺冷启动(组件) | R1:MAJOR → R2:**NO MAJOR** | 完成(Town05;single@K 对照未跑) | H2b ✗ · H2c ✗ | 负结果,不进入组合 |
+acot_note/1003_iteration_roadmap.md:20:- 修订:新增 V1-commit-only、V1-selfreset 两个机制对照;H1b 拆为全部 / 开局锁对(drift)两层;报告 IoU 对正确选择的 AUROC。→ R2 NO MAJOR。
+acot_note/1003_iteration_roadmap.md:24:- 修订:定位为组件;窗口内飞行与 V0 相同(每步单帧语言选择);新增 V2-single@K 对照;开局正确率配对 bootstrap;先验截断 3。→ R2 NO MAJOR。
+acot_note/1003_iteration_roadmap.md:33:- 离线冒烟(`rollout/smoke_iter.py`,录制 episode,开环,仅验证代码路径):V0/V1/V1-selfreset/V2/V2-single/V3/V3+V2/V3-ensemble 全部运行正常。
+acot_note/1003_iteration_roadmap.md:157:   - V2-single@K 对照未跑,H2a 无法正式检验。
+runs/asd/iter/launch_wd.sh:6:# env: SEED_BASE (91000) EPISODES (20) STALL_MIN (12) FIRST_MIN (20) + COLD_*/V1_SELFRESET passthrough
+runs/asd/iter/queue2.sh:7: S1) waitdone v1_t05; V1_SELFRESET=1 bash $L/launch.sh v1self_t05 2000 1 8402 Town05 "--tid-head dam4sam --dam4sam-host dam4sam-svc --dam4sam-port 5602 --conf-tau 0.05 $DEP --asd filter" "$TEMP" ;;
+runs/asd/iter/queue2.sh:8: S2) waitdone v2_t05; COLD_WINDOW=5 COLD_LAMBDA=0.9 COLD_SINGLE=1 bash $L/launch.sh v2single_t05 2010 3 8412 Town05 "$TAH --asd filter" "$TEMP" ;;
+
+exec
+/bin/sh -lc 'rg -n "correct_l|correct_s|mis_follow_inst|mis_follow_sustained|strict|宽松|承诺|弃权" carla_uav_tracking/rollout/deploy_compare.py carla_uav_tracking/rollout/eval_out/deploy_compare.json' in /nvidia/hque/code/cyhe/uav-acot-track
+ succeeded in 0ms:
+carla_uav_tracking/rollout/eval_out/deploy_compare.json:26:   "correct_l": [
+carla_uav_tracking/rollout/eval_out/deploy_compare.json:31:   "correct_s": [
+carla_uav_tracking/rollout/eval_out/deploy_compare.json:75:   "correct_l": [
+carla_uav_tracking/rollout/eval_out/deploy_compare.json:80:   "correct_s": [
+carla_uav_tracking/rollout/eval_out/deploy_compare.json:124:   "correct_l": [
+carla_uav_tracking/rollout/eval_out/deploy_compare.json:129:   "correct_s": [
+carla_uav_tracking/rollout/eval_out/deploy_compare.json:173:   "correct_l": [
+carla_uav_tracking/rollout/eval_out/deploy_compare.json:178:   "correct_s": [
+carla_uav_tracking/rollout/eval_out/deploy_compare.json:222:   "correct_l": [
+carla_uav_tracking/rollout/eval_out/deploy_compare.json:227:   "correct_s": [
+carla_uav_tracking/rollout/eval_out/deploy_compare.json:271:   "correct_l": [
+carla_uav_tracking/rollout/eval_out/deploy_compare.json:276:   "correct_s": [
+carla_uav_tracking/rollout/eval_out/deploy_compare.json:320:   "correct_l": [
+carla_uav_tracking/rollout/eval_out/deploy_compare.json:325:   "correct_s": [
+carla_uav_tracking/rollout/eval_out/deploy_compare.json:369:   "correct_l": [
+carla_uav_tracking/rollout/eval_out/deploy_compare.json:374:   "correct_s": [
+carla_uav_tracking/rollout/eval_out/deploy_compare.json:418:   "correct_l": [
+carla_uav_tracking/rollout/eval_out/deploy_compare.json:423:   "correct_s": [
+carla_uav_tracking/rollout/eval_out/deploy_compare.json:467:   "correct_l": [
+carla_uav_tracking/rollout/eval_out/deploy_compare.json:472:   "correct_s": [
+carla_uav_tracking/rollout/deploy_compare.py:25:def _strict(e):
+carla_uav_tracking/rollout/deploy_compare.py:34:# The former definition 1 − mis_follow_inst counted abstention frames as CORRECT (DAM4SAM abstains ~60% → 0.786 vs 0.367);
+carla_uav_tracking/rollout/deploy_compare.py:35:# it and the strict one (abstention = wrong) are kept as correct_l / correct_s for the appendix.
+carla_uav_tracking/rollout/deploy_compare.py:36:EXTRA = [("correct_l", lambda e: 1 - e["mis_follow_inst"]), ("correct_s", _strict)]
+carla_uav_tracking/rollout/deploy_compare.py:37:METRICS = [("correct", "正确锁定比例(承诺)", lambda e: 1 - e["mis_follow_sustained"]),
+carla_uav_tracking/rollout/deploy_compare.py:48:    return {int(e["episode_seed"]): e for e in d["episodes"] if e.get("mis_follow_inst") is not None}
+
+exec
+/bin/sh -lc 'ls carla_uav_tracking/rollout/eval_out/*self* carla_uav_tracking/rollout/eval_out/*single* runs/asd/iter/*self* runs/asd/iter/*single* 2>/dev/null' in /nvidia/hque/code/cyhe/uav-acot-track
+ exited 2 in 0ms:
+codex
+机理部分的核心审稿点已经比较清楚：开局分层强支撑“长尾由开局锁错主导”，但“回灌门控使 ρ 从 0.34 到 0.72”这个因果说法过满，因为 commit-only 的 ρ 也有 0.672，gateTAH-only 也有 0.723。这里更像“回火/闭环融合策略会提高两记忆错误重合，双记忆回灌会把这种重合固化成不可恢复长锁错”。
+codex
+**Verdict: MAJOR**
+
+不是因为结果为负，而是因为当前稿件里还有三类会被 T-RO/RA-L/CoRL 审稿人抓住的硬伤：指标口径属于结果后修正的高风险区、预注册对照没有完整闭合、机理因果表述过强。
+
+**MAJOR 1: 正确锁定比例改口径有原则依据，但 HARKing 风险没有完全消除**
+
+代码核对结论：`弃权帧算正确` 对 `1 - mis_follow_inst` 属实。`metrics.py` 里只有 `pred_cand is not None and not target` 才计 instant wrong；DAM4SAM 在 `_dam4sam_select` 中遇到未初始化、空 mask、或 160 px 门内无候选会返回全 `-1e9`，DAM4SAM 分支随后 `pred_slot=-1`。因此 DAM4SAM 的宽松口径 0.786 确实主要是弃权伪影。
+
+把主口径改为 `1 - mis_follow_sustained` 也有原则依据：它和 `max_correct_run_s` / `max_wrong_run_s` 都基于 committed identity，适合衡量“锁定”。但这是在看到 DAM4SAM 弃权现象后修正，不能写成“并非看结果后挑选”。更稳的写法是：
+
+- “原预注册 endpoint 为宽松口径；实验后发现该口径对可弃权 tracker 不可比，因此将承诺口径作为修正主口径。”
+- “所有预注册假设同时按原口径报告，修正口径用于最终论文主分析；任何‘预注册成功’只按原口径判定。”
+- “三口径全部进主表或主文脚注，不只放 appendix。”
+- 补一句 nuance：`mis_follow_sustained` 在已有承诺时弃权沿用上一承诺；若 episode 初期尚无承诺，弃权也不会被计为 sustained wrong，因此它不是“严格弃权沿用上一承诺”的完全等价实现。
+
+当前 `1001` §指标口径和 §5.5 已经比旧版诚实很多，但“主口径改为承诺口径……并非看结果后挑选”建议改掉。
+
+**MAJOR 2: 预注册门控判定没有完全闭合**
+
+V1：预注册修订要求 `V1-selfreset`，但 roadmap 明确未跑。现在只能说“V1 相对 DAM4SAM / commit-only 未达门控”，不能说已完成 V1 机制判定。尤其“重置 SAM2 未显示额外收益”只能针对 `V1 vs V1-commit-only`，不能排除“re-init 本身/丢弃 DRM”的贡献。
+
+V2：`V2-single@K` 未跑，因此 H2a “序贯证据积累提高开局正确率”无法正式检验。roadmap 机理里已有一句，但预注册判定表也应单列：`H2a: pending / not run`。
+
+V3：五臂基本符合修订预注册，且机制对照失败的结论是诚实的。建议把“机制对照 ✗”拆开写：`V3 > ensemble` 失败，`V3 > commit-only` 失败，`V3 vs gateTAH-only` 仅描述，不作为通过门槛。
+
+**MAJOR 3: “回灌门控使记忆误差同步 ρ_err 0.34→0.72”因果表述过强**
+
+数据支持“V3 中两记忆错误高度相关”，也支持“V3-ensemble 中门控前误差相关较低”。但不能直接归因于“双记忆回灌门控”，因为：
+
+- `V3-commit-only` 的 `ρ_err = 0.672`，没有门控记忆也已经很高。
+- `V3-gateTAH-only` 的 `ρ_err = 0.723`，与 V3 几乎相同。
+- `present_dam` 差异很大：ensemble 0.552，V3 0.768，commit-only 0.382，会影响相关系数的可比性。
+- 各臂闭环飞行轨迹、episode 长度、DAM4SAM 弃权模式不同，ρ 不是同一观测分布上的纯机制量。
+
+建议改成：
+
+“无回火逐帧 ensemble 的门控前错误相关较低；一旦进入回火融合闭环，两个记忆的错误显著重合。双记忆回灌不是净增益，并会在开局锁错时固化错误身份。”
+
+如果要主张“回灌导致同步”，需要补分析：按 common seeds、开局对/错分层、DAM present 匹配、每 episode ρ 或 Fisher-z bootstrap、gate 前后窗口对比，最好有固定轨迹/离线 replay 对照。
+
+**MAJOR 4: 泛化与贡献措辞需要收窄**
+
+泛化表述基本谨慎，但“融合/PGIF 家族优于 DAM4SAM”仍偏宽。数据只支持：
+
+- V3 在 Town03 相对 DAM4SAM 承诺口径和最长锁错显著更好。
+- V3 在 Town10HD 相对 DAM4SAM 承诺口径不显著，严格口径显著，最长锁错不优。
+- 缺 V0 · Town10HD，不能说 V3 或 PGIF 家族泛化优于 V0。
+
+建议写成：“修正口径下，V3 对 DAM4SAM 的跨地图结果方向较好，但证据不一致；尚不能支持 V3 优于 V0 或方法族整体泛化。”
+
+**MINOR**
+
+- “单帧语言准确率约 0.22–0.33”和“开局锁对 7–11/19 / 首帧约 50%”混在一起了。前者像 tick-wise `acc_lang`，后者是 opening accuracy。必须分开。
+- `1001` §5.1 PGIF 正确比例 0.613，而 §5.5 / `deploy_compare.json` 是 0.576；需要解释是旧 tick-align 口径还是不同实验批次。
+- V0 开局分层来自旧 `runs/asd/deploy_all`，而 1003 其他臂来自 `runs/asd/iter`；建议标注不是同批日志，避免 paired opening 分析被质疑。
+- “PGIF 跨记忆可包装的弱证据”建议删或降级。V1 未过非劣、selfreset 未跑，作为负结果即可。
+- “新增贡献足够 SCI 一区/CCF-A”目前不够。可写进论文的是有价值的负结果和评测修正，但若作为主线，还缺一个正向方法贡献或更大规模 benchmark 证据：更多 seeds、完整预注册对照、真实 detector/localizer 噪声、V0 Town10HD、DAM4SAM tick 日志、固定轨迹机理验证。
+
+总体建议：这批结果很诚实，也有论文价值；但应把它定位为“指标修正 + 负结果机理诊断 + 下一步假设生成”，不要包装成 V1/V2/V3 的方法成功。
+tokens used
+80,500
+**Verdict: MAJOR**
+
+不是因为结果为负，而是因为当前稿件里还有三类会被 T-RO/RA-L/CoRL 审稿人抓住的硬伤：指标口径属于结果后修正的高风险区、预注册对照没有完整闭合、机理因果表述过强。
+
+**MAJOR 1: 正确锁定比例改口径有原则依据，但 HARKing 风险没有完全消除**
+
+代码核对结论：`弃权帧算正确` 对 `1 - mis_follow_inst` 属实。`metrics.py` 里只有 `pred_cand is not None and not target` 才计 instant wrong；DAM4SAM 在 `_dam4sam_select` 中遇到未初始化、空 mask、或 160 px 门内无候选会返回全 `-1e9`，DAM4SAM 分支随后 `pred_slot=-1`。因此 DAM4SAM 的宽松口径 0.786 确实主要是弃权伪影。
+
+把主口径改为 `1 - mis_follow_sustained` 也有原则依据：它和 `max_correct_run_s` / `max_wrong_run_s` 都基于 committed identity，适合衡量“锁定”。但这是在看到 DAM4SAM 弃权现象后修正，不能写成“并非看结果后挑选”。更稳的写法是：
+
+- “原预注册 endpoint 为宽松口径；实验后发现该口径对可弃权 tracker 不可比，因此将承诺口径作为修正主口径。”
+- “所有预注册假设同时按原口径报告，修正口径用于最终论文主分析；任何‘预注册成功’只按原口径判定。”
+- “三口径全部进主表或主文脚注，不只放 appendix。”
+- 补一句 nuance：`mis_follow_sustained` 在已有承诺时弃权沿用上一承诺；若 episode 初期尚无承诺，弃权也不会被计为 sustained wrong，因此它不是“严格弃权沿用上一承诺”的完全等价实现。
+
+当前 `1001` §指标口径和 §5.5 已经比旧版诚实很多，但“主口径改为承诺口径……并非看结果后挑选”建议改掉。
+
+**MAJOR 2: 预注册门控判定没有完全闭合**
+
+V1：预注册修订要求 `V1-selfreset`，但 roadmap 明确未跑。现在只能说“V1 相对 DAM4SAM / commit-only 未达门控”，不能说已完成 V1 机制判定。尤其“重置 SAM2 未显示额外收益”只能针对 `V1 vs V1-commit-only`，不能排除“re-init 本身/丢弃 DRM”的贡献。
+
+V2：`V2-single@K` 未跑，因此 H2a “序贯证据积累提高开局正确率”无法正式检验。roadmap 机理里已有一句，但预注册判定表也应单列：`H2a: pending / not run`。
+
+V3：五臂基本符合修订预注册，且机制对照失败的结论是诚实的。建议把“机制对照 ✗”拆开写：`V3 > ensemble` 失败，`V3 > commit-only` 失败，`V3 vs gateTAH-only` 仅描述，不作为通过门槛。
+
+**MAJOR 3: “回灌门控使记忆误差同步 ρ_err 0.34→0.72”因果表述过强**
+
+数据支持“V3 中两记忆错误高度相关”，也支持“V3-ensemble 中门控前误差相关较低”。但不能直接归因于“双记忆回灌门控”，因为：
+
+- `V3-commit-only` 的 `ρ_err = 0.672`，没有门控记忆也已经很高。
+- `V3-gateTAH-only` 的 `ρ_err = 0.723`，与 V3 几乎相同。
+- `present_dam` 差异很大：ensemble 0.552，V3 0.768，commit-only 0.382，会影响相关系数的可比性。
+- 各臂闭环飞行轨迹、episode 长度、DAM4SAM 弃权模式不同，ρ 不是同一观测分布上的纯机制量。
+
+建议改成：
+
+“无回火逐帧 ensemble 的门控前错误相关较低；一旦进入回火融合闭环，两个记忆的错误显著重合。双记忆回灌不是净增益，并会在开局锁错时固化错误身份。”
+
+如果要主张“回灌导致同步”，需要补分析：按 common seeds、开局对/错分层、DAM present 匹配、每 episode ρ 或 Fisher-z bootstrap、gate 前后窗口对比，最好有固定轨迹/离线 replay 对照。
+
+**MAJOR 4: 泛化与贡献措辞需要收窄**
+
+泛化表述基本谨慎，但“融合/PGIF 家族优于 DAM4SAM”仍偏宽。数据只支持：
+
+- V3 在 Town03 相对 DAM4SAM 承诺口径和最长锁错显著更好。
+- V3 在 Town10HD 相对 DAM4SAM 承诺口径不显著，严格口径显著，最长锁错不优。
+- 缺 V0 · Town10HD，不能说 V3 或 PGIF 家族泛化优于 V0。
+
+建议写成：“修正口径下，V3 对 DAM4SAM 的跨地图结果方向较好，但证据不一致；尚不能支持 V3 优于 V0 或方法族整体泛化。”
+
+**MINOR**
+
+- “单帧语言准确率约 0.22–0.33”和“开局锁对 7–11/19 / 首帧约 50%”混在一起了。前者像 tick-wise `acc_lang`，后者是 opening accuracy。必须分开。
+- `1001` §5.1 PGIF 正确比例 0.613，而 §5.5 / `deploy_compare.json` 是 0.576；需要解释是旧 tick-align 口径还是不同实验批次。
+- V0 开局分层来自旧 `runs/asd/deploy_all`，而 1003 其他臂来自 `runs/asd/iter`；建议标注不是同批日志，避免 paired opening 分析被质疑。
+- “PGIF 跨记忆可包装的弱证据”建议删或降级。V1 未过非劣、selfreset 未跑，作为负结果即可。
+- “新增贡献足够 SCI 一区/CCF-A”目前不够。可写进论文的是有价值的负结果和评测修正，但若作为主线，还缺一个正向方法贡献或更大规模 benchmark 证据：更多 seeds、完整预注册对照、真实 detector/localizer 噪声、V0 Town10HD、DAM4SAM tick 日志、固定轨迹机理验证。
+
+总体建议：这批结果很诚实，也有论文价值；但应把它定位为“指标修正 + 负结果机理诊断 + 下一步假设生成”，不要包装成 V1/V2/V3 的方法成功。

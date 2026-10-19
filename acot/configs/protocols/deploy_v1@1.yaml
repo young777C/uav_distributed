@@ -1,0 +1,28 @@
+# LEGACY protocol (pre-1004): simulator actor ids as identity keys, frustum-only candidates (no occlusion), grounding-head
+# opening. Kept only to reproduce / import old numbers (paper_ext_*, paper_dep_*); not for new experiments.
+name: deploy_v1
+version: 1
+aliases: [deploy_v1]
+description: sim actor ids, no occlusion filter, head opening (legacy)
+camera: {fov_deg: 90.0, width: 512, height: 512, fps: 10}
+sim:
+  s2_period: 6
+  episode_steps: 900
+  scenario: mvp
+  max_lost_s: 18.0
+  warmup: {expert_ticks: 90, min_target_speed_mps: 1.2}
+  retarget_tick: null
+perception:
+  candidates: {source: sim_projection, set: task_vehicles, vehicle_size_m: 4.0, box_min_px: 10.0, box_max_px: 140.0}
+  occlusion: none
+  identity_keys: sim
+  where_localisation: gt_committed_id
+  noise: none
+frontend:
+  vlm: {model_config: train/config_v5.yaml, stage2_ckpt: runs/stage2_v5/stage2_best.pt, language_mode: neutral}
+  crop_features: {id: dino_s14_lvd142m_cls384_c224_p1.3, depth_scale: 100.0}
+  opening: {module: head, hires_k: 1, window: 1, agg: sum, final_reset: false, reset_asd: false, force_final: false,
+            seed_asd: 0.0}
+scorer: {commit_k: 5, t_fail_s: 2.0, central_frac: 0.3, primary: committed}
+privileged_perception: [cand_box_gt_projection, cand_depth_gt, task_vehicle_set, identity_keys_sim_actor_ids,
+                        where_world_gt_committed_id]

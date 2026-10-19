@@ -1,0 +1,7 @@
+# UPPER BOUND U2 (1006 表 1, uses GT): Ours with the TAHRelM memory written with the TRUE target's box every S2 tick
+# (identity selection, PGIF, commitment unchanged) = the "memory never drifts" ceiling. acot definition (the legacy
+# gallery_seed=gt path had no attribute opening / cold start); not parity-checked against the legacy runtime.
+name: diag_gt_memory
+extends: ours_final
+identity: {memory_seed: gt}
+diagnostics: [gallery_seed_gt]

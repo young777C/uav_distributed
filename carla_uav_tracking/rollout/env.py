@@ -21,6 +21,7 @@ a socket stub; for the CARLA-only smoke it is an expert adapter.
 
 from __future__ import annotations
 
+import os
 import time
 from dataclasses import dataclass
 
@@ -39,6 +40,31 @@ class Observation:
     step: int                # tick index → drives the policy's S1/S2 scheduler
     target_color: str = ""   # GT target identity (color, blueprint) for the attrbind tid head —
     target_bp: str = ""      # privileged like the GT candidate boxes; = the offline attr upper bound
+    rgb_hi: np.ndarray | None = None   # 1004 opening fix: k× resolution frame of the SAME camera, opening ticks only
+    retarget_event: bool = False   # 1003_dynamic-retarget-design.md §2.1: True on the exact tick
+                                    # the scene's target was just reassigned (scripted, S1 GT-driven)
+
+
+def _ray_visible(world, cam_loc, xyz, dz=(0.7, 1.4), start_off=1.0, margin=3.0) -> bool:
+    """Occlusion check (1004 G13): is a vehicle at ground position `xyz` visible from the camera? Cast rays from the
+    camera to points `dz` metres above the vehicle origin (body centre, roof); the vehicle counts as VISIBLE if at
+    least one ray reaches within `margin` m of the point unobstructed (hits on the vehicle's own body lie inside the
+    margin; buildings, vegetation and OTHER vehicles in front of it occlude). Partial visibility = visible."""
+    import carla
+    if xyz is None or not np.all(np.isfinite(np.asarray(xyz[:3], float))):
+        return False
+    c = np.array([cam_loc.x, cam_loc.y, cam_loc.z], float)
+    for h in dz:
+        p = np.array([float(xyz[0]), float(xyz[1]), float(xyz[2]) + h])
+        d = float(np.linalg.norm(p - c))
+        if d < start_off + margin:
+            return True
+        s0 = c + (p - c) / d * start_off
+        hits = world.cast_ray(carla.Location(*s0), carla.Location(*p))
+        if not any(float(np.linalg.norm(np.array([q.location.x, q.location.y, q.location.z]) - s0)) < d - start_off - margin
+                   for q in hits):
+            return True
+    return False
 
 
 def _build_proprio(drone_state, cam_pitch: float) -> np.ndarray:
@@ -63,8 +89,15 @@ class StudentRolloutEnv:
                  fps: int = 10, resolution=(512, 512), central_frac: float = 0.3,
                  fov_deg: float = 90.0, expert_control: bool = False,
                  predict_road: bool = False, road_oracle: bool = False,
-                 waypoint_offsets_s=(1, 2, 4, 6)):
+                 waypoint_offsets_s=(1, 2, 4, 6), vis_raycast: bool = False,
+                 retarget_tick: int | None = None, hires_k: int = 1):
         self._scene = scene
+        # 1004 G13: ray-cast occlusion flags for target + distractors (shipped to the policy as gt_candidates[4] for
+        # occlusion-aware candidates; target visibility also goes to the scorer). Off = legacy frustum-only behaviour.
+        self._vis_raycast = bool(vis_raycast)
+        # 1004 opening fix: a second camera at hires_k× resolution (same pose / FOV) exists only for the opening ticks
+        # (0, 6, 12) and is destroyed afterwards — the policy's zoom-and-verify crops candidates from it.
+        self._hires_k = int(hires_k)
         self._world = world
         self._policy = policy          # .reset(); .act(obs, gt_candidates) -> (action4, search_mode, info)
         # P2a-1: when True, compute the deployable road-graph target prediction env-side
@@ -83,6 +116,10 @@ class StudentRolloutEnv:
         # the drone with the EXPERT action (GT+PID, centers the target). Isolates "if framing
         # were perfect, does grounding/SR recover?" — tests the framing→grounding→SR chain.
         self._expert_control = bool(expert_control)
+        # 1003_dynamic-retarget-design.md §2.2/§5 S1: scripted single-event retarget, GT-driven
+        # (no language yet). At this tick, if a visible distractor exists, swap it in as the new
+        # target and flag Observation.retarget_event=True for exactly that tick.
+        self._retarget_tick = retarget_tick
         self._scorer = scorer          # .reset(meta); .update(...); .should_truncate(); .finalize()
         self._fps = fps
         self._dt = 1.0 / fps
@@ -110,8 +147,43 @@ class StudentRolloutEnv:
         return (0.5 - m / 2) * W <= u <= (0.5 + m / 2) * W and \
                (0.5 - m / 2) * H <= v <= (0.5 + m / 2) * H
 
+    def _fire_retarget(self, cam_t, step: int) -> bool:
+        """1003_dynamic-retarget-design.md §2.2 S1: pick a currently-visible distractor (similar
+        ones preferred — the hard case) and swap it in as the target via SceneManager.retarget().
+        GT-driven (no language): the chosen slot IS the new ground truth, so there is nothing to
+        "get wrong" here — this only tests the retarget+override plumbing, not grounding."""
+        dstates = self._scene.get_distractor_states()
+        similar = self._scene.get_distractor_similar()
+        order = sorted(range(len(dstates)), key=lambda d: (not bool(similar[d]) if d < len(similar) else True))
+        for d in order:
+            if not np.all(np.isfinite(dstates[d, :3])):
+                continue
+            if self._rec._point_in_frame(cam_t, dstates[d, :3]):
+                return bool(self._scene.retarget(d, tick=step))
+        return False      # no visible distractor at this tick — event does not fire (not retried in S1)
+
     def run(self, max_steps: int | None = None) -> dict:
-        metadata = self._scene.setup_episode()
+        try:
+            metadata = self._scene.setup_episode()
+        except RuntimeError as e:          # e.g. "target spawn failed at 5 anchors" for this seed → skip, don't crash the run
+            if "spawn failed" not in str(e):
+                raise
+            try:
+                self._scene.cleanup()
+            except Exception:
+                pass
+            return {"skipped": True, "reason": f"setup: {e}",
+                    "episode_seed": getattr(self._scene, "_config", {}).get("environment", {}).get("seed")}
+        if os.environ.get("DUMP_LABELS"):
+            # 1004 opening fix: per-actor attribute LABELS for training a vehicle-model classifier on separate seeds
+            # (offline only; never sent to the policy). Distractor order == dstates order == Candidate.gt_idx.
+            import json as _json
+            _d = os.environ["DUMP_LABELS"]; os.makedirs(_d, exist_ok=True)
+            _json.dump({"seed": metadata.get("seed"), "target_bp": metadata.get("target_blueprint"),
+                        "target_color": metadata.get("target_color"), "language": metadata.get("language"),
+                        "distractors": [{"bp": m.get("bp"), "color": m.get("color"), "cls": m.get("cls")}
+                                        for m in metadata.get("distractors", [])]},
+                       open(os.path.join(_d, f"{metadata.get('seed')}.json"), "w"))
         assert self._scene.drone is not None
         language = self._scene.episode_language
 
@@ -141,6 +213,14 @@ class StudentRolloutEnv:
             return self._abort(original_settings, metadata, "target stationary")
 
         rgb_sensor = self._rec._create_attached_sensor()
+        hi_sensor = None
+        if self._hires_k > 1:
+            r0 = self._rec._resolution
+            self._rec._resolution = (r0[0] * self._hires_k, r0[1] * self._hires_k)
+            try:
+                hi_sensor = self._rec._create_attached_sensor()
+            finally:
+                self._rec._resolution = r0
         cam_pitch = float(metadata.get("camera_pitch", -50.0))
         self._policy.reset()
         self._scorer.reset(metadata)
@@ -165,14 +245,30 @@ class StudentRolloutEnv:
                 self._scene.step_target(self._dt)
                 self._world.tick()
                 rgb = rgb_sensor.get_frame(timeout=0.5)               # frame(t) @ P(t)
+                rgb_hi = None
+                if hi_sensor is not None:
+                    rgb_hi = hi_sensor.get_frame(timeout=2.0)
+                    if step >= 12:                                     # opening over → stop the extra render
+                        hi_sensor.destroy(); hi_sensor = None
+                    if step not in (0, 6, 12):
+                        rgb_hi = None
 
                 # GT — SCORING + candidate boxes ONLY, never fed to the controller.
+                cam_t = self._scene.drone.get_camera_transform()
+                retarget_event = False
+                if self._retarget_tick is not None and step == self._retarget_tick:
+                    retarget_event = self._fire_retarget(cam_t, step)
                 tpos, tvel, tyaw, _tspeed = self._scene.get_target_state()
                 dstates = self._scene.get_distractor_states()          # (D,6)
-                cam_t = self._scene.drone.get_camera_transform()
                 campose = _campose(cam_t)
                 drone_state = self._scene.drone.get_state()
                 target_present = self._rec._point_in_frame(cam_t, tpos)
+                vis = None; target_visible = None
+                if self._vis_raycast:
+                    t_vis = bool(target_present) and _ray_visible(self._world, cam_t.location, tpos)
+                    d_vis = [bool(_ray_visible(self._world, cam_t.location, dstates[d, :3]))
+                             for d in range(len(dstates))]
+                    vis = (t_vis, d_vis); target_visible = t_vis
                 target_central = self._target_central(cam_t, tpos)
                 # Consumed only by the expert adapter's recovery framing (smoke);
                 # the student policy never reads it (recorder.py:235 parity).
@@ -196,9 +292,10 @@ class StudentRolloutEnv:
                 obs = Observation(rgb=rgb, language=language,
                                   proprio=_build_proprio(drone_state, cam_pitch), step=step,
                                   target_color=str(metadata.get("target_color") or ""),
-                                  target_bp=str(metadata.get("target_blueprint") or ""))
+                                  target_bp=str(metadata.get("target_blueprint") or ""),
+                                  retarget_event=retarget_event, rgb_hi=rgb_hi)
                 action, _search_mode, info = self._policy.act(
-                    obs, gt_candidates=(tpos, dstates, campose, road_pred_world))
+                    obs, gt_candidates=(tpos, dstates, campose, road_pred_world, vis))
 
                 # expert-control probe: keep the policy's tid `info` for scoring, but drive
                 # the drone with the EXPERT action (well-framed) instead of the DiT's.
@@ -209,11 +306,13 @@ class StudentRolloutEnv:
                 # SCORE this tick against GT (hysteresis mis-follow etc. inside).
                 self._scorer.update(step=step, target_present=target_present,
                                     target_central=target_central, in_loss_window=in_loss,
-                                    info=info, uav_target_dist=dist)
+                                    info=info, uav_target_dist=dist, target_visible=target_visible)
 
                 # APPLY → move drone + camera to P(t+1).
                 self._scene.step_drone(action)
                 rgb_sensor._sensor.set_transform(self._scene.drone.get_camera_transform())
+                if hi_sensor is not None:
+                    hi_sensor._sensor.set_transform(self._scene.drone.get_camera_transform())
 
                 if self._scorer.should_truncate():
                     break
@@ -225,6 +324,11 @@ class StudentRolloutEnv:
                 rgb_sensor.destroy()
             except RuntimeError:
                 pass
+            if hi_sensor is not None:
+                try:
+                    hi_sensor.destroy()
+                except RuntimeError:
+                    pass
             self._scene.cleanup()
             try:
                 self._world.tick()
@@ -235,6 +339,9 @@ class StudentRolloutEnv:
         summary = self._scorer.finalize()
         summary.update({"episode_seed": metadata.get("seed"), "steps": step,
                         "duration_seconds": time.time() - start, "language": language})
+        if self._retarget_tick is not None:
+            summary["retarget_tick"] = self._retarget_tick
+            summary["retarget_log"] = list(self._scene._retarget_log)   # [] if the event never found a visible distractor
         if self._road is not None:
             summary["road_pred_ticks"] = n_road         # >0 confirms the road prior was live
             print(f"[env] road_pred used on {n_road} loss ticks", flush=True)

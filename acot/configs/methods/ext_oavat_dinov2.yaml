@@ -1,0 +1,6 @@
+# 1006 backbone control (exploratory, not in a Holm family): OA-VAT identity adaptation with its DINOv3 backbone
+# swapped for DINOv2 ViT-S/14 (the shared crop-feature backbone of every arm); everything else = ext_oavat.
+name: ext_oavat_dinov2
+extends: ext_oavat
+identity:
+  oavat: {model: dinov2_vits14, checkpoint: ""}

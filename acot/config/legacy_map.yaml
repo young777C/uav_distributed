@@ -1,0 +1,320 @@
+# Legacy configuration surface → acot (framework §6.2). acot/tests/test_legacy_surface.py checks this file against
+# acot/tools/legacy_surface.py:collect() in BOTH directions (every surface row mapped; no stale entries).
+# The runtime sections (policy_server, run_rollout, env) are also the TRANSLATION TABLE of acot/config/legacy.py:
+#   from: <dotted path in the resolved arm> (first existing path of a list; absent → argparse / code default)
+#   map:  value mapping; when_head: only for these heads; infra / collect / fixed / build: see legacy.py.
+
+categories:              # whole-category dispositions (argparse flags and sys.argv use of files in these categories)
+  analysis: {disposition: replaced, by: acot.analysis (one metrics/stats implementation, experiment-driven reports)}
+  test: {disposition: kept, as: test tooling}
+  other-owner: {disposition: not_migrated, owner: v6 data session (runs/data_v6)}
+
+files:                   # offline / datagen scripts: all their flags / argv collectively
+  train/tah_train.py: {disposition: wrapped, by: "acot train (trainer tah_relm)"}
+  train/tah_cache.py: {disposition: wrapped, by: "acot prep (kind tah_seq)"}
+  train/tah_merge.py: {disposition: wrapped, by: "acot prep (kinds tah_seq / dagger)"}
+  train/backbone_kv.py: {disposition: wrapped, by: "acot prep (kind vlm_ctx)"}
+  train/make_split.py: {disposition: superseded, by: "acot data split (rules naive / town_heldout)"}
+  train/stage1_ear.py: {disposition: legacy_import, as: "artefact import (stage-1 EAR ckpt)"}
+  train/stage2.py: {disposition: legacy_import, as: "artefact import stage2_ckpt (retraining not reproduced)"}
+  carla_uav_tracking/rollout/opening_cls.py: {disposition: wrapped, by: "acot train (trainer opening_attr_lin)"}
+  carla_uav_tracking/rollout/opening_ft.py: {disposition: wrapped, by: "acot train (trainer opening_attr_ft)"}
+  carla_uav_tracking/rollout/opening_score.py: {disposition: legacy_only, reason: "offline opening scorer study; its describe() is proven equal to acot/data/language.py"}
+  train/grounding_train.py: {disposition: legacy_only, reason: grounding-head experiments (not in the final model)}
+  train/qwen_lora_grounding.py: {disposition: legacy_only, reason: LoRA grounding experiment}
+  train/qwen_lora_paired_eval.py: {disposition: legacy_only, reason: LoRA grounding experiment}
+  train/reid_metric_train.py: {disposition: legacy_only, reason: reid metric-learning experiment}
+  train/bc_center_train.py: {disposition: legacy_only, reason: BC negative result (907)}
+  train/rl_e0_center.py: {disposition: legacy_only, reason: RL-E0 negative result (907)}
+  train/dagger_train.py: {disposition: legacy_only, reason: grounding DAgger experiment}
+  train/audit_bearing.py: {disposition: legacy_only, reason: offline probe}
+  train/baseline_deadreckon.py: {disposition: legacy_only, reason: offline probe}
+  train/benchmark_leak_probe.py: {disposition: legacy_only, reason: offline probe}
+  train/check_data_ready.py: {disposition: legacy_only, reason: data check}
+  train/eval_stage1.py: {disposition: legacy_only, reason: offline eval of stage 1}
+  train/fullframe_probe.py: {disposition: legacy_only, reason: offline probe}
+  train/grounding_attr_probe.py: {disposition: legacy_only, reason: offline probe}
+  train/grounding_head_compare.py: {disposition: legacy_only, reason: offline probe}
+  train/grounding_probe.py: {disposition: legacy_only, reason: offline probe}
+  train/grounding_probe_midepisode.py: {disposition: legacy_only, reason: offline probe}
+  train/intercept_eval.py: {disposition: legacy_only, reason: offline eval}
+  train/recrop_probe.py: {disposition: legacy_only, reason: offline probe}
+  train/reid_resolution_probe.py: {disposition: legacy_only, reason: offline probe (its _dino_feats is used by the policy)}
+  train/mmap_cache.py: {disposition: legacy_only, reason: cache utility}
+  acot_probe/run_probe.py: {disposition: legacy_only, reason: early probing study}
+  acot_probe/visualize.py: {disposition: legacy_only, reason: visualisation}
+  carla_uav_tracking/scripts/generate_batch.py: {disposition: wrapped, by: "acot data gen (per plan item, via gen_seed_town_list.sh)"}
+  carla_uav_tracking/scripts/generate_single.py: {disposition: superseded, by: "acot data gen"}
+  carla_uav_tracking/scripts/launch_parallel.py: {disposition: superseded, by: "acot data gen (workers)"}
+  carla_uav_tracking/scripts/qc_report.py: {disposition: superseded, by: "acot data qc"}
+  carla_uav_tracking/scripts/qc_v6.py: {disposition: not_migrated, owner: v6 data session}
+  carla_uav_tracking/scripts/annotate_road_pred.py: {disposition: legacy_only, reason: visualisation}
+  carla_uav_tracking/scripts/h5_to_mp4.py: {disposition: legacy_only, reason: visualisation}
+  carla_uav_tracking/scripts/render_video.py: {disposition: legacy_only, reason: visualisation}
+  carla_uav_tracking/scripts/visualize_episode.py: {disposition: legacy_only, reason: visualisation}
+  carla_uav_tracking/scripts/_measure_occ.py: {disposition: legacy_only, reason: occlusion-label study}
+  carla_uav_tracking/scripts/_occ_montage.py: {disposition: legacy_only, reason: occlusion-label study}
+  carla_uav_tracking/scripts/add_occ_labels.py: {disposition: legacy_only, reason: one-off label pass (A1)}
+  carla_uav_tracking/scripts/probe_occluders.py: {disposition: legacy_only, reason: occlusion study}
+  iter/dashboard_tui.py: {disposition: legacy_only, reason: review-loop dashboard}
+  iter/log_iter.py: {disposition: legacy_only, reason: review-loop ledger}
+  iter/review_sample.py: {disposition: kept, as: "batch review contract run by acot data gen"}
+
+policy_server:           # carla_uav_tracking/rollout/policy_server.py — every flag
+  --config: {from: protocol.frontend.vlm.model_config}
+  --ckpt: {from: protocol.frontend.vlm.stage2_ckpt}
+  --language-mode: {from: protocol.frontend.vlm.language_mode}
+  --device: {fixed: "cuda:0", class: infra}            # the GPU is chosen with docker --gpus
+  --s2-period: {from: protocol.sim.s2_period}
+  --ablate: {from: method.control.ablate}
+  --ex-source: {from: method.control.ex_source}
+  --commit-k: {from: method.control.commit_k}
+  --tid-head: {from: method.identity.head}
+  --tid-ckpt: {from: method.identity.attrbind.ckpt}
+  --reid-feature: {from: method.identity.reid.feature}
+  --reid-bank: {from: method.identity.reid.bank}
+  --reid-topm: {from: method.identity.reid.topm}
+  --warmup-oracle-s: {from: method.identity.warmup_oracle_s}
+  --frame-gain: {from: method.control.frame_gain}
+  --conf-tau: {from: method.identity.conf_tau}
+  --reid-tavg: {from: method.identity.reid.tavg}
+  --conf-consensus: {from: method.identity.conf_consensus}
+  --reid-motion: {from: method.identity.reid.motion}
+  --reid-motion-gate-px: {from: method.identity.reid.motion_gate_px}
+  --gallery-seed: {from: method.identity.memory_seed}
+  --reanchor: {from: method.identity.reanchor.mode}
+  --reanchor-patience: {from: method.identity.reanchor.patience}
+  --reanchor-tavg: {from: method.identity.reanchor.tavg}
+  --assoc-mode: {from: method.identity.assoc.mode}
+  --assoc-gate-px: {from: [method.identity.assoc.gate_px, method.identity.dam4sam.gate_px]}
+  --assoc-lambda: {from: method.identity.assoc.lambda}
+  --dam4sam-host: {infra: dam4sam_host, when_head: [dam4sam, fusion]}
+  --tah-ckpt: {from: method.identity.tah.ckpt}
+  --dam4sam-port: {infra: dam4sam_port, when_head: [dam4sam, fusion]}
+  --asd: {from: method.filter.mode}
+  --asd-cfg: {fixed: "", note: "ASD kwargs travel in ASD_CFG (as the legacy launchers did)"}
+  --tracklets: {from: protocol.perception.identity_keys}
+  --occl-cands: {from: protocol.perception.occlusion, map: {raycast: true, none: false}}
+  --event-override: {from: method.identity.event_override}
+  --port: {infra: policy_port}
+
+run_rollout:             # carla_uav_tracking/rollout/run_rollout.py — every flag (the acot client takes the same values)
+  --policy-host: {infra: policy_host}
+  --policy-port: {infra: policy_port}
+  --carla-port: {infra: carla_port}
+  --episodes: {seeds: count}
+  --seed-base: {seeds: base}
+  --steps: {from: protocol.sim.episode_steps}
+  --town: {seeds: town}
+  --out: {artefact: results_path}
+  --expert-control: {from: method.control.expert_control}
+  --predict-road: {from: method.control.predict_road, note: "run_rollout also implies it from --road-oracle"}
+  --road-oracle: {from: method.control.road_oracle}
+  --vis-raycast: {from: protocol.perception.occlusion, map: {raycast: true, none: false}}
+  --retarget-tick: {from: protocol.sim.retarget_tick}
+  --hires: {from: protocol.frontend.opening.hires_k}
+
+dam4sam_service:         # carla_uav_tracking/rollout/dam4sam_service.py (started by the scheduler / checked by preflight)
+  --model: {from: method.identity.dam4sam.model}
+  --port: {infra: dam4sam_port}
+
+env:                     # every environment variable read or written by in-scope code
+  ASD_CFG: {build: asd_cfg}
+  ASD_LOG: {collect: ticks}
+  COLD_WINDOW: {from: method.identity.cold.window, default: "0"}
+  COLD_LAMBDA: {from: method.identity.cold.lambda, default: "0.9"}
+  COLD_SINGLE: {from: method.identity.cold.single, map: {true: "1", false: "0"}, default: "0"}
+  V1_SELFRESET: {from: method.filter.v1_selfreset, map: {true: "1", false: "0"}, default: "0"}
+  DAM4SAM_DIAG: {collect: dam4sam_diag, default: "0"}
+  DAM4SAM_EVERY_FRAME: {from: method.identity.dam4sam.every_frame, map: {true: "1", false: "0"}, default: "0"}
+  TRK_CFG: {build: trk_cfg}
+  OPENING_DUMP: {collect: opening_snapshots}
+  OPENING: {from: protocol.frontend.opening.module, default: head}
+  OPENING_CFG: {build: opening_cfg}
+  ORACLE_ABSENT: {from: method.oracle_absent, map: {"off": "0", abstain: "1", hygiene: "2"}, default: "0"}
+  TAH_DAGGER_DIR: {collect: tah_dagger}
+  DAGGER_DIR: {collect: dagger, presence: is_not_none, note: "policy.py tests `is not None`: never pass it empty"}
+  DUMP_LABELS: {collect: actor_labels, side: client}
+  HOSTNAME: {class: infra, note: "container name → DAgger / opening dump file names only"}
+  CARLA_PORT: {class: infra, side: client}
+  CARLA_TM_PORT: {class: infra, side: client}
+  CARLA_HOST: {class: infra}
+  CARLA_ROOT: {class: infra}
+  SMOKE_TOWN: {class: test}
+  SMOKE_STEPS: {class: test}
+  PARITY_EP: {class: test}
+  PARITY_DEVICE: {class: test}
+env_dynamic:
+  carla_uav_tracking/rollout/smoke_iter.py: {class: test}
+
+constructors:            # objects the flags / JSON strings are splatted into
+  Policy:
+    ckpt_path: {from: protocol.frontend.vlm.stage2_ckpt}
+    cfg: {injected: model_config}
+    vlm: {injected: OnlineVLM}
+    device: {class: infra}
+    s2_period: {flag: --s2-period}
+    shuffle_seed: {from: method.control.shuffle_seed, note: "not exposed by policy_server; must stay 0 until P2"}
+    ablate: {flag: --ablate}
+    ex_source: {flag: --ex-source}
+    commit_k: {flag: --commit-k}
+    tid_head: {flag: --tid-head}
+    tid_ckpt: {flag: --tid-ckpt}
+    reid_feature: {flag: --reid-feature}
+    reid_bank: {flag: --reid-bank}
+    reid_topm: {flag: --reid-topm}
+    conf_tau: {flag: --conf-tau}
+    conf_consensus: {flag: --conf-consensus}
+    frame_gain: {flag: --frame-gain}
+    warmup_oracle_s: {flag: --warmup-oracle-s}
+    reid_tavg: {flag: --reid-tavg}
+    reid_motion: {flag: --reid-motion}
+    reid_motion_gate_px: {flag: --reid-motion-gate-px}
+    gallery_seed: {flag: --gallery-seed}
+    reanchor: {flag: --reanchor}
+    reanchor_patience: {flag: --reanchor-patience}
+    reanchor_tavg: {flag: --reanchor-tavg}
+    assoc_mode: {flag: --assoc-mode}
+    assoc_gate_px: {flag: --assoc-gate-px}
+    assoc_lambda: {flag: --assoc-lambda}
+    dam4sam_host: {flag: --dam4sam-host}
+    dam4sam_port: {flag: --dam4sam-port}
+    tah_ckpt: {flag: --tah-ckpt}
+    asd: {flag: --asd}
+    asd_cfg: {flag: --asd-cfg}
+    tracklets: {flag: --tracklets}
+    occl_cands: {flag: --occl-cands}
+    event_override: {flag: --event-override}
+  ASD:                   # ASD_CFG / --asd-cfg JSON
+    mode: {from: method.filter.mode, note: "injected from --asd (must not appear in the JSON)"}
+    log_path: {collect: ticks, note: "injected from ASD_LOG (must not appear in the JSON)"}
+    k_anchor: {from: method.filter.k_anchor}
+    beta_lang: {from: method.filter.beta_lang}
+    lang_ema: {from: method.filter.lang_ema}
+    tau: {from: method.filter.tau}
+    kappa: {from: method.filter.kappa}
+    h: {from: method.filter.h}
+    refractory: {from: method.filter.refractory}
+    learned_ckpt: {from: method.filter.learned_ckpt}
+    anchor_mode: {from: method.filter.anchor_mode}
+    eps_switch: {from: method.filter.eps_switch}
+    q_lo: {from: method.filter.q_lo}
+    q_hi: {from: method.filter.q_hi}
+    conf_window: {from: method.filter.conf_window}
+    gate_memory: {from: method.filter.gate_memory}
+    filter_kind: {from: method.filter.filter_kind}
+    resid_decay: {from: method.filter.resid_decay}
+    alpha: {from: method.filter.alpha}
+    naive: {from: method.filter.naive}
+    gate_tah: {from: method.filter.gate_tah}
+    gate_dam: {from: method.filter.gate_dam}
+    absent_hold: {from: method.filter.absent_hold}
+    absent_max: {from: method.filter.absent_max}
+  TrackletAssigner:      # TRK_CFG JSON
+    max_age: {from: protocol.perception.tracker.max_age}
+    gate_px: {from: protocol.perception.tracker.gate_px}
+    gate_box: {from: protocol.perception.tracker.gate_box}
+    w_app: {from: protocol.perception.tracker.w_app}
+    min_cos: {from: protocol.perception.tracker.min_cos}
+    vel_beta: {from: protocol.perception.tracker.vel_beta}
+    app_alpha: {from: protocol.perception.tracker.app_alpha}
+  AttrScorer:            # OPENING_CFG JSON (module attr) after the Policy pops
+    model: {injected: VLM backbone}
+    processor: {injected: VLM processor}
+    device: {class: infra}
+    ckpt: {from: protocol.frontend.opening.attr.ckpt_lin}
+    wm: {from: protocol.frontend.opening.attr.wm}
+    wc: {from: protocol.frontend.opening.attr.wc}
+    wq: {from: protocol.frontend.opening.attr.wq}
+    ft: {from: protocol.frontend.opening.attr.ft}
+  ZoomVerifier:          # OPENING_CFG JSON (module zoom) after the Policy pops
+    model: {injected: VLM backbone}
+    processor: {injected: VLM processor}
+    device: {class: infra}
+    scale: {from: protocol.frontend.opening.zoom.scale}
+    R: {from: protocol.frontend.opening.zoom.R}
+    spotlight: {from: protocol.frontend.opening.zoom.spotlight}
+  OPENING_CFG:           # keys popped by Policy before the scorer is built
+    window: {from: protocol.frontend.opening.window}
+    agg: {from: protocol.frontend.opening.agg}
+    final_reset: {from: protocol.frontend.opening.final_reset}
+    reset_asd: {from: protocol.frontend.opening.reset_asd}
+    force_final: {from: protocol.frontend.opening.force_final}
+    seed_asd: {from: protocol.frontend.opening.seed_asd}
+  RolloutScorer:         # built by the acot client with every value explicit
+    fps: {from: protocol.camera.fps}
+    commit_k: {from: protocol.scorer.commit_k}
+    t_fail_s: {from: protocol.scorer.t_fail_s}
+    max_lost_s: {from: protocol.sim.max_lost_s}
+    central_frac: {from: protocol.scorer.central_frac}
+
+wire:                    # env → policy message fields (framework §7.1)
+  act.rgb: {class: deployable}
+  act.language: {class: deployable}
+  act.proprio: {class: deployable}
+  act.step: {class: deployable}
+  act.rgb_hi: {class: deployable, from: protocol.frontend.opening.hires_k}
+  act.retarget_event: {class: diagnostic, blanked_unless: [retarget]}
+  act.target_color / act.target_bp: {class: diagnostic, blanked_unless: [attrbind_gt_attrs], label_for: [opening_snapshots, dagger]}
+  act.gt_candidates[0] tpos: {class: privileged, audited: true}
+  act.gt_candidates[1] dstates: {class: privileged, audited: true}
+  act.gt_candidates[2] campose: {class: deployable}
+  act.gt_candidates[3] road_pred_world: {class: diagnostic, blanked_unless: [predict_road, road_oracle]}
+  act.gt_candidates[4] vis: {class: privileged, audited: true}
+  cand.idx (tracklets=sim): {class: privileged, protocol: deploy_v1}
+  cset.is_target / cset.true_idx / cand.gt_idx: {class: scoring, audited: true}
+  reply.cand_lite: {class: scoring}
+  reply.pred_slot / action / search_mode: {class: deployable}
+  reset: {class: logging, note: "the acot client adds seed / arm / config_hash (ignored by the legacy server)"}
+
+launchers:               # glob → disposition (every in-scope shell script)
+  carla_uav_tracking/rollout/eval_asd.sh: {disposition: golden_reference, by: "acot eval (L0 golden tests)"}
+  carla_uav_tracking/rollout/*.sh: {disposition: superseded, by: acot eval}
+  runs/asd/iter/launch_wd.sh: {disposition: golden_reference, by: "acot eval scheduler (watchdog, resume)"}
+  runs/opening_dump/chains_attr.sh: {disposition: golden_reference, by: acot eval}
+  runs/opening_dump/run_openval.sh: {disposition: golden_reference, by: acot eval}
+  runs/opening_dump/f_v4.sh: {disposition: golden_reference, by: acot eval}
+  runs/opening_dump/f_oracle_absent.sh: {disposition: golden_reference, by: acot eval}
+  runs/tah_v90/collect_dagger.sh: {disposition: golden_reference, by: "acot eval + collect tah_dagger"}
+  runs/asd/**/*.sh: {disposition: superseded, by: acot eval}
+  runs/asd/*.sh: {disposition: superseded, by: acot eval}
+  runs/opening_dump/*.sh: {disposition: superseded, by: acot eval}
+  runs/abl_allactor/*.sh: {disposition: superseded, by: acot eval}
+  runs/tah_v90/gen_fov90*.sh: {disposition: superseded, by: acot data gen}
+  runs/tah_v90/pipeline*.sh: {disposition: superseded, by: "acot prep / train"}
+  carla_uav_tracking/scripts/gen_seed_town_list.sh: {disposition: wrapped, by: acot data gen}
+  carla_uav_tracking/scripts/run_resilient.sh: {disposition: superseded, by: acot data gen}
+  carla_uav_tracking/scripts/run_job_v6.sh: {disposition: not_migrated, owner: v6 data session}
+  carla_uav_tracking/scripts/pull_videos_mac.sh: {disposition: legacy_only, reason: visualisation transfer}
+  iter/*.sh: {disposition: superseded, by: "acot data gen (QC + review contract)"}
+  train/*.sh: {disposition: superseded, by: "acot train / prep"}
+  train/docker/*.sh: {disposition: kept, as: "image build / run (infra)"}
+  runs/acot_logs/*.sh: {disposition: legacy_only, reason: "legacy side of the acot A/A validation (chains_attr.sh renamed)"}
+
+constants:
+  env_fov: {to: protocol.camera.fov_deg, note: "the acot client passes fov_deg explicitly"}
+  model_image: {to: [protocol.camera, protocol.perception.candidates], check: "resolve.check_compat"}
+  cfg_v5_shared_dirs: {to: lint, check: "acot lint (legacy findings)"}
+  cfg_v5_split_missing: {to: lint, check: "acot lint (legacy findings)"}
+  rollout_fps_res: {to: [protocol.camera.fps, protocol.camera.width, protocol.camera.height]}
+  max_lost_18: {to: protocol.sim.max_lost_s, check: "resolve.check_compat"}
+  scorer_defaults: {to: protocol.scorer, note: "passed explicitly by the acot client"}
+  opening_hires_ticks: {to: protocol.frontend.opening.hires_k, note: "ticks 0/6/12 hard-coded in env.py (= s2_period × window)"}
+  warmup_stationary: {to: protocol.sim.warmup}
+  shuffle_seed: {to: method.control.shuffle_seed}
+  tah_lang_reanchor: {to: method.identity.tah.lang_reanchor_thr, note: "legacy runtime: hard-coded 0.6 — acot eval refuses other values (legacy.hardcoded_problems); the acot runtime does not implement reanchor=lang"}
+  dam4sam_cooldown: {to: method.identity.dam4sam.reinit_cooldown, note: "legacy runtime: hard-coded 3 — acot eval refuses other values (legacy.hardcoded_problems); the acot runtime reads the method field"}
+  crop_dino: {to: protocol.frontend.crop_features}
+  eval_asd_fixed: {to: [protocol.frontend.vlm, infra.docker, infra.pip_preinstall]}
+  launch_wd_infra: {to: [infra.carla_servers, infra.tm_ports, infra.watchdog]}
+  tah_cache_meta: {to: "P3 artefact manifest (tah_seq)"}
+  tah_train_compat: {to: "P3 compat matrix"}
+  backbone_kv_skip: {to: "P3 content-addressed artefacts"}
+  attr_ckpt_paths: {to: [protocol.frontend.opening.attr.ckpt_lin, protocol.frontend.opening.attr.ckpt_ft]}
+  tick_align_order: {to: "acot.analysis legacy importer (by_order_verified)"}
+  opening_cl_partial: {to: "acot.analysis legacy importer (final > partial)"}
+  iter_gate_precedence: {to: "acot.analysis legacy importer"}
+  postprocess_box_min: {to: "P3 datagen (documented discrepancy)"}
+  labels_336: {to: "legacy_only (stale)"}
+  cyh_carla_python: {to: infra.python.carla_client}
+  dam4sam_single_client: {to: infra.services.dam4sam.clients_per_instance}

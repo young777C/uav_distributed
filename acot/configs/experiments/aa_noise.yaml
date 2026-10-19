@@ -1,0 +1,11 @@
+# A/A noise floor (2026-10-04): the final model re-run on all 20 dev seeds through acot — compared with a simultaneous
+# LEGACY-launcher re-run (runs/acot_logs/aa_legacy.sh, arms aa_legacy_{a,b,c}) and the historical legacy run of the same
+# configuration (zoa_pgif_trk, 10-03). Measures run-to-run noise and any acot-vs-legacy systematic difference.
+name: aa_noise
+protocol: sim_proxy_v2@1
+seeds: {set: dev, expect: 20}
+completeness: {require: allow_skipped, allow_skipped_reasons: ["target stationary"], pairing: intersection}
+arms:
+  ours: {method: ours_final, role: main}
+collect: [ticks, trk, gt_access, scenario]
+infra: {runtime: legacy}           # reproduces / documents a run of the legacy policy runtime (P1 path)

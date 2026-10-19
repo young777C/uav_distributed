@@ -1,0 +1,13 @@
+# L0 golden replica of runs/opening_dump/run_openval.sh (19-step opening validation; opening variants = opening ablations).
+name: legacy_openval
+protocol: sim_proxy_v2_openval@1
+seeds: {set: heldout_opening}
+arms:
+  v1: {method: ours_final}
+  head: {method: ours_final, ablation: opening, override: {frontend.opening.module: head, frontend.opening.window: 1}}
+  v3: {method: ours_final, ablation: opening,
+       override: {frontend.opening.agg: last, frontend.opening.final_reset: true, frontend.opening.reset_asd: true}}
+  v4: {method: ours_final, ablation: opening,
+       override: {frontend.opening.agg: last, frontend.opening.force_final: true, frontend.opening.seed_asd: 3.0}}
+collect: [ticks]
+infra: {runtime: legacy}           # reproduces / documents a run of the legacy policy runtime (P1 path)

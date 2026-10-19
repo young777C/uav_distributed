@@ -1,0 +1,13 @@
+# 1006 T0 / §3.4: reference opening on dev-B under protocol @3 (= t0_refopen_devB with sim_proxy_v2_openval@3; the @2
+# table devB.json is not valid under @3 because the scenes evolve differently) — two independent passes (agreement);
+# pass A builds acot/configs/shared_opening/devB3.json via `python -m acot.analysis.shared_opening`.
+name: t0_refopen_devB3
+protocol: sim_proxy_v2_openval@3
+seeds: {set: dev2, subset: [[93060, 93099]], expect: 40}
+completeness: {require: allow_skipped, allow_skipped_reasons: ["target stationary"], pairing: intersection}
+schedule: {block: 5, seed: 10071, max_infra_attempts: 3}
+arms:
+  ref_a: {method: ours_final, role: main}
+  ref_b: {method: ours_final, role: main, repeat: 1}
+collect: [ticks, gt_access, scenario]
+infra: {runtime: acot}

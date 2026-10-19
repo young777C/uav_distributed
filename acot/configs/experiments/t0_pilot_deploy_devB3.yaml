@@ -1,0 +1,21 @@
+# 1006 T0 §3.5 / §7.3 (natural opening, dev-B 40 seeds, protocol @3; rerun of t0_pilot_deploy_devB after the
+# CARLA determinism fix):
+#   A/A   — Ours twice under repeat 0 and twice under repeat 1 (run-to-run and repeat-salt variance, server recorded)
+#   A/B   — w/o PGIF and w/o attribute opening, r = 2 (paired with aa_r0a / aa_r1a); variance estimation ONLY
+name: t0_pilot_deploy_devB3
+protocol: sim_proxy_v2@3
+seeds: {set: dev2, subset: [[93060, 93099]], expect: 40}
+completeness: {require: allow_skipped, allow_skipped_reasons: ["target stationary"], pairing: intersection}
+schedule: {block: 5, seed: 10072, max_infra_attempts: 3}
+arms:
+  aa_r0a:    {method: ours_final, role: main}
+  aa_r0b:    {method: ours_final, role: main}
+  aa_r1a:    {method: ours_final, role: main, repeat: 1}
+  aa_r1b:    {method: ours_final, role: main, repeat: 1}
+  nopgif_r0: {method: ours_no_pgif, role: ablation}
+  nopgif_r1: {method: ours_no_pgif, role: ablation, repeat: 1}
+  noopen_r0: {method: ours_final, ablation: opening, override: {frontend.opening.module: head, frontend.opening.window: 1}}
+  noopen_r1: {method: ours_final, ablation: opening, repeat: 1,
+              override: {frontend.opening.module: head, frontend.opening.window: 1}}
+collect: [ticks, trk, gt_access, scenario]
+infra: {runtime: acot}

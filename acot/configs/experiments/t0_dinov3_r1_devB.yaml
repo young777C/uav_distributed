@@ -1,0 +1,13 @@
+# 1006 DINOv3 trial, repeat 1 of the data-matched pair (dev-B, protocol @2): with t0_dinov3_devB (repeat 0) this gives
+# r = 2 for ours_v2off vs ours_v3off. Backbone replacement rule (fixed BEFORE results, 1006_t0_log.md): pc_correct
+# Δ(v3off − v2off) ≥ +0.05 with 95% CI lower bound > 0, TR90 Δ CI lower bound > −0.02, identity time ≪ 0.6 s.
+name: t0_dinov3_r1_devB
+protocol: sim_proxy_v2@2
+seeds: {set: dev2, subset: [[93060, 93099]], expect: 40}
+completeness: {require: allow_skipped, allow_skipped_reasons: ["target stationary"], pairing: intersection}
+schedule: {block: 5, seed: 10068, max_infra_attempts: 3}
+arms:
+  ours_v2off_r1: {method: ours_v2off, role: ablation, repeat: 1}
+  ours_v3off_r1: {method: ours_v3off, role: ablation, repeat: 1}
+collect: [ticks, gt_access, scenario]
+infra: {runtime: acot}

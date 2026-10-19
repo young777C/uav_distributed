@@ -96,6 +96,9 @@ class VehicleTarget:
 
         # CARLA autopilot — follows road network, obeys traffic lights.
         # Per-vehicle speed difference (negative = faster than the limit).
+        if tm_port == 8000:                       # parallel workers: honour CARLA_TM_PORT (scene_manager._tm_port)
+            import os as _os
+            tm_port = int(_os.environ.get("CARLA_TM_PORT", "8000"))
         if carla_client is not None:
             tm = carla_client.get_trafficmanager(tm_port)
             tm.set_synchronous_mode(True)
@@ -107,6 +110,7 @@ class VehicleTarget:
                 tm.distance_to_leading_vehicle(self._vehicle, 2.5)
             except (RuntimeError, AttributeError):
                 pass
+        self._tm_port = tm_port
         self._vehicle.set_autopilot(True, tm_port)
 
     # ------------------------------------------------------------------
@@ -169,7 +173,7 @@ class VehicleTarget:
     def destroy(self) -> None:
         if self._vehicle is not None and self._vehicle.is_alive:
             try:
-                self._vehicle.set_autopilot(False)  # let the TM drop it first
+                self._vehicle.set_autopilot(False, getattr(self, "_tm_port", 8000))  # own TM, not 8000
             except RuntimeError:
                 pass
             self._vehicle.destroy()

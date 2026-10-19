@@ -1,0 +1,3522 @@
+Reading additional input from stdin...
+OpenAI Codex v0.159.3
+--------
+workdir: /nvidia/hque/code/cyhe/uav-acot-track
+model: gpt-5.5
+provider: openai
+approval: never
+sandbox: read-only
+reasoning effort: high
+reasoning summaries: none
+session id: 01a0ff89-ad76-7192-8afc-c2df5d0c0f09
+--------
+user
+你是 IEEE T-RO / RA-L 审稿人兼 CCF-A 会议领域主席。这是第 2 轮审核。上一轮你的意见见 acot_note/codex/1003_Rb_evidence.md(verdict MAJOR,4 条 MAJOR + MINOR)。作者已修改 acot_note/1003_iteration_roadmap.md(方法学发现的'处理'小节、版本总览表、预注册判定表、泛化措辞、机理诊断第 1/2 条、总结)与 acot_note/1001_innovation-design.md(§指标口径的口径修正说明、§5.5 读法与批次差异说明)。数据与脚本同上一轮:carla_uav_tracking/rollout/iter_gate.py、iter_mech.py、deploy_compare.py、metrics.py、eval_out/iter_gate.json、eval_out/iter_mech.json。请逐条核对上一轮每个 MAJOR/MINOR 是否已被充分解决(给出 已解决/部分解决/未解决 + 理由),并检查修改是否引入新的过度声称或与数据不符之处(请实际核对表中数字与 iter_gate.json / iter_mech.json 是否一致)。注意:本轮审核的对象是'这份路线报告作为对 1003 迭代的诚实记录是否合格',不是'1003 是否已构成可投稿的完整论文'——后者作者已在总结中承认不够。输出:verdict(NO MAJOR / MAJOR),逐条结论,中文。
+codex
+我会按审稿复核来做：先读上一轮证据、两份修改文档和对应 JSON/脚本，再逐项对照数字与表述。因为当前权限是只读，我会只核查不改文件。
+exec
+/bin/sh -lc 'pwd && rg --files acot_note carla_uav_tracking eval_out | sort' in /nvidia/hque/code/cyhe/uav-acot-track
+ succeeded in 0ms:
+/nvidia/hque/code/cyhe/uav-acot-track
+rg: eval_out: No such file or directory (os error 2)
+acot_note/1001_codex_review_r1.md
+acot_note/1001_codex_review_r2.md
+acot_note/1001_codex_review_r3.md
+acot_note/1001_codex_review_r4.md
+acot_note/1001_innovation-design.md
+acot_note/1001_poc-closure.md
+acot_note/1002_idea_dam4sam_pgif.md
+acot_note/1002_iteration-roadmap-workflow.md
+acot_note/1002_plan_dam4sam_pgif.md
+acot_note/1002_stage0_qwen_lora.md
+acot_note/1003_iteration_roadmap.md
+acot_note/1003_iteration_workflow.md
+acot_note/1003_v1_v2_design.md
+acot_note/1003_v3_design.md
+acot_note/725_acot-vla.md
+acot_note/727_dataset-card.md
+acot_note/729_learning_diary_0729.md
+acot_note/805_acot-uav-design.md
+acot_note/807_data-acceptance-criteria.md
+acot_note/811_language-grounding-plan.md
+acot_note/811_related-work-and-positioning.md
+acot_note/817_data-fix-spec.md
+acot_note/818_experiment-design.md
+acot_note/818_harness-implementation-guide.md
+acot_note/818_training-plan.md
+acot_note/826_具身智能底层架构全景.md
+acot_note/826_暑期研究进展汇报.md
+acot_note/831_research-bottlenecks.md
+acot_note/831_wm-m0-data-spec.md
+acot_note/831_wm-p2a-plan.md
+acot_note/901_findings-synthesis.md
+acot_note/901_reid-highres-render-spec.md
+acot_note/903_reid-line-summary.md
+acot_note/903_reid-qa-faq.md
+acot_note/904_mvp-regen-spec.md
+acot_note/904_stage3-rl-design.md
+acot_note/906_paper_data_inventory.md
+acot_note/907_baseline_compare_906.md
+acot_note/907_model-integration-907.md
+acot_note/907_research_reflection.md
+acot_note/907_transition-diary-801.md
+acot_note/912_qwen-target-conditioning-plan.md
+acot_note/codex/1003_R1a_R2a.md
+acot_note/codex/1003_R1a_R2a.md.trace
+acot_note/codex/1003_R1a_R2a_round2.md
+acot_note/codex/1003_R1a_R2a_round2.md.trace
+acot_note/codex/1003_R3a.md
+acot_note/codex/1003_R3a.md.trace
+acot_note/codex/1003_R3a_round2.md
+acot_note/codex/1003_R3a_round2.md.trace
+acot_note/codex/1003_Rb_evidence.md
+acot_note/codex/1003_Rb_evidence.md.trace
+acot_note/codex/1003_Rb_evidence_round2.md.trace
+acot_note/figs/728_gpu_diagram.png
+acot_note/figs/architecture_compare_baselines.png
+acot_note/figs/architecture_latest.png
+acot_note/figs/fig_architecture.png
+acot_note/figs/fig_architecture.py
+acot_note/figs/fig_architecture.svg
+acot_note/figs/fig_architecture_v1_tahrelm.png
+acot_note/figs/fig_architecture_v1_tahrelm.py
+acot_note/figs/fig_architecture_v1_tahrelm.svg
+acot_note/figs/fig_baselines_pgif.png
+acot_note/figs/fig_baselines_pgif.py
+acot_note/figs/fig_deploy_compare.png
+acot_note/figs/fig_deploy_compare.py
+acot_note/figs/fig_external_baselines.png
+acot_note/figs/fig_pgif_architecture.png
+acot_note/figs/fig_pgif_architecture.py
+acot_note/figs/fig_pgif_architecture.svg
+acot_note/figs/fig_pgif_main.png
+acot_note/figs/fig_reanchor.png
+acot_note/figs/fig_reanchor_rescue.png
+acot_note/figs/fig_scenario_density.png
+acot_note/figs/fig_stability_plane.png
+acot_note/figs/fig_stage0_lora.png
+acot_note/figs/fig_stage0_lora.py
+acot_note/figs/investigation_flow.png
+acot_note/figs/make_baseline_figs.py
+acot_note/figs/make_pgif_figs.py
+acot_note/figs/regen_arm_figs.py
+acot_note/figs/scenario_fig.py
+acot_note/figs/stability_plane.html
+acot_note/figs/stability_plane.png
+acot_note/figs/three_arm_zex_injection.png
+acot_note/figs/update_s55_table.py
+acot_note/figs/wam_architecture.png
+acot_note/figs/wm_scheme_compare.png
+acot_note/html/728_data_pipeline.html
+acot_note/html/729_vlm_fusion.html
+acot_note/html/811_full_architecture.html
+acot_note/html/814_training_dataflow.html
+acot_note/html/817_wam_architecture.html
+acot_note/html/819_three_arm_zex_injection.html
+acot_note/html/820_investigation_flow.html
+acot_note/html/826_wm_scheme_compare.html
+acot_note/html/903_reid_dinov2_gallery_pipeline.html
+acot_note/html/903_reid_final_architecture.html
+acot_note/html/905_reid_temporal_architecture.html
+acot_note/html/906_architecture_compare_baselines.html
+acot_note/html/907_architecture_latest.html
+acot_note/html/907_architecture_tah.html
+carla_uav_tracking/README.docker.md
+carla_uav_tracking/carla_quick_test.py
+carla_uav_tracking/carla_uav/__init__.py
+carla_uav_tracking/carla_uav/drone.py
+carla_uav_tracking/carla_uav/expert_policy.py
+carla_uav_tracking/carla_uav/obstacle_avoidance.py
+carla_uav_tracking/carla_uav/perturbation.py
+carla_uav_tracking/carla_uav/pid_controller.py
+carla_uav_tracking/carla_uav/safety.py
+carla_uav_tracking/config/default.yaml
+carla_uav_tracking/config/scenarios/_mvp_fix_val.yaml
+carla_uav_tracking/config/scenarios/_occ_check_1080.yaml
+carla_uav_tracking/config/scenarios/_smooth_test.yaml
+carla_uav_tracking/config/scenarios/cross_town_holdout.yaml
+carla_uav_tracking/config/scenarios/easy_distinct.yaml
+carla_uav_tracking/config/scenarios/maneuver_heavy.yaml
+carla_uav_tracking/config/scenarios/mixed_class.yaml
+carla_uav_tracking/config/scenarios/mvp.yaml
+carla_uav_tracking/config/scenarios/occlusion_heavy.yaml
+carla_uav_tracking/config/scenarios/pilot.yaml
+carla_uav_tracking/config/scenarios/rural.yaml
+carla_uav_tracking/config/scenarios/urban_hard.yaml
+carla_uav_tracking/config/scenarios/urban_hard_similar.yaml
+carla_uav_tracking/docker-compose.yml
+carla_uav_tracking/docker/carla.Dockerfile
+carla_uav_tracking/docker/requirements.txt
+carla_uav_tracking/recording/__init__.py
+carla_uav_tracking/recording/postprocess.py
+carla_uav_tracking/recording/recorder.py
+carla_uav_tracking/recording/sensors.py
+carla_uav_tracking/rollout/__init__.py
+carla_uav_tracking/rollout/a1_finish.sh
+carla_uav_tracking/rollout/a1_post.sh
+carla_uav_tracking/rollout/asd.py
+carla_uav_tracking/rollout/asd_stats.py
+carla_uav_tracking/rollout/b1_finish.sh
+carla_uav_tracking/rollout/bridge.py
+carla_uav_tracking/rollout/candidates.py
+carla_uav_tracking/rollout/collect_tahdag.sh
+carla_uav_tracking/rollout/compare_runs.py
+carla_uav_tracking/rollout/continuous_metrics.py
+carla_uav_tracking/rollout/control_stability.py
+carla_uav_tracking/rollout/dam4sam_service.py
+carla_uav_tracking/rollout/deploy_compare.py
+carla_uav_tracking/rollout/deploy_eval_chain.sh
+carla_uav_tracking/rollout/drift_analysis.py
+carla_uav_tracking/rollout/env.py
+carla_uav_tracking/rollout/eval_ablation.sh
+carla_uav_tracking/rollout/eval_asd.sh
+carla_uav_tracking/rollout/eval_attrbind.sh
+carla_uav_tracking/rollout/eval_bc_center.sh
+carla_uav_tracking/rollout/eval_conf_consensus.sh
+carla_uav_tracking/rollout/eval_ex_source.sh
+carla_uav_tracking/rollout/eval_ext_assoc.sh
+carla_uav_tracking/rollout/eval_ext_dam4sam.sh
+carla_uav_tracking/rollout/eval_ext_rerun.sh
+carla_uav_tracking/rollout/eval_h0.sh
+carla_uav_tracking/rollout/eval_out/auroc_reid_observe.json
+carla_uav_tracking/rollout/eval_out/auroc_tah_observe.json
+carla_uav_tracking/rollout/eval_out/bc_b04.json
+carla_uav_tracking/rollout/eval_out/bc_b07.json
+carla_uav_tracking/rollout/eval_out/bc_base.json
+carla_uav_tracking/rollout/eval_out/bc_center.json
+carla_uav_tracking/rollout/eval_out/bc_e0.json
+carla_uav_tracking/rollout/eval_out/dag_dagger.json
+carla_uav_tracking/rollout/eval_out/dag_dagger2.json
+carla_uav_tracking/rollout/eval_out/dag_offline.json
+carla_uav_tracking/rollout/eval_out/deploy_compare.json
+carla_uav_tracking/rollout/eval_out/ex_cv_gated.json
+carla_uav_tracking/rollout/eval_out/ex_ear.json
+carla_uav_tracking/rollout/eval_out/ex_track.json
+carla_uav_tracking/rollout/eval_out/ex_zerovel_gated.json
+carla_uav_tracking/rollout/eval_out/expert_control.json
+carla_uav_tracking/rollout/eval_out/iter_gate.json
+carla_uav_tracking/rollout/eval_out/iter_mech.json
+carla_uav_tracking/rollout/eval_out/m0.json
+carla_uav_tracking/rollout/eval_out/m1.json
+carla_uav_tracking/rollout/eval_out/m3_waiter2.out
+carla_uav_tracking/rollout/eval_out/paper_asd_reid_observe.json
+carla_uav_tracking/rollout/eval_out/paper_asd_reid_tempered.json
+carla_uav_tracking/rollout/eval_out/paper_asd_tah_anchor_p3.json
+carla_uav_tracking/rollout/eval_out/paper_asd_tah_bayes.json
+carla_uav_tracking/rollout/eval_out/paper_asd_tah_observe.json
+carla_uav_tracking/rollout/eval_out/paper_asd_tah_observe_t10.json
+carla_uav_tracking/rollout/eval_out/paper_asd_tah_resid.json
+carla_uav_tracking/rollout/eval_out/paper_asd_tah_tempered.json
+carla_uav_tracking/rollout/eval_out/paper_asd_tah_tempered_nogate.json
+carla_uav_tracking/rollout/eval_out/paper_asd_tah_tempered_t10.json
+carla_uav_tracking/rollout/eval_out/paper_dep_borrow1.json
+carla_uav_tracking/rollout/eval_out/paper_dep_dam4sam.json
+carla_uav_tracking/rollout/eval_out/paper_dep_deepsort.json
+carla_uav_tracking/rollout/eval_out/paper_dep_l4.json
+carla_uav_tracking/rollout/eval_out/paper_dep_l5.json
+carla_uav_tracking/rollout/eval_out/paper_dep_ocsort.json
+carla_uav_tracking/rollout/eval_out/paper_dep_tahdag.json
+carla_uav_tracking/rollout/eval_out/paper_dep_tahrelm.json
+carla_uav_tracking/rollout/eval_out/paper_dep_tahrelm_pgif.json
+carla_uav_tracking/rollout/eval_out/paper_dep_xattn.json
+carla_uav_tracking/rollout/eval_out/paper_ext_assoc_deepsort.json
+carla_uav_tracking/rollout/eval_out/paper_ext_assoc_motion.json
+carla_uav_tracking/rollout/eval_out/paper_ext_dam4sam.json
+carla_uav_tracking/rollout/eval_out/paper_ext_reidmotion.json
+carla_uav_tracking/rollout/eval_out/paper_ext_reidmotion03.json
+carla_uav_tracking/rollout/eval_out/paper_ext_reidmotion03_cons1.0.json
+carla_uav_tracking/rollout/eval_out/paper_ext_reidmotion07.json
+carla_uav_tracking/rollout/eval_out/paper_ext_tah_gt.json
+carla_uav_tracking/rollout/eval_out/paper_ext_tahdag_gt.json
+carla_uav_tracking/rollout/eval_out/paper_ext_tahrelm_committed.json
+carla_uav_tracking/rollout/eval_out/paper_ext_tahrelm_deploy.json
+carla_uav_tracking/rollout/eval_out/paper_ext_tahrelm_gt.json
+carla_uav_tracking/rollout/eval_out/paper_ext_tahrelm_oracledrift.json
+carla_uav_tracking/rollout/eval_out/paper_it_dam4sam_t03.json.partial
+carla_uav_tracking/rollout/eval_out/paper_it_dam4sam_t03_part1.json
+carla_uav_tracking/rollout/eval_out/paper_it_dam4sam_t03b.json
+carla_uav_tracking/rollout/eval_out/paper_it_dam4sam_t03b_p1.json
+carla_uav_tracking/rollout/eval_out/paper_it_dam4sam_t03b_p1.json.partial
+carla_uav_tracking/rollout/eval_out/paper_it_dam4sam_t10.json
+carla_uav_tracking/rollout/eval_out/paper_it_pgif_t03.json
+carla_uav_tracking/rollout/eval_out/paper_it_pgif_t03_p1.json
+carla_uav_tracking/rollout/eval_out/paper_it_pgif_t03_p1.json.partial
+carla_uav_tracking/rollout/eval_out/paper_it_tahrelm_t03.json
+carla_uav_tracking/rollout/eval_out/paper_it_v1_t05.json
+carla_uav_tracking/rollout/eval_out/paper_it_v1_t05.json.partial
+carla_uav_tracking/rollout/eval_out/paper_it_v1_t05_p1.json.partial
+carla_uav_tracking/rollout/eval_out/paper_it_v1_t05_p2.json
+carla_uav_tracking/rollout/eval_out/paper_it_v1_t05_p2.json.partial
+carla_uav_tracking/rollout/eval_out/paper_it_v1nog_t05.json
+carla_uav_tracking/rollout/eval_out/paper_it_v1nog_t05_p1.json
+carla_uav_tracking/rollout/eval_out/paper_it_v1nog_t05_p1.json.partial
+carla_uav_tracking/rollout/eval_out/paper_it_v2_t05.json
+carla_uav_tracking/rollout/eval_out/paper_it_v2_t05.json.partial
+carla_uav_tracking/rollout/eval_out/paper_it_v3_t03.json
+carla_uav_tracking/rollout/eval_out/paper_it_v3_t03_p1.json
+carla_uav_tracking/rollout/eval_out/paper_it_v3_t03_p1.json.partial
+carla_uav_tracking/rollout/eval_out/paper_it_v3_t05.json
+carla_uav_tracking/rollout/eval_out/paper_it_v3_t05.json.partial
+carla_uav_tracking/rollout/eval_out/paper_it_v3_t05_p1.json.partial
+carla_uav_tracking/rollout/eval_out/paper_it_v3_t05_p2.json
+carla_uav_tracking/rollout/eval_out/paper_it_v3_t05_p2.json.partial
+carla_uav_tracking/rollout/eval_out/paper_it_v3_t10.json
+carla_uav_tracking/rollout/eval_out/paper_it_v3_t10_p1.json
+carla_uav_tracking/rollout/eval_out/paper_it_v3_t10_p1.json.partial
+carla_uav_tracking/rollout/eval_out/paper_it_v3com_t05.json
+carla_uav_tracking/rollout/eval_out/paper_it_v3com_t05_p1.json
+carla_uav_tracking/rollout/eval_out/paper_it_v3com_t05_p1.json.partial
+carla_uav_tracking/rollout/eval_out/paper_it_v3ens_t05.json
+carla_uav_tracking/rollout/eval_out/paper_it_v3ens_t05.json.partial
+carla_uav_tracking/rollout/eval_out/paper_it_v3ens_t05_p1.json.partial
+carla_uav_tracking/rollout/eval_out/paper_it_v3ens_t05_p2.json
+carla_uav_tracking/rollout/eval_out/paper_it_v3ens_t05_p2.json.partial
+carla_uav_tracking/rollout/eval_out/paper_it_v3gt_t05.json
+carla_uav_tracking/rollout/eval_out/paper_it_v3gt_t05_p1.json
+carla_uav_tracking/rollout/eval_out/paper_it_v3gt_t05_p1.json.partial
+carla_uav_tracking/rollout/eval_out/paper_it_v3v2_t05.json
+carla_uav_tracking/rollout/eval_out/paper_it_v3v2_t05_p1.json
+carla_uav_tracking/rollout/eval_out/paper_it_v3v2_t05_p1.json.partial
+carla_uav_tracking/rollout/eval_out/paper_l1_xattn.json
+carla_uav_tracking/rollout/eval_out/paper_l2_vlmpool.json
+carla_uav_tracking/rollout/eval_out/paper_l3_dino.json
+carla_uav_tracking/rollout/eval_out/paper_l4_dino_conf.json
+carla_uav_tracking/rollout/eval_out/paper_l5_dino_conf_tavg.json
+carla_uav_tracking/rollout/eval_out/paper_neg_bc04.json
+carla_uav_tracking/rollout/eval_out/paper_neg_rle0.json
+carla_uav_tracking/rollout/eval_out/pgif_generalization.json
+carla_uav_tracking/rollout/eval_out/pgif_idnoise_tah.json
+carla_uav_tracking/rollout/eval_out/pgif_replay_reid_partial1.json
+carla_uav_tracking/rollout/eval_out/pgif_replay_tah_partial1.json
+carla_uav_tracking/rollout/eval_out/pgif_report.json
+carla_uav_tracking/rollout/eval_out/pgif_three_metrics.json
+carla_uav_tracking/rollout/eval_out/pgif_track_metrics.json
+carla_uav_tracking/rollout/eval_out/reacq_nowm.json
+carla_uav_tracking/rollout/eval_out/reanchor_lang.json
+carla_uav_tracking/rollout/eval_out/reanchor_langtavg.json
+carla_uav_tracking/rollout/eval_out/reanchor_oracle.json
+carla_uav_tracking/rollout/eval_out/reid_deploy.json
+carla_uav_tracking/rollout/eval_out/reid_tavg0.4.json
+carla_uav_tracking/rollout/eval_out/reid_tavg0.5.json
+carla_uav_tracking/rollout/eval_out/reid_tavg0.7.json
+carla_uav_tracking/rollout/eval_out/reid_tavg0.json
+carla_uav_tracking/rollout/eval_out/road_cv_gated.json
+carla_uav_tracking/rollout/eval_out/road_ear.json
+carla_uav_tracking/rollout/eval_out/road_expert_reiddino.json
+carla_uav_tracking/rollout/eval_out/road_fg30_chunk.json
+carla_uav_tracking/rollout/eval_out/road_fgN30.json
+carla_uav_tracking/rollout/eval_out/road_fgP30.json
+carla_uav_tracking/rollout/eval_out/road_framegain_smoke.json
+carla_uav_tracking/rollout/eval_out/road_oracleid_track.json
+carla_uav_tracking/rollout/eval_out/road_reid.json
+carla_uav_tracking/rollout/eval_out/road_reiddino.json
+carla_uav_tracking/rollout/eval_out/road_road.json
+carla_uav_tracking/rollout/eval_out/road_road_oracle.json
+carla_uav_tracking/rollout/eval_out/road_trackreiddino.json
+carla_uav_tracking/rollout/eval_out/road_trackreiddino_conf05.json
+carla_uav_tracking/rollout/eval_out/road_w0_a.json
+carla_uav_tracking/rollout/eval_out/road_w0_b.json
+carla_uav_tracking/rollout/eval_out/road_w12_a.json
+carla_uav_tracking/rollout/eval_out/road_w12_b.json
+carla_uav_tracking/rollout/eval_out/road_warmup0.json
+carla_uav_tracking/rollout/eval_out/road_warmup12.json
+carla_uav_tracking/rollout/eval_out/stability_control.json
+carla_uav_tracking/rollout/eval_out/tahdag_collect.json
+carla_uav_tracking/rollout/eval_out/toy_drift.json
+carla_uav_tracking/rollout/eval_out/track_attr.json
+carla_uav_tracking/rollout/eval_out/track_xattn.json
+carla_uav_tracking/rollout/eval_out/unk_probe.json
+carla_uav_tracking/rollout/eval_paper_batch.sh
+carla_uav_tracking/rollout/eval_reanchor.sh
+carla_uav_tracking/rollout/eval_reid_temporal.sh
+carla_uav_tracking/rollout/eval_reidmotion.sh
+carla_uav_tracking/rollout/eval_reidmotion_sweep.sh
+carla_uav_tracking/rollout/eval_road.sh
+carla_uav_tracking/rollout/eval_tah.sh
+carla_uav_tracking/rollout/handoff_reanchor.sh
+carla_uav_tracking/rollout/iter_gate.py
+carla_uav_tracking/rollout/iter_mech.py
+carla_uav_tracking/rollout/metrics.py
+carla_uav_tracking/rollout/online_vlm.py
+carla_uav_tracking/rollout/parity_online_vlm.py
+carla_uav_tracking/rollout/pgif_replay.py
+carla_uav_tracking/rollout/pgif_report.py
+carla_uav_tracking/rollout/pgif_three_metrics.py
+carla_uav_tracking/rollout/pgif_track_metrics.py
+carla_uav_tracking/rollout/policy.py
+carla_uav_tracking/rollout/policy_server.py
+carla_uav_tracking/rollout/probe_adapter.py
+carla_uav_tracking/rollout/probe_target_conditioning.py
+carla_uav_tracking/rollout/remote_policy.py
+carla_uav_tracking/rollout/road_predictor.py
+carla_uav_tracking/rollout/rollout_m0_smoke.json
+carla_uav_tracking/rollout/run_h1h2_pipeline.sh
+carla_uav_tracking/rollout/run_langtavg_rescue.sh
+carla_uav_tracking/rollout/run_rollout.py
+carla_uav_tracking/rollout/sanity_policy_load.py
+carla_uav_tracking/rollout/scenario_split.py
+carla_uav_tracking/rollout/smoke_expert_loop.py
+carla_uav_tracking/rollout/smoke_iter.py
+carla_uav_tracking/rollout/stats_significance.py
+carla_uav_tracking/rollout/target_state.py
+carla_uav_tracking/rollout/test_asd.py
+carla_uav_tracking/rollout/tick_align.py
+carla_uav_tracking/rollout/toy_drift.py
+carla_uav_tracking/scene/__init__.py
+carla_uav_tracking/scene/language_generator.py
+carla_uav_tracking/scene/occluder_cache.py
+carla_uav_tracking/scene/occlusion.py
+carla_uav_tracking/scene/scene_manager.py
+carla_uav_tracking/scripts/__init__.py
+carla_uav_tracking/scripts/_measure_occ.py
+carla_uav_tracking/scripts/_occ_montage.py
+carla_uav_tracking/scripts/add_occ_labels.py
+carla_uav_tracking/scripts/annotate_road_pred.py
+carla_uav_tracking/scripts/generate_batch.py
+carla_uav_tracking/scripts/generate_single.py
+carla_uav_tracking/scripts/launch_parallel.py
+carla_uav_tracking/scripts/probe_occluders.py
+carla_uav_tracking/scripts/pull_videos_mac.sh
+carla_uav_tracking/scripts/qc_report.py
+carla_uav_tracking/scripts/render_video.py
+carla_uav_tracking/scripts/run_resilient.sh
+carla_uav_tracking/scripts/visualize_episode.py
+carla_uav_tracking/targets/__init__.py
+carla_uav_tracking/targets/loss_event_scheduler.py
+carla_uav_tracking/targets/maneuver_injector.py
+carla_uav_tracking/targets/route_follower.py
+carla_uav_tracking/targets/vehicle_target.py
+carla_uav_tracking/tests/__init__.py
+carla_uav_tracking/tests/test_data_format.py
+carla_uav_tracking/tests/test_pid_tracking.py
+
+exec
+/bin/sh -lc "sed -n '1,260p' acot_note/codex/1003_Rb_evidence.md" in /nvidia/hque/code/cyhe/uav-acot-track
+ succeeded in 0ms:
+**Verdict: MAJOR**
+
+不是因为结果为负，而是因为当前稿件里还有三类会被 T-RO/RA-L/CoRL 审稿人抓住的硬伤：指标口径属于结果后修正的高风险区、预注册对照没有完整闭合、机理因果表述过强。
+
+**MAJOR 1: 正确锁定比例改口径有原则依据，但 HARKing 风险没有完全消除**
+
+代码核对结论：`弃权帧算正确` 对 `1 - mis_follow_inst` 属实。`metrics.py` 里只有 `pred_cand is not None and not target` 才计 instant wrong；DAM4SAM 在 `_dam4sam_select` 中遇到未初始化、空 mask、或 160 px 门内无候选会返回全 `-1e9`，DAM4SAM 分支随后 `pred_slot=-1`。因此 DAM4SAM 的宽松口径 0.786 确实主要是弃权伪影。
+
+把主口径改为 `1 - mis_follow_sustained` 也有原则依据：它和 `max_correct_run_s` / `max_wrong_run_s` 都基于 committed identity，适合衡量“锁定”。但这是在看到 DAM4SAM 弃权现象后修正，不能写成“并非看结果后挑选”。更稳的写法是：
+
+- “原预注册 endpoint 为宽松口径；实验后发现该口径对可弃权 tracker 不可比，因此将承诺口径作为修正主口径。”
+- “所有预注册假设同时按原口径报告，修正口径用于最终论文主分析；任何‘预注册成功’只按原口径判定。”
+- “三口径全部进主表或主文脚注，不只放 appendix。”
+- 补一句 nuance：`mis_follow_sustained` 在已有承诺时弃权沿用上一承诺；若 episode 初期尚无承诺，弃权也不会被计为 sustained wrong，因此它不是“严格弃权沿用上一承诺”的完全等价实现。
+
+当前 `1001` §指标口径和 §5.5 已经比旧版诚实很多，但“主口径改为承诺口径……并非看结果后挑选”建议改掉。
+
+**MAJOR 2: 预注册门控判定没有完全闭合**
+
+V1：预注册修订要求 `V1-selfreset`，但 roadmap 明确未跑。现在只能说“V1 相对 DAM4SAM / commit-only 未达门控”，不能说已完成 V1 机制判定。尤其“重置 SAM2 未显示额外收益”只能针对 `V1 vs V1-commit-only`，不能排除“re-init 本身/丢弃 DRM”的贡献。
+
+V2：`V2-single@K` 未跑，因此 H2a “序贯证据积累提高开局正确率”无法正式检验。roadmap 机理里已有一句，但预注册判定表也应单列：`H2a: pending / not run`。
+
+V3：五臂基本符合修订预注册，且机制对照失败的结论是诚实的。建议把“机制对照 ✗”拆开写：`V3 > ensemble` 失败，`V3 > commit-only` 失败，`V3 vs gateTAH-only` 仅描述，不作为通过门槛。
+
+**MAJOR 3: “回灌门控使记忆误差同步 ρ_err 0.34→0.72”因果表述过强**
+
+数据支持“V3 中两记忆错误高度相关”，也支持“V3-ensemble 中门控前误差相关较低”。但不能直接归因于“双记忆回灌门控”，因为：
+
+- `V3-commit-only` 的 `ρ_err = 0.672`，没有门控记忆也已经很高。
+- `V3-gateTAH-only` 的 `ρ_err = 0.723`，与 V3 几乎相同。
+- `present_dam` 差异很大：ensemble 0.552，V3 0.768，commit-only 0.382，会影响相关系数的可比性。
+- 各臂闭环飞行轨迹、episode 长度、DAM4SAM 弃权模式不同，ρ 不是同一观测分布上的纯机制量。
+
+建议改成：
+
+“无回火逐帧 ensemble 的门控前错误相关较低；一旦进入回火融合闭环，两个记忆的错误显著重合。双记忆回灌不是净增益，并会在开局锁错时固化错误身份。”
+
+如果要主张“回灌导致同步”，需要补分析：按 common seeds、开局对/错分层、DAM present 匹配、每 episode ρ 或 Fisher-z bootstrap、gate 前后窗口对比，最好有固定轨迹/离线 replay 对照。
+
+**MAJOR 4: 泛化与贡献措辞需要收窄**
+
+泛化表述基本谨慎，但“融合/PGIF 家族优于 DAM4SAM”仍偏宽。数据只支持：
+
+- V3 在 Town03 相对 DAM4SAM 承诺口径和最长锁错显著更好。
+- V3 在 Town10HD 相对 DAM4SAM 承诺口径不显著，严格口径显著，最长锁错不优。
+- 缺 V0 · Town10HD，不能说 V3 或 PGIF 家族泛化优于 V0。
+
+建议写成：“修正口径下，V3 对 DAM4SAM 的跨地图结果方向较好，但证据不一致；尚不能支持 V3 优于 V0 或方法族整体泛化。”
+
+**MINOR**
+
+- “单帧语言准确率约 0.22–0.33”和“开局锁对 7–11/19 / 首帧约 50%”混在一起了。前者像 tick-wise `acc_lang`，后者是 opening accuracy。必须分开。
+- `1001` §5.1 PGIF 正确比例 0.613，而 §5.5 / `deploy_compare.json` 是 0.576；需要解释是旧 tick-align 口径还是不同实验批次。
+- V0 开局分层来自旧 `runs/asd/deploy_all`，而 1003 其他臂来自 `runs/asd/iter`；建议标注不是同批日志，避免 paired opening 分析被质疑。
+- “PGIF 跨记忆可包装的弱证据”建议删或降级。V1 未过非劣、selfreset 未跑，作为负结果即可。
+- “新增贡献足够 SCI 一区/CCF-A”目前不够。可写进论文的是有价值的负结果和评测修正，但若作为主线，还缺一个正向方法贡献或更大规模 benchmark 证据：更多 seeds、完整预注册对照、真实 detector/localizer 噪声、V0 Town10HD、DAM4SAM tick 日志、固定轨迹机理验证。
+
+总体建议：这批结果很诚实，也有论文价值；但应把它定位为“指标修正 + 负结果机理诊断 + 下一步假设生成”，不要包装成 V1/V2/V3 的方法成功。
+exec
+/bin/sh -lc "sed -n '1,260p' acot_note/1003_iteration_roadmap.md" in /nvidia/hque/code/cyhe/uav-acot-track
+ succeeded in 0ms:
+# 1003 · 迭代升级路线(roadmap)· 闭环全部完成(2026-10-02 15:32),结论见「总结」
+
+> 2026-10-02 09:12 起,12 h。workflow:`1003_iteration_workflow.md`。设计文档:`1003_v1_v2_design.md`、`1003_v3_design.md`。codex 审稿记录:`codex/1003_*.md`。闭环日志 `runs/asd/iter/`,结果 `carla_uav_tracking/rollout/eval_out/paper_it_*.json`。
+> 统一规范:deployable(身份决策不用真值;候选框与车辆定位为仿真理想输入);CARLA 在线闭环;三项客观指标(正确锁定比例、最长连续正确锁定、最长锁错);同种子配对 bootstrap 95% CI;超参数闭环前预注册。
+
+## 版本总览
+
+| 版本 | 内容 | codex 创新点审核(R^a) | 闭环状态 | 门控结果 | 去留 |
+|---|---|---|---|---|---|
+| V0 | TAHRelM + PGIF(`1001` v4) | `1001_codex_review_r4.md`:NO MAJOR | 已完成(`paper_dep_*`) | — | 基线 |
+| V1 | PGIF ∘ DAM4SAM(后验身份 re-init SAM2) | R1:MAJOR → R2:**NO MAJOR**(`codex/1003_R1a_R2a*.md`) | 完成(Town05 + commit-only 对照;selfreset 对照未跑) | H1a ✗(非劣未达)· H1b ✗(−9.4 s,n.s.)· selfreset 机制对照**未检验** | 负结果,不进入组合 |
+| V2 | 延迟承诺冷启动(组件) | R1:MAJOR → R2:**NO MAJOR** | 完成(Town05;single@K 对照未跑) | H2a **未检验**(single@K 未跑)· H2b ✗ · H2c ✗ | 负结果,不进入组合 |
+| V3 | 异构记忆 + 语言回火融合 + 后验回灌门控(核心) | R1:MAJOR → R2:**NO MAJOR**(`codex/1003_R3a*.md`) | 完成(Town05 五臂 + Town03/10HD) | H3a ✗ · H3b ✗(显著差于 V0)· V3>ensemble ✗ · V3>commit-only ✗ · H3c(ensemble 中 ρ_err<0.5)成立 | 负结果;融合闭环中两记忆误差高度重合(描述性发现) |
+| V4 | 重捕获感知回火(可选) | 未开始 | — | — | 取消(时间) |
+
+## 审稿要点与修订记录
+
+### V1(PGIF ∘ DAM4SAM)
+- R1 MAJOR:① 收益可能来自 re-init / 丢弃 DRM 本身;② 冷启动锁错会被巩固;③ SAM2 预测 IoU 未必是身份置信度。
+- 修订:新增 V1-commit-only、V1-selfreset 两个机制对照;H1b 拆为全部 / 开局锁对(drift)两层;报告 IoU 对正确选择的 AUROC。→ R2 NO MAJOR。
+
+### V2(延迟承诺冷启动)
+- R1 MAJOR:① 单独新颖性弱;② 窗口内"飞向临时 argmax"是混杂;③ 开局错误率需可检验;先验过强。
+- 修订:定位为组件;窗口内飞行与 V0 相同(每步单帧语言选择);新增 V2-single@K 对照;开局正确率配对 bootstrap;先验截断 3。→ R2 NO MAJOR。
+
+### V3(异构证据融合)
+- R1 MAJOR:① 在 V3 内测误差相关性被闭环污染;② 缺普通集成 / 门控拆分对照;③ α 启发式;④ 群体确认偏差;⑤ 按评测结果继承 V2 的选择偏差。
+- 修订:三路等权;新增 V3-ensemble(无回火、无回灌,兼作门控前误差相关的测量)、V3-commit-only、V3-gateTAH-only;V3 与 V3+V2 同表报告;记录错误门控、重置次数。→ R2 NO MAJOR(条目 2 部分解决:主张收窄为"融合后验回灌门控带来增益",不声称每个子机制都必要)。
+
+## 预检记录
+- Town03(训练集外地图)加入评测:`run_rollout.py` 中 `--town` 自动并入场景城镇列表;第一批闭环 2 个 episode 正常。
+- DAM4SAM 服务返回 SAM2 预测 IoU(`external/DAM4SAM/dam4sam_tracker.py`、`rollout/dam4sam_service.py`),4 个服务实例(5601–5604)。
+- 离线冒烟(`rollout/smoke_iter.py`,录制 episode,开环,仅验证代码路径):V0/V1/V1-selfreset/V2/V2-single/V3/V3+V2/V3-ensemble 全部运行正常。
+
+## 闭环批次
+| 批次 | 槽位 S1(CARLA 2000) | S2(2010) | S3(2040) |
+|---|---|---|---|
+| 1(09:13–10:50) | TAHRelM 无纠偏 · Town03 ✅ | DAM4SAM · Town10HD | V0 · Town03 ❌(CARLA 2040 在第 17 个 episode 卡死,前 16 个结果未保存 → 待重跑) |
+| 2(10:15–10:49) | V1 · Town05 ❌ 重启中断(8 ep 未保存) | V2 · Town05 ❌(0 ep) | DAM4SAM · Town03 ❌(7 ep 未保存) |
+
+**重启后重排(11:01 起,`runs/asd/iter/chains_r2.sh`,4 个槽位;S4 为 GPU3 上的 CARLA,健康度待验证,只放低优先级任务)**:
+| 槽位 | 依次执行 |
+|---|---|
+| S1(CARLA 2000,policy GPU1) | V1 · T05 → V3-commit-only · T05 → V3 · Town03 |
+| S2(CARLA 2010,policy GPU4) | V2 · T05 → V3-gateTAH-only · T05 → V3 · Town10HD |
+| S3(CARLA 2040,policy GPU7) | V3 · T05 → V3+V2 · T05 → V0 · Town03(重跑) |
+| S4(CARLA 2020,policy GPU1) | V3-ensemble · T05 → DAM4SAM · Town03 → V1-commit-only · T05 |
+
+## ★ 方法学发现(12:10):「正确锁定比例」对弃权的处理不一致,DAM4SAM 的 0.786 主要来自弃权
+
+- **问题**:现用的正确锁定比例 = 1 − `mis_follow_inst`。scorer 只把「选了错车」记为错,弃权帧(`pred_slot = −1`,即没有任何选择)记为**正确**。
+  - DAM4SAM 在 SAM2 掩码为空、或预测框 160 px 内没有候选时会弃权。
+  - 其余各臂(含 PGIF、V1~V3 的融合输出)每帧都会给出选择。
+  - 另外两项指标(最长连续正确、最长锁错)都按**承诺身份**计算,弃权时沿用上一承诺。三项指标的「锁定」定义因此不一致。
+- **证据**(`rollout/iter_gate.py`,用 scorer 的逐帧分桶计数 `n_dist × mis_by_N` 重算严格口径):
+
+| 臂(Town05,n=19) | 宽松(弃权算对,原口径) | 承诺(弃权沿用承诺,与另两项一致) | 严格(弃权算错) |
+|---|---|---|---|
+| DAM4SAM | 0.786 | 0.367 | 0.190 |
+| TAHRelM+PGIF(V0) | 0.583 | 0.576 | 0.584 |
+| TAHRelM | 0.326 | 0.320 | 0.326 |
+| DeepSORT / OC-SORT | 0.297 / 0.238 | 0.286 / 0.229 | 0.296 / 0.240 |
+| DAM4SAM · Town10HD | 0.598 | 0.299 | 0.103 |
+
+  - 除 DAM4SAM 外,各臂三种口径的差别 ≤ 0.01。DAM4SAM 约 60% 的目标在画面帧处于弃权状态。
+  - V0 − DAM4SAM 配对差(n=19):
+    - 承诺口径 +0.209 [−0.001, +0.415]
+    - 严格口径 +0.394 [+0.167, +0.610]
+    - 宽松口径 −0.203 [−0.384, −0.027]
+    - 最长连续正确 +8.0 s [−2.4, +18.5]
+    - 最长锁错 −11.3 s [−23.3, +0.7]
+- **影响**:原定的「正确比例上超过 DAM4SAM」这一目标,是相对一个口径伪影定义的。换成与另两项一致的承诺口径后,V0 在三项指标上方向全部优于 DAM4SAM;严格口径下显著,承诺口径下临界。
+- **处理**:
+  - **原预注册 endpoint 为宽松口径。** 实验后发现该口径对会弃权的跟踪器不可比,因此把承诺口径作为**修正后的主口径**(用户 22:05 确认)。这一修正发生在看到 DAM4SAM 弃权现象之后,属于结果后修正,如实声明。
+  - **预注册是否成功只按原口径判定**:按原口径,1003 的全部预注册假设均未通过,见下方判定表的「宽松」值。
+  - 三种口径全部进主表或主文脚注,不只放附录。1001 §5.5 已按此更新(图中 ◇ 标出原口径值)。
+  - **口径细节**:`mis_follow_sustained` 在已有承诺之后,弃权沿用上一承诺;episode 开头尚无承诺时的弃权帧不计为错。因此它不完全等价于"弃权一律沿用上一承诺",开头未承诺的帧对所有臂都偏宽。
+- **未解释的残余**:seed 91003 上,4 次独立运行(V0、V1、V3、V3-ens)的首帧语言选择都是 0 号干扰车。DAM4SAM 基线在这个种子上严格口径仍为 0.85,说明它当时的初始化很可能是对的。原因未查明,可能是 DAM4SAM 基线的首个决策 tick 不同,没有 tick 日志无法核对。
+
+## 运维事件
+- **11:01–11:34 episode 间确定性卡死(已定位并修复)**:
+  - **现象**:重启后 V1 · T05、V3 · T05、V3-ensemble · T05 都在 ep0 结束后卡住,复现两次。卡住时 CARLA 帧不前进,新 client 看到 0 个 actor(同步模式下无 tick 的表象)。只有 V2 · T05 正常。
+  - **根因**:py-spy 栈显示卡在 `scene_manager._destroy_all_traffic` 的 `set_autopilot(False)`。这个调用没有传 TM 端口,于是默认连到 8000。8000 已被 V2 的 client(连 CARLA 2010)占用,其余 worker 因此变成跨服务器的远程 TM,随后阻塞。卡住与 DAM4SAM 无关,只取决于谁先抢到 8000。
+  - **修复**:`scene_manager.py`、`targets/vehicle_target.py` 两处 `set_autopilot(False)` 改传各 worker 的 TM 端口。随后结束卡住的 client,watchdog 从 seed 91001 续跑(p2),ep0 结果保留在 p1 的 `.partial` 中。
+  - **旁注**:10:16 CARLA 2040 的超时可能是同一原因,未单独验证。
+- **约 10:49 宿主机重启**:所有容器(含 `cyh-carla`、`dam4sam-svc`)退出码 255;V1 · T05(8 ep)、DAM4SAM · T03(7 ep)因在"逐 episode 保存"补丁之前启动而未保存,V2 · T05 未开始。11:00 `docker start` 恢复容器、重启 CARLA 与 4 个 DAM4SAM 服务,按上表重排;日志归档于 `runs/asd/iter/lost_reboot/`。总时间表顺延约 1.8 h。
+- 10:16 CARLA 2040 仿真超时(60 s 无响应),V0 · Town03 中断。`run_rollout.py` 原先只在全部 episode 结束后写 JSON → 已改为每个 episode 结束写 `<out>.json.partial`(对此后启动的臂生效)。V0 · Town03 安排在后续空闲槽位重跑。
+
+## 结果(全部 deployable;正确锁定比例为承诺口径,见上文「方法学发现」;统计 `rollout/iter_gate.py` → `eval_out/iter_gate.json`,机理 `rollout/iter_mech.py` → `eval_out/iter_mech.json`)
+
+### Town05 主表(seeds 91000–19,19 个计分 episode)
+| 臂 | 正确锁定比例 [95% CI] | 严格口径 | 最长连续正确(s) | 最长锁错(s) | 开局锁对 | 开局对 / 错时的正确比例 |
+|---|---|---|---|---|---|---|
+| **V0 · TAHRelM+PGIF** | **0.576** [0.37, 0.78] | 0.584 | **21.3** | 15.4 | 11/19¹ | 0.96 / ≈0¹ |
+| DAM4SAM | 0.367 [0.19, 0.56] | 0.190 | 13.3 | 26.7 | — | — |
+| V1 · PGIF∘DAM4SAM | 0.450 [0.24, 0.67] | 0.183 | 19.4 | 17.3 | 9/19 | 0.95 / 0.00 |
+| V1-commit-only | 0.389 [0.18, 0.60] | 0.153 | 16.1 | 20.0 | 9/19 | 0.82 / 0.00 |
+| V2 · 延迟承诺 | 0.504 [0.29, 0.71] | 0.508 | 25.2 | 19.6 | 10/19 | 0.95 / 0.01 |
+| V3 · 融合 + 回灌门控 | 0.368 [0.16, 0.58] | 0.372 | 11.9 | 22.8 | 7/19 | 0.99 / 0.00 |
+| V3+V2 | 0.392 [0.19, 0.59] | 0.391 | 18.2 | 19.0 | 8/19 | 0.88 / 0.03 |
+| V3-ensemble(逐帧投票,无回火无回灌) | 0.415 [0.26, 0.57] | 0.418 | 6.6 | **8.6** | 9/19 | 0.72 / 0.15 |
+| V3-commit-only(回火融合只管承诺) | 0.480 [0.29, 0.67] | 0.481 | 18.2 | 22.5 | 10/19 | 0.78 / 0.15 |
+| V3-gateTAH-only | 0.530 [0.32, 0.74] | 0.541 | 23.8 | 16.5 | 11/19 | 0.91 / 0.00 |
+
+¹ V0 的开局取自 `runs/asd/deploy_all/tahrelm_pgif.jsonl` 首个 tick(语言首帧选择),分层值取自 `1001` §5.1(10-01 PoC 批次,开局锁对 12/19)。两者都**不是**与 1003 各臂同批的日志,开局配对比较仅作参考。同一配置的 V0 在 10-01 批次为 0.613,在 10-02 重跑中为 0.576,差异来自运行间方差,主要是开局。
+
+### 预注册假设判定(配对 bootstrap 95% CI,n=19;正确比例三口径并列,判定以承诺口径为主)
+| 假设 | 比较 | 正确比例 Δ(承诺 / 宽松 / 严格) | 最长锁错 Δ | 判定 |
+|---|---|---|---|---|
+| H1a 非劣(下界 > −0.05) | V1 − DAM4SAM | +0.08 [−0.15, +0.31] / −0.12 / −0.01 | — | ✗(CI 过宽,未证非劣) |
+| H1b-all | V1 − DAM4SAM | — | −9.4 s [−22.2, +3.4] | ✗(方向对,不显著) |
+| V1 机制(重置 vs 只改承诺) | V1 − V1-commit-only | +0.06 [−0.18, +0.30] | −2.7 s [−16.5, +10.3] | ✗(只说明"改到后验身份并重置"相对"只改承诺"无可测收益) |
+| V1 机制(改身份 vs 仅重置) | V1 − V1-selfreset | — | — | **未检验**(selfreset 臂因重启延误未跑;不能排除 re-init / 丢弃 DRM 本身的作用) |
+| H2a 开局正确率 | V2 − V2-single@K | — | — | **未检验**(single@K 臂未跑) |
+| H2b / H2c | V2 − V0 | −0.07 [−0.24, +0.10] | +4.2 s [−2.4, +11.4] | ✗ / ✗ |
+| H3a | V3 − DAM4SAM | +0.00 [−0.20, +0.20](严格 +0.18 [−0.01, +0.37]) | −3.9 s [−13.7, +6.8] | ✗ |
+| H3b | V3 − V0 | **−0.21 [−0.41, −0.05]** | — | ✗(显著更差) |
+| V3 > ensemble | V3 − V3-ensemble | −0.05 [−0.19, +0.11] | **+14.2 s [+5.2, +24.4]** | ✗(锁错显著更长) |
+| V3 > commit-only | V3 − V3-commit-only | −0.11 [−0.28, +0.05] | +0.3 s | ✗ |
+| V3 vs gateTAH-only(仅描述,非门槛) | V3 − V3-gateTAH-only | — | +6.3 s [−2.6, +16.4] | — |
+| H3a(V3+V2) | V3+V2 − DAM4SAM | +0.03 [−0.21, +0.25] | −7.7 s [−19.7, +4.5] | ✗ |
+| (参照,非预注册)V0 vs DAM4SAM | V0 − DAM4SAM | +0.21 [−0.00, +0.42] / −0.20 / **+0.39 [+0.16, +0.61]** | −11.3 s [−23.2, +0.6] | 修正口径下方向占优;仅严格口径显著 |
+
+> 判定规则:**预注册是否通过只按原(宽松)口径判定——全部 ✗**;承诺/严格口径的结论是修正后分析,不计为预注册成功。
+
+### 泛化(训练集外地图,20 ep,与同地图 DAM4SAM / TAHRelM 配对)
+| 设定 | 正确锁定比例 | 最长连续正确(s) | 最长锁错(s) | 配对 Δ(正确比例 / 最长锁错) |
+|---|---|---|---|---|
+| V3 · Town03 | 0.398 | 15.1 | 17.5 | vs DAM4SAM:**+0.14 [+0.01, +0.30]** / **−11.0 s [−20.2, −2.7]** |
+| DAM4SAM · Town03 | 0.254(宽松 0.732,严格 0.155) | 9.0 | 28.5 | — |
+| V0 · Town03 | 0.408 | 15.8 | 22.7 | vs TAHRelM:+0.10 [−0.04, +0.25] |
+| TAHRelM 无纠偏 · Town03 | 0.312 | 6.1 | 12.0 | — |
+| V3 · Town10HD | 0.387 | 13.5 | 24.3 | vs DAM4SAM:+0.09 [−0.07, +0.26](严格 +0.29 [+0.13, +0.46]) / +1.8 s |
+| DAM4SAM · Town10HD | 0.299(宽松 0.598,严格 0.103) | 11.1 | 22.5 | — |
+
+- 修正口径下,V3 对 DAM4SAM 的跨地图结果方向较好,但证据不一致:
+  - Town03:承诺口径正确比例与最长锁错均显著更好。
+  - Town10HD:承诺口径不显著,严格口径显著,最长锁错不优。
+- 缺 V0 · Town10HD 臂;V3 在 Town05 上显著差于 V0。因此**不能**支持"V3 优于 V0",也不能支持"方法族整体泛化"。
+
+### 机理诊断(tick 日志,`iter_mech.py`)
+1. **开局身份决定一切(所有臂一致)**:
+   - 开局锁对的 episode,承诺正确比例为 0.72–0.99,其中带门控的臂为 0.88–0.99;开局锁错的只有 0–0.17。
+   - 各臂开局锁对数都在 7–11/19 之间(**开局准确率**约 37–58%,由首帧语言选择决定)。这和**逐 tick 的语言准确率**(`acc_lang`,全程所有可见 tick 上为 0.22–0.33)是两个量:开局时目标通常靠近画面中心、未被遮挡,所以开局准确率更高。
+   - 同一种子的首帧语言选择在多次运行间基本可复现:91003、91006、91007、91008 在 V0、V1、V3、V3-ens 中都错选同一辆车。但也有少数种子翻转(91001、91005),导致臂间开局数相差 ±2–4 集,对应正确比例相差约 ±0.1–0.2。
+   - 因此 n=19 的臂间差异有很大一部分是开局这一步的随机性。H3b 的显著负差中,V3 只有 7/19 开局锁对,V0 有 11/19,这一项占了主要部分。
+2. **融合闭环中两个记忆的错误高度重合(描述性;不能归因于"回灌"本身)**:
+
+   | 指标 | V3-ensemble | V3-commit-only | V3-gateTAH-only | V3 |
+   |---|---|---|---|---|
+   | TAHRelM 与 DAM4SAM 的误差相关 ρ_err | **0.34** | 0.67 | 0.72 | 0.72 |
+   | 两记忆选同一车的比例 | 0.43 | 0.47 | 0.82 | 0.76 |
+   | 两者同时错且错到同一辆车 | 0.22 | 0.18 | 0.37 | 0.48 |
+   | DAM4SAM 有选择(未弃权)的 tick 比例 | 0.55 | 0.38 | 0.42 | 0.77 |
+
+   - **能说的**:无回火的逐帧 ensemble 里,两记忆的错误相关较低(0.34,H3c 预测 < 0.5,成立)。一旦进入回火融合闭环,无论是否回灌、回灌几个记忆,错误都高度重合(0.67–0.72)。两个记忆都回灌时,"错到同一辆车"的比例最高(0.48)。
+   - **不能说的**:commit-only 不回灌记忆,ρ_err 也有 0.67,所以"回灌导致同步"不成立。更可能的共同原因是融合承诺决定了飞行轨迹,两个记忆看到的是同一段画面。此外各臂的 DAM 出现率(0.38–0.77)、episode 长度和飞行轨迹都不同,ρ_err 不是同一观测分布上的纯机制量。
+   - **要主张因果,还需补的分析**:同种子、按开局对/错分层、按 DAM 出现率匹配、逐 episode ρ 的 Fisher-z bootstrap、门控前后窗口对比,最好再加固定轨迹的离线回放对照。
+   - **与结果相关的事实**:V3 开局锁对时 0.99,开局锁错时 0.00;ensemble 和 commit-only 开局锁错时还有 0.15,代价是开局锁对时只有 0.72–0.78。V3 的 DAM4SAM 重置中,有 23% 把原本选对的 SAM2 改到了错误身份。双记忆回灌不是净增益,并会在开局锁错时固化错误身份。
+
+3. **V1 退化**:
+   - SAM2 预测 IoU 对"DAM4SAM 选对"的 AUROC 只有 0.53,低于预注册阈值 0.55。按预注册说明,PGIF 在 DAM4SAM 上退化为近似等权驻留,540 个 tick 只改写了 24 次。
+   - V1 与 DAM4SAM 的差异落在运行间方差之内(V1 − commit-only 不显著)。
+4. **V2 无效**:
+   - 全程逐 tick 的语言准确率只有约 0.25–0.33,窗口内各 tick 的语言错误很可能高度相关(未单独测量)。累积 5 个 tick 没有提高开局正确率(V2 为 10/19,V0 的首帧语言为 11/19)。
+   - V2-single@K 对照未跑,H2a 无法正式检验。
+
+## 总结(诚实结论;按 codex R^b 收窄,`codex/1003_Rb_evidence.md`)
+1. **预注册判定**:
+   - 按原口径,V1、V2、V3 的全部预注册假设均未通过。
+   - V1-selfreset 与 V2-single@K 两个机制对照未跑,对应的机制判定未检验。
+2. **修正口径下的 V0 vs DAM4SAM**(结果后分析,非预注册):
+   - 三项指标方向都占优,但只有严格口径的正确比例显著(+0.39)。
+   - 承诺口径正确比例 +0.21 处于边界;最长连续正确 +8.0 s、最长锁错 −11.3 s 均不显著。
+   - 1003 的三个新版本都**没有超过 V0**。V3 在 Town05 上显著更差,其中开局锁对数的差异(7/19 vs 11/19)占了主要部分。
+3. **定位**:这批结果应写成"指标修正 + 负结果机理诊断 + 下一步假设生成",**不能**包装成 V1/V2/V3 的方法成功。可进入论文的内容:
+   - (a) 评测方法学:会弃权的记忆跟踪器(SAM2 类)在"逐帧错选率"口径下被系统性高估,DAM4SAM 高出约 0.4。
+   - (b) 描述性发现:融合闭环中两记忆错误高度重合,双记忆回灌在开局锁错时固化错误身份(因果待补)。
+   - (c) 瓶颈定位:开局身份决定了 0.9 以上与接近 0 两种结局;记忆和融合层面的改进,在开局锁错时都无能为力。
+   - **单靠这些不够 SCI 一区或 CCF-A 的主线。** 还缺一个正向的方法贡献,或更大规模的证据:更多种子、补齐预注册对照、真实检测/定位噪声、V0 · Town10HD、DAM4SAM 的 tick 日志与弃权原因、固定轨迹的机理验证。
+4. **下一步的杠杆是开局身份**:
+   - 一是更强的开局 grounding。阶段 0 的 LoRA 未显著有效。
+   - 二是开局锁错后的可恢复机制,例如保持来源多样性、只门控承诺的融合。
+   - 同时扩种子到 n≈40,压低开局随机性带来的方差。
+
+codex
+我已经看到新版 roadmap 明显按上一轮意见收窄了，关键现在是做“账本审计”：表里的承诺/宽松/严格口径、CI 和机制数值是否真的来自 JSON，而不是叙述上修好了、数字还漂着。
+exec
+/bin/sh -lc "sed -n '1,260p' carla_uav_tracking/rollout/eval_out/iter_gate.json" in /nvidia/hque/code/cyhe/uav-acot-track
+ succeeded in 0ms:
+{
+  "arms": {
+    "dam4sam": {
+      "n": 19,
+      "correct": [
+        0.36668413555140833,
+        0.19268042680179115,
+        0.5577116209563668
+      ],
+      "correct_l": [
+        0.7859476825407968,
+        0.6533705748031885,
+        0.8987128297203175
+      ],
+      "correct_s": [
+        0.18965222247262695,
+        0.0861759460467405,
+        0.3174439825897246
+      ],
+      "longC": [
+        13.284210526315789,
+        6.778815789473685,
+        20.684473684210506
+      ],
+      "longW": [
+        26.689473684210526,
+        16.857763157894738,
+        37.373684210526314
+      ]
+    },
+    "dam4sam_t03": {
+      "n": 20,
+      "correct": [
+        0.2538566761426586,
+        0.09863439145699457,
+        0.43058182091578745
+      ],
+      "correct_l": [
+        0.7321759294633787,
+        0.6154990559493524,
+        0.8370393071452586
+      ],
+      "correct_s": [
+        0.15468852629472712,
+        0.06342694885389547,
+        0.26654131036193623
+      ],
+      "longC": [
+        8.974999999999998,
+        3.174875,
+        15.589999999999998
+      ],
+      "longW": [
+        28.5,
+        20.614875,
+        36.14
+      ]
+    },
+    "dam4sam_t10": {
+      "n": 20,
+      "correct": [
+        0.2985974037671272,
+        0.10850547730829421,
+        0.49859740376712713
+      ],
+      "correct_l": [
+        0.5978773258346545,
+        0.423503942653183,
+        0.7655912558046951
+      ],
+      "correct_s": [
+        0.10289082655002306,
+        0.03211744821167309,
+        0.18576065621422905
+      ],
+      "longC": [
+        11.135,
+        4.009875,
+        19.17512499999999
+      ],
+      "longW": [
+        22.529999999999998,
+        12.405000000000001,
+        34.0
+      ]
+    },
+    "pgif": {
+      "n": 19,
+      "correct": [
+        0.5756628870633238,
+        0.36591317254622246,
+        0.7841957224892219
+      ],
+      "correct_l": [
+        0.5833771269995309,
+        0.3726293111897479,
+        0.7901639224759882
+      ],
+      "correct_s": [
+        0.5837819250650336,
+        0.3727160012236299,
+        0.7921452992539306
+      ],
+      "longC": [
+        21.25263157894737,
+        11.16828947368421,
+        32.11578947368421
+      ],
+      "longW": [
+        15.426315789473685,
+        6.431447368421052,
+        25.894736842105264
+      ]
+    },
+    "pgif_t03": {
+      "n": 20,
+      "correct": [
+        0.408036869416727,
+        0.21107676228125427,
+        0.6076154177055763
+      ],
+      "correct_l": [
+        0.41390039804246415,
+        0.21358654959849652,
+        0.6148461363550717
+      ],
+      "correct_s": [
+        0.41686342595638826,
+        0.21684705893609024,
+        0.6190110186188191
+      ],
+      "longC": [
+        15.84,
+        6.669875,
+        27.09037499999997
+      ],
+      "longW": [
+        22.684999999999995,
+        12.87,
+        33.114999999999995
+      ]
+    },
+    "tahrelm_t03": {
+      "n": 20,
+      "correct": [
+        0.3119121264717144,
+        0.18496827763982113,
+        0.4502666142609852
+      ],
+      "correct_l": [
+        0.3049936612288118,
+        0.1807339263266293,
+        0.44573544559941103
+      ],
+      "correct_s": [
+        0.30536832615811893,
+        0.17849912630252357,
+        0.4461689587467025
+      ],
+      "longC": [
+        6.095,
+        3.28,
+        9.345
+      ],
+      "longW": [
+        11.959999999999999,
+        8.149874999999998,
+        16.119999999999997
+      ]
+    },
+    "v1_t05": {
+      "n": 19,
+      "correct": [
+        0.45,
+        0.2394736842105263,
+        0.6657894736842105
+      ],
+      "correct_l": [
+        0.6708157791969999,
+        0.4956006169585147,
+        0.8371720059363933
+      ],
+      "correct_s": [
+        0.18269853449356557,
+        0.06940756978687672,
+        0.3145118994809546
+      ],
+      "longC": [
+        19.378947368421052,
+        8.378947368421052,
+        31.700131578947357
+      ],
+      "longW": [
+        17.278947368421054,
+        8.610394736842105,
+        27.00526315789474
+      ]
+    },
+    "v1nog_t05": {
+      "n": 19,
+      "correct": [
+        0.38853303489685703,
+        0.179443758805605,
+        0.5990593506863306
+      ],
+      "correct_l": [
+        0.7082849008022252,
+        0.5348127460201787,
+        0.862637525017419
+      ],
+      "correct_s": [
+        0.15331522672891723,
+        0.06255952178852289,
+        0.26175335253739673
+      ],
+      "longC": [
+        16.142105263157895,
+        6.757894736842106,
+        27.23197368421049
+      ],
+      "longW": [
+        19.97894736842105,
+        10.478947368421052,
+        30.968552631578934
+      ]
+    },
+    "v2_t05": {
+      "n": 19,
+      "correct": [
+        0.5041740814640984,
+        0.2941941739793886,
+        0.7122219248814939
+      ],
+      "correct_l": [
+        0.5061166444277899,
+        0.29833815652656626,
+        0.725346962724429
+      ],
+      "correct_s": [
+        0.5080009775866684,
+        0.3008275932186732,
+        0.7174185070812401
+      ],
+      "longC": [
+        25.15789473684211,
+        11.068157894736844,
+        40.984210526315785
+      ],
+      "longW": [
+        19.62105263157895,
+        9.099868421052632,
+        31.289473684210527
+      ]
+    },
+    "v3_t03": {
+      "n": 20,
+      "correct": [
+        0.3976627361778233,
+        0.19977676306443432,
+        0.6001789617486338
+
+exec
+/bin/sh -lc "rg -n \"指标口径|5\\.5|PGIF|0\\.613|0\\.576|宽松|承诺|弃权|Town10HD|泛化|SCI|CCF|一区|预注册|selfreset|single\" acot_note/1001_innovation-design.md acot_note/1003_iteration_roadmap.md" in /nvidia/hque/code/cyhe/uav-acot-track
+ succeeded in 0ms:
+acot_note/1003_iteration_roadmap.md:4:> 统一规范:deployable(身份决策不用真值;候选框与车辆定位为仿真理想输入);CARLA 在线闭环;三项客观指标(正确锁定比例、最长连续正确锁定、最长锁错);同种子配对 bootstrap 95% CI;超参数闭环前预注册。
+acot_note/1003_iteration_roadmap.md:10:| V0 | TAHRelM + PGIF(`1001` v4) | `1001_codex_review_r4.md`:NO MAJOR | 已完成(`paper_dep_*`) | — | 基线 |
+acot_note/1003_iteration_roadmap.md:11:| V1 | PGIF ∘ DAM4SAM(后验身份 re-init SAM2) | R1:MAJOR → R2:**NO MAJOR**(`codex/1003_R1a_R2a*.md`) | 完成(Town05 + commit-only 对照;selfreset 对照未跑) | H1a ✗(非劣未达)· H1b ✗(−9.4 s,n.s.)· selfreset 机制对照**未检验** | 负结果,不进入组合 |
+acot_note/1003_iteration_roadmap.md:12:| V2 | 延迟承诺冷启动(组件) | R1:MAJOR → R2:**NO MAJOR** | 完成(Town05;single@K 对照未跑) | H2a **未检验**(single@K 未跑)· H2b ✗ · H2c ✗ | 负结果,不进入组合 |
+acot_note/1003_iteration_roadmap.md:18:### V1(PGIF ∘ DAM4SAM)
+acot_note/1003_iteration_roadmap.md:20:- 修订:新增 V1-commit-only、V1-selfreset 两个机制对照;H1b 拆为全部 / 开局锁对(drift)两层;报告 IoU 对正确选择的 AUROC。→ R2 NO MAJOR。
+acot_note/1003_iteration_roadmap.md:22:### V2(延迟承诺冷启动)
+acot_note/1003_iteration_roadmap.md:24:- 修订:定位为组件;窗口内飞行与 V0 相同(每步单帧语言选择);新增 V2-single@K 对照;开局正确率配对 bootstrap;先验截断 3。→ R2 NO MAJOR。
+acot_note/1003_iteration_roadmap.md:33:- 离线冒烟(`rollout/smoke_iter.py`,录制 episode,开环,仅验证代码路径):V0/V1/V1-selfreset/V2/V2-single/V3/V3+V2/V3-ensemble 全部运行正常。
+acot_note/1003_iteration_roadmap.md:38:| 1(09:13–10:50) | TAHRelM 无纠偏 · Town03 ✅ | DAM4SAM · Town10HD | V0 · Town03 ❌(CARLA 2040 在第 17 个 episode 卡死,前 16 个结果未保存 → 待重跑) |
+acot_note/1003_iteration_roadmap.md:45:| S2(CARLA 2010,policy GPU4) | V2 · T05 → V3-gateTAH-only · T05 → V3 · Town10HD |
+acot_note/1003_iteration_roadmap.md:49:## ★ 方法学发现(12:10):「正确锁定比例」对弃权的处理不一致,DAM4SAM 的 0.786 主要来自弃权
+acot_note/1003_iteration_roadmap.md:51:- **问题**:现用的正确锁定比例 = 1 − `mis_follow_inst`。scorer 只把「选了错车」记为错,弃权帧(`pred_slot = −1`,即没有任何选择)记为**正确**。
+acot_note/1003_iteration_roadmap.md:52:  - DAM4SAM 在 SAM2 掩码为空、或预测框 160 px 内没有候选时会弃权。
+acot_note/1003_iteration_roadmap.md:53:  - 其余各臂(含 PGIF、V1~V3 的融合输出)每帧都会给出选择。
+acot_note/1003_iteration_roadmap.md:54:  - 另外两项指标(最长连续正确、最长锁错)都按**承诺身份**计算,弃权时沿用上一承诺。三项指标的「锁定」定义因此不一致。
+acot_note/1003_iteration_roadmap.md:57:| 臂(Town05,n=19) | 宽松(弃权算对,原口径) | 承诺(弃权沿用承诺,与另两项一致) | 严格(弃权算错) |
+acot_note/1003_iteration_roadmap.md:60:| TAHRelM+PGIF(V0) | 0.583 | 0.576 | 0.584 |
+acot_note/1003_iteration_roadmap.md:63:| DAM4SAM · Town10HD | 0.598 | 0.299 | 0.103 |
+acot_note/1003_iteration_roadmap.md:65:  - 除 DAM4SAM 外,各臂三种口径的差别 ≤ 0.01。DAM4SAM 约 60% 的目标在画面帧处于弃权状态。
+acot_note/1003_iteration_roadmap.md:67:    - 承诺口径 +0.209 [−0.001, +0.415]
+acot_note/1003_iteration_roadmap.md:69:    - 宽松口径 −0.203 [−0.384, −0.027]
+acot_note/1003_iteration_roadmap.md:72:- **影响**:原定的「正确比例上超过 DAM4SAM」这一目标,是相对一个口径伪影定义的。换成与另两项一致的承诺口径后,V0 在三项指标上方向全部优于 DAM4SAM;严格口径下显著,承诺口径下临界。
+acot_note/1003_iteration_roadmap.md:74:  - **原预注册 endpoint 为宽松口径。** 实验后发现该口径对会弃权的跟踪器不可比,因此把承诺口径作为**修正后的主口径**(用户 22:05 确认)。这一修正发生在看到 DAM4SAM 弃权现象之后,属于结果后修正,如实声明。
+acot_note/1003_iteration_roadmap.md:75:  - **预注册是否成功只按原口径判定**:按原口径,1003 的全部预注册假设均未通过,见下方判定表的「宽松」值。
+acot_note/1003_iteration_roadmap.md:76:  - 三种口径全部进主表或主文脚注,不只放附录。1001 §5.5 已按此更新(图中 ◇ 标出原口径值)。
+acot_note/1003_iteration_roadmap.md:77:  - **口径细节**:`mis_follow_sustained` 在已有承诺之后,弃权沿用上一承诺;episode 开头尚无承诺时的弃权帧不计为错。因此它不完全等价于"弃权一律沿用上一承诺",开头未承诺的帧对所有臂都偏宽。
+acot_note/1003_iteration_roadmap.md:89:## 结果(全部 deployable;正确锁定比例为承诺口径,见上文「方法学发现」;统计 `rollout/iter_gate.py` → `eval_out/iter_gate.json`,机理 `rollout/iter_mech.py` → `eval_out/iter_mech.json`)
+acot_note/1003_iteration_roadmap.md:94:| **V0 · TAHRelM+PGIF** | **0.576** [0.37, 0.78] | 0.584 | **21.3** | 15.4 | 11/19¹ | 0.96 / ≈0¹ |
+acot_note/1003_iteration_roadmap.md:96:| V1 · PGIF∘DAM4SAM | 0.450 [0.24, 0.67] | 0.183 | 19.4 | 17.3 | 9/19 | 0.95 / 0.00 |
+acot_note/1003_iteration_roadmap.md:98:| V2 · 延迟承诺 | 0.504 [0.29, 0.71] | 0.508 | 25.2 | 19.6 | 10/19 | 0.95 / 0.01 |
+acot_note/1003_iteration_roadmap.md:102:| V3-commit-only(回火融合只管承诺) | 0.480 [0.29, 0.67] | 0.481 | 18.2 | 22.5 | 10/19 | 0.78 / 0.15 |
+acot_note/1003_iteration_roadmap.md:105:¹ V0 的开局取自 `runs/asd/deploy_all/tahrelm_pgif.jsonl` 首个 tick(语言首帧选择),分层值取自 `1001` §5.1(10-01 PoC 批次,开局锁对 12/19)。两者都**不是**与 1003 各臂同批的日志,开局配对比较仅作参考。同一配置的 V0 在 10-01 批次为 0.613,在 10-02 重跑中为 0.576,差异来自运行间方差,主要是开局。
+acot_note/1003_iteration_roadmap.md:107:### 预注册假设判定(配对 bootstrap 95% CI,n=19;正确比例三口径并列,判定以承诺口径为主)
+acot_note/1003_iteration_roadmap.md:108:| 假设 | 比较 | 正确比例 Δ(承诺 / 宽松 / 严格) | 最长锁错 Δ | 判定 |
+acot_note/1003_iteration_roadmap.md:112:| V1 机制(重置 vs 只改承诺) | V1 − V1-commit-only | +0.06 [−0.18, +0.30] | −2.7 s [−16.5, +10.3] | ✗(只说明"改到后验身份并重置"相对"只改承诺"无可测收益) |
+acot_note/1003_iteration_roadmap.md:113:| V1 机制(改身份 vs 仅重置) | V1 − V1-selfreset | — | — | **未检验**(selfreset 臂因重启延误未跑;不能排除 re-init / 丢弃 DRM 本身的作用) |
+acot_note/1003_iteration_roadmap.md:114:| H2a 开局正确率 | V2 − V2-single@K | — | — | **未检验**(single@K 臂未跑) |
+acot_note/1003_iteration_roadmap.md:122:| (参照,非预注册)V0 vs DAM4SAM | V0 − DAM4SAM | +0.21 [−0.00, +0.42] / −0.20 / **+0.39 [+0.16, +0.61]** | −11.3 s [−23.2, +0.6] | 修正口径下方向占优;仅严格口径显著 |
+acot_note/1003_iteration_roadmap.md:124:> 判定规则:**预注册是否通过只按原(宽松)口径判定——全部 ✗**;承诺/严格口径的结论是修正后分析,不计为预注册成功。
+acot_note/1003_iteration_roadmap.md:126:### 泛化(训练集外地图,20 ep,与同地图 DAM4SAM / TAHRelM 配对)
+acot_note/1003_iteration_roadmap.md:130:| DAM4SAM · Town03 | 0.254(宽松 0.732,严格 0.155) | 9.0 | 28.5 | — |
+acot_note/1003_iteration_roadmap.md:133:| V3 · Town10HD | 0.387 | 13.5 | 24.3 | vs DAM4SAM:+0.09 [−0.07, +0.26](严格 +0.29 [+0.13, +0.46]) / +1.8 s |
+acot_note/1003_iteration_roadmap.md:134:| DAM4SAM · Town10HD | 0.299(宽松 0.598,严格 0.103) | 11.1 | 22.5 | — |
+acot_note/1003_iteration_roadmap.md:137:  - Town03:承诺口径正确比例与最长锁错均显著更好。
+acot_note/1003_iteration_roadmap.md:138:  - Town10HD:承诺口径不显著,严格口径显著,最长锁错不优。
+acot_note/1003_iteration_roadmap.md:139:- 缺 V0 · Town10HD 臂;V3 在 Town05 上显著差于 V0。因此**不能**支持"V3 优于 V0",也不能支持"方法族整体泛化"。
+acot_note/1003_iteration_roadmap.md:143:   - 开局锁对的 episode,承诺正确比例为 0.72–0.99,其中带门控的臂为 0.88–0.99;开局锁错的只有 0–0.17。
+acot_note/1003_iteration_roadmap.md:154:   | DAM4SAM 有选择(未弃权)的 tick 比例 | 0.55 | 0.38 | 0.42 | 0.77 |
+acot_note/1003_iteration_roadmap.md:157:   - **不能说的**:commit-only 不回灌记忆,ρ_err 也有 0.67,所以"回灌导致同步"不成立。更可能的共同原因是融合承诺决定了飞行轨迹,两个记忆看到的是同一段画面。此外各臂的 DAM 出现率(0.38–0.77)、episode 长度和飞行轨迹都不同,ρ_err 不是同一观测分布上的纯机制量。
+acot_note/1003_iteration_roadmap.md:162:   - SAM2 预测 IoU 对"DAM4SAM 选对"的 AUROC 只有 0.53,低于预注册阈值 0.55。按预注册说明,PGIF 在 DAM4SAM 上退化为近似等权驻留,540 个 tick 只改写了 24 次。
+acot_note/1003_iteration_roadmap.md:166:   - V2-single@K 对照未跑,H2a 无法正式检验。
+acot_note/1003_iteration_roadmap.md:169:1. **预注册判定**:
+acot_note/1003_iteration_roadmap.md:170:   - 按原口径,V1、V2、V3 的全部预注册假设均未通过。
+acot_note/1003_iteration_roadmap.md:171:   - V1-selfreset 与 V2-single@K 两个机制对照未跑,对应的机制判定未检验。
+acot_note/1003_iteration_roadmap.md:172:2. **修正口径下的 V0 vs DAM4SAM**(结果后分析,非预注册):
+acot_note/1003_iteration_roadmap.md:174:   - 承诺口径正确比例 +0.21 处于边界;最长连续正确 +8.0 s、最长锁错 −11.3 s 均不显著。
+acot_note/1003_iteration_roadmap.md:177:   - (a) 评测方法学:会弃权的记忆跟踪器(SAM2 类)在"逐帧错选率"口径下被系统性高估,DAM4SAM 高出约 0.4。
+acot_note/1003_iteration_roadmap.md:180:   - **单靠这些不够 SCI 一区或 CCF-A 的主线。** 还缺一个正向的方法贡献,或更大规模的证据:更多种子、补齐预注册对照、真实检测/定位噪声、V0 · Town10HD、DAM4SAM 的 tick 日志与弃权原因、固定轨迹的机理验证。
+acot_note/1003_iteration_roadmap.md:183:   - 二是开局锁错后的可恢复机制,例如保持来源多样性、只门控承诺的融合。
+acot_note/1001_innovation-design.md:1:# 1001 · 创新点设计报告(终版 v4):PGIF — 后验门控身份滤波
+acot_note/1001_innovation-design.md:5:> **评价指标(2026-10-02 起)**:论文只用三个客观指标——**正确锁定比例**(↑)、**最长连续正确锁定时长**(↑)、**最长锁错时长**(↓)。成功率 SR 依赖人为设定的阈值(≥2s 承诺错锁即判失败),**不作为评价指标**,仅在附录 B 留作参考。
+acot_note/1001_innovation-design.md:12:**闭环指代跟踪中,自更新的身份记忆用自己的逐帧选择作伪标签更新自己——这是闭环版的确认偏差:单帧误选被写进记忆、下一帧再被自己确认,放大为持续错锁。PGIF 在任意身份记忆外层,对持久 tracklet 维护"按误差相关时间回火、以置信度秩加权"的身份证据,并让记忆更新与控制承诺都以证据 argmax 为门。无训练参数;只需记忆暴露"选择 + 置信度 + 更新钩子",并假设环境提供持久 tracklet 关联。**
+acot_note/1001_innovation-design.md:14:![PGIF architecture](figs/fig_pgif_architecture.png)
+acot_note/1001_innovation-design.md:16:*图 1 · (a) PGIF 位于身份记忆与(i)记忆自身更新、(ii)控制承诺之间,切断"原始自更新"这条确认偏差回路;(b) 一个真实闭环 episode(TAHRelM + PGIF,seed 91009):记忆原始选择 44% 的 tick 指向 look-alike(阴影),回火证据始终保持真目标领先,门控改写 47 次(▲),PGIF 输出 100% 正确;(c) 组成部分消融。源 `figs/fig_pgif_architecture.py`(b 面板由 `runs/asd/tah_tempered_91000.jsonl` 重放生成)。*
+acot_note/1001_innovation-design.md:46:## 3. 方法:PGIF
+acot_note/1001_innovation-design.md:57:                      控制承诺 ŝ_t                                         # 后验门控承诺
+acot_note/1001_innovation-design.md:59:- 超参 λ=0.98(τ≈50 tick≈30s)、W=30:实现时先验默认值,**未在评测种子上调**;TAH、reid、Town10HD 同一组。
+acot_note/1001_innovation-design.md:64:**PGIF 本身没有任何可训练参数(0 个)**:它是一个纯推理期的递推规则,只有两个**人工设定、冻结**的超参(λ=0.98、W=30),既不训练也没有在评测种子上调。下表是 PGIF 包裹的整个 deployable 系统的参数构成(由 ckpt 实测计数):
+acot_note/1001_innovation-design.md:68:| **PGIF**(`asd.py::_filter_step`) | 回火证据累积 + 后验门控 | **0**(超参 λ、W 各 1 个,冻结) | 无可训练参数 |
+acot_note/1001_innovation-design.md:76:→ 整个系统中**唯一经过训练的身份相关参数是 TAHRelM 的 4,740 个**,PGIF 在其外层**不新增任何参数、不需要任何训练数据**;换成启发式 reid gallery(本身 0 参数)时,整条身份链路完全无训练参数。
+acot_note/1001_innovation-design.md:85:- (c) 门控阻止误选写入记忆,预期降低误差相关时间 → **门控 > 只改承诺不门控**。
+acot_note/1001_innovation-design.md:95:| **离线** | 已采集数据(`runs/tah_cache.pt` 64 ep + DAgger 23 ep) | 训练时用 GT 身份(teacher forcing) | 否(逐帧打分,不飞行) | 训练/验证 TAHRelM(val 0.990);PGIF 开环回放分析(§5.4) |
+acot_note/1001_innovation-design.md:97:| **deployable** | **CARLA 在线闭环** | **用模型自己的承诺身份更新**;冷启动用语言选车 | 是 | 部署条件下的身份表现:身份决策不用 GT(候选框与车辆定位仍为仿真理想输入) |
+acot_note/1001_innovation-design.md:99:实现:`policy.py --gallery-seed {gt, committed}`。TAHRelM 记忆更新源 `us = true_idx if gallery_seed != "committed" else _pred_slot`(`policy.py:636`);reid gallery 同理(`policy.py:299`);committed 模式冷启动用语言 grounding(`policy.py:594` 起)。两种在线设定的闭环、因果性(只用过去信息)与打分完全相同,GT 只在环境侧用于打分;区别仅在于 gt-seeded 额外把 GT 喂给身份记忆。gt-seeded 下 PGIF 只门控控制承诺(记忆按定义仍由 GT 更新,`policy.py:709`)。
+acot_note/1001_innovation-design.md:101:### 指标口径(三项客观指标)
+acot_note/1001_innovation-design.md:104:| **正确锁定比例** ↑ | 目标在画面内的帧中,**承诺身份**(K=5 滞回)为真目标的帧比例;模型弃权(本帧不给任何选择)时沿用上一承诺——与另两项指标同一"锁定"定义 | scorer,逐帧 10 Hz(1 − `mis_follow_sustained`)。**2026-10-02 口径修正**见下方说明 |
+acot_note/1001_innovation-design.md:106:| **最长锁错时长** ↓ | 每个 episode 内承诺身份(K=5 滞回)持续为错误车辆的最长时长 | scorer,逐帧(`max_wrong_run_s`) |
+acot_note/1001_innovation-design.md:108:> **口径修正(2026-10-02)**:此前正确锁定比例取 1 − `mis_follow_inst`,scorer 只把"选了错车"记为错,**弃权帧被计为正确**。会弃权的只有 DAM4SAM(SAM2 掩码为空或 160 px 关联门内无候选,约占目标在画面帧的 60%),其余各臂每帧都给出选择,三种口径相差 ≤ 0.01。DAM4SAM:原口径 0.786 → 承诺口径 0.367 → 严格口径(弃权算错)0.190。这一修正发生在看到 DAM4SAM 的弃权现象之后,属于**结果后修正**:主口径改为承诺口径,因为它与最长连续正确/最长锁错是同一"锁定"定义;1003 的预注册判定仍只按原口径(见 `1003_iteration_roadmap.md`)。三种口径同时报告:§5.5 图中 ◇ 标出原口径值,全部数字见 `eval_out/deploy_compare.json`(`correct_l` / `correct_s`)与 `rollout/iter_gate.py`。细节:episode 开头尚无承诺时的弃权帧在承诺口径下不计为错,对所有臂同样偏宽。
+acot_note/1001_innovation-design.md:110:一致性校验:tick 日志算出的正确比例与 scorer 逐帧值相关 r = 0.998–1.000;最长锁错 r = 0.87–0.99(差异来自 scorer 用滞回后的承诺身份)。全部数字:`rollout/pgif_three_metrics.py` → `eval_out/pgif_three_metrics.json`;配对 bootstrap 95% CI。
+acot_note/1001_innovation-design.md:117:| **PGIF** | **0.613** | **30.3s / 21.0s** | 10.8s / **0.8s** |
+acot_note/1001_innovation-design.md:121:- 正确锁定比例与最长连续正确锁定均**显著**提升;PGIF 收回 GT 漂移检测上界在正确锁定比例上增益的 **76%**(0.341/0.449),且完全 GT-free **[M]**。
+acot_note/1001_innovation-design.md:127:| 设定 | 初始锁定正确:正确锁定比例(无纠偏→PGIF,Δ [CI]) | 初始锁定错误:正确锁定比例(Δ [CI]) |
+acot_note/1001_innovation-design.md:130:| Town10HD·TAHRelM | n=9:0.485→**0.899**,**+0.414 [+0.229,+0.597]** | n=11:0.250→0.094,−0.156 [−0.355,+0.056] |
+acot_note/1001_innovation-design.md:133:→ **初始锁定正确时,PGIF 几乎消除了后续漂移**(三个设定均显著);**初始锁定错误时,PGIF 会忠实地坚持错误身份**,略有恶化——这正是持续性机制的反面。PGIF 的整体增益上限由冷启动(语言初锁)正确率决定,这是下一步最重要的改进方向 **[M]**。
+acot_note/1001_innovation-design.md:137:| 变体 | 正确锁定比例 | 最长连续正确锁定(均值) | 最长锁错(均值) | **PGIF − 变体**:正确比例 / 最长正确 / 最长锁错 [CI] | 预测 |
+acot_note/1001_innovation-design.md:141:| PGIF 去门控 | 0.396 | 14.7s | 20.0s | +0.217 [+0.034,+0.401] / +15.6s [−0.9,+31.9] / −9.3s [−17.8,−1.3] | (c) ✅ |
+acot_note/1001_innovation-design.md:142:| **PGIF** | **0.613** | **30.3s** | **10.8s** | — | — |
+acot_note/1001_innovation-design.md:144:→ PGIF 对三个变体在正确锁定比例与最长锁错上均显著更好;最长连续正确锁定对等权驻留与去门控的差为正但 CI 略含 0。未回火贝叶斯在三项指标上都比不纠偏更差(正确比例 Δ−0.198 [−0.338,−0.076],最长锁错 +11.1s [+2.6,+20.5]),直接印证"自更新使误差自相关" **[M]**。
+acot_note/1001_innovation-design.md:146:### 5.3 泛化(同一冻结超参)
+acot_note/1001_innovation-design.md:148:| 设定 | n | 正确锁定比例(基线→PGIF,Δ [CI]) | 最长连续正确锁定(均值,Δ [CI]) | 最长锁错(均值,Δ [CI]) |
+acot_note/1001_innovation-design.md:150:| TAHRelM · Town05(主) | 19 | 0.272→0.613,**+0.341 [+0.177,+0.512]** | 5.9→30.3s,**+24.4s [+12.0,+37.7]** | 15.7→10.8s,−5.0s [−14.0,+5.1] |
+acot_note/1001_innovation-design.md:151:| TAHRelM · **Town10HD**(跨场景) | 20 | 0.356→0.456,+0.100 [−0.087,+0.287] | 12.7→21.4s,+8.7s [−4.4,+22.0] | 16.3→16.1s,−0.2s [−7.9,+8.1] |
+acot_note/1001_innovation-design.md:156:- 跨场景/跨记忆增益较小的主要原因是冷启动锁错比例更高(Town10HD 20 个中 11 个);reid 另有"gallery 只存 committed 身份 = 自带一层门控"的原因(D4)。
+acot_note/1001_innovation-design.md:164:| PGIF(开环,无门控反馈) | 0.402 | 0.391 | 0.385 | 0.384 | 0.354 | 0.339 |
+acot_note/1001_innovation-design.md:167:→ p≤0.02/tick(每目标约每 30s 至多一次关联错误)保留约 3/4 增益;p=0.1 时基本消失。PGIF 需要中等质量的持久关联层 **[M][L]**。开环回放中回火与等权驻留持平(0.402 vs 0.407),二者闭环差异(§5.2)来自门控对后续观测的反馈,开环无法体现。
+acot_note/1001_innovation-design.md:169:### 5.5 全部 WHICH 模块在可部署设定下的对比(2026-10-02 重跑,替代旧版 gt-seeded 对比)
+acot_note/1001_innovation-design.md:171:> **"deployable"的确切含义(措辞更正,2026-10-02)**:指**身份决策链路不使用真值**——不告诉模型哪辆是目标,身份记忆/轨迹状态/初始化只来自模型自己的选择(冷启动用语言)。但以下两项仍由仿真理想提供,对所有臂相同:① 候选框(由真值车辆位置投影 = 理想检测器 + 理想持久关联,`candidates.py::build_candidates`);② WHERE 使用被承诺车辆的世界坐标(`policy.py::_committed_world`)。因此此前"决策时不使用任何真值"的表述过强,应为"身份决策不使用真值,感知与定位假设理想"。
+acot_note/1001_innovation-design.md:172:> **为什么重跑**:旧版对比(`907_baseline_compare_906.md` 图 1,2026-09-06)中的 8 个方法都运行在 **gt-seeded** 设定——身份记忆/轨迹状态每一步用真值目标刷新,等于给模型一条作弊通道,不能作为方法比较。本节所有臂(含外部 baseline)均为 **deployable**:冷启动用语言选车,之后只用模型自己的承诺身份更新记忆;CARLA 在线闭环,同种子 91000–19(19 个计分 episode),三项指标由新版 scorer 逐帧记录(`max_correct_run_s` 与 `max_wrong_run_s` 均以承诺身份为准,目标出画即断开)。外部方法的可部署化:OC-SORT/DeepSORT 轨迹状态改为用自己关联到的车更新,DAM4SAM 改为用语言选中车辆的框初始化(`policy.py` `_assoc_select` / `_dam4sam_select` 的 `init_slot`)。批量脚本 `runs/asd/deploy_all/chains.sh`;统计 `rollout/deploy_compare.py` → `eval_out/deploy_compare.json`。
+acot_note/1001_innovation-design.md:176:*图 2 · 全部模块在可部署设定下的三项指标(误差线 = 种子 bootstrap 95% CI;橙色虚线 = PGIF 均值;正确锁定比例为承诺口径,◇ = DAM4SAM 的原口径值,其弃权帧被计为正确)。源 `figs/fig_deploy_compare.py`。*
+acot_note/1001_innovation-design.md:178:| 方法 | 类别 | 正确锁定比例(承诺)↑ [95% CI] | 最长连续正确锁定 ↑(均值 / 中位,s) | 最长锁错 ↓(均值 / 中位,s) | **PGIF − 该方法**(配对 Δ [95% CI]):正确比例 / 最长正确 / 最长锁错 |
+acot_note/1001_innovation-design.md:189:| **TAHRelM+PGIF(ours)** | **ours** | 0.576 [0.37, 0.78] | 21.3 / 11.5 | 15.4 / 0.9 | — |
+acot_note/1001_innovation-design.md:191:**读法(如实,承诺口径)**:
+acot_note/1001_innovation-design.md:192:- **PGIF vs 我们的其他模块与 OC-SORT/DeepSORT**:正确锁定比例与最长连续正确锁定上,PGIF 对 xattn、l5、TAH+DAgger、TAHRelM 无纠偏、OC-SORT、DeepSORT 均**显著更好**(CI 不含 0);对 borrow#1 正确比例 +0.13 [+0.00, +0.27]、对 l4 +0.15 [−0.02, +0.31] 处于显著边界,最长连续正确均显著更好。**最长锁错上 PGIF 与它们都无显著差异**,l4(7.9s)、borrow#1(8.8s)的均值低于 PGIF(15.4s)——PGIF 的中位数仅 0.9s,均值被少数冷启动锁错的长尾拉高。
+acot_note/1001_innovation-design.md:193:- **DAM4SAM(外部 SOTA,SAM2-L 记忆)**:三项指标上 PGIF 方向均更好——正确锁定比例 +0.21 [−0.00, +0.41](边界)、最长连续正确 +8.0s [−2.3, +18.4]、最长锁错 −11.3s [−23.2, +0.7](均不显著)。DAM4SAM 的最长锁错均值 26.7s、中位 21.6s,为所有方法中最长——"粘滞记忆":锁错后长期不改。**此前"DAM4SAM 正确比例显著高于 PGIF(0.786 vs 0.583)"的结论来自旧口径把 DAM4SAM 的弃权帧(约 60%)算作正确,已撤回**;严格口径(弃权算错)下 PGIF 显著更好(+0.39 [+0.16, +0.61])。仍不声称"全面显著优于",n=19 下只有严格口径达到显著。
+acot_note/1001_innovation-design.md:195:- **与 §5.1 的差异**:§5.1 中 PGIF 为 0.613,来自 10-01 的 PoC 批次(开局锁对 12/19);本节 0.576 来自 10-02 的同配置重跑(开局锁对 11/19)。两者差异属运行间方差,主要来自开局语言选择。
+acot_note/1001_innovation-design.md:198:**后续(1003 迭代,已完成)**:把 PGIF 包在 DAM4SAM 外层(V1)、异构记忆融合(V3)等版本的闭环结果、门控判定与泛化实验见 `1003_iteration_roadmap.md`。
+acot_note/1001_innovation-design.md:202:> **核心 claim**:在**持久 tracklet 接口下**,TAHRelM 单场景(Town05)在线闭环 PoC 已闭合:正确锁定比例与最长连续正确锁定显著提升,三条机理预测全部成立。泛化 claim:三设定合并(n=58)时正确锁定比例与最长连续正确锁定均显著;最长锁错未显著改善(冷启动锁错主导)。
+acot_note/1001_innovation-design.md:205:2. **方法 PGIF**:尺度无关秩置信加权 + 按误差相关时间回火的 tracklet 证据累积 + 后验门控更新/承诺;无训练参数(两个冻结超参 λ、W);对记忆只需三个钩子,对环境需一个持久关联层。
+acot_note/1001_innovation-design.md:207:4. **实证**:GT-free 收回 oracle 漂移检测上界 76% 的正确锁定比例增益;初始锁定正确时把正确锁定比例提到 0.96/0.90/0.80(三设定);锚/语言纠偏作为机理清楚的负结果;泛化与关联噪声敏感度曲线。
+acot_note/1001_innovation-design.md:212:- **MHT(Reid 1979)/ identity management(Schumitsch et al., RSS 2006)/ JPDA**:多目标身份推断经典。PGIF 只跟踪单一指代身份的证据,观测来自另一个学习模块的选择与置信度,并把证据**反馈去门控该模块的自更新**——关注闭环确认偏差,而非多目标关联本身。
+acot_note/1001_innovation-design.md:213:- **自训练确认偏差(Arazo et al., IJCNN 2020;Mean Teacher, Tarvainen & Valpola 2017)**:离线半监督里用阈值/教师平滑伪标签。PGIF 是闭环、在线、时序版本,伪标签由带持续性先验的回火证据产生;§5.2(a) 表明在闭环自相关误差下,不回火的概率平滑反而有害。
+acot_note/1001_innovation-design.md:222:- **[L2] 冷启动锁错**:语言初锁即错时没有正确历史可回退,PGIF 反而会坚持错误身份(分层见 §5.1);这是最长锁错未显著改善的主因,也是最主要的改进方向。
+acot_note/1001_innovation-design.md:229:2. 改进冷启动(延迟承诺 + 语言证据时序积分后再锁定),攻 L2;扩种子到 n≈40 提升最长锁错的统计功效。
+acot_note/1001_innovation-design.md:230:3. 直接估计误差相关时间 τ(observe vs PGIF 日志的误选自相关函数),把预测 (c) 从间接变为直接。
+acot_note/1001_innovation-design.md:231:4. 外部记忆(DAM4SAM)加 reset 钩子后接 PGIF,扩展跨记忆证据。
+acot_note/1001_innovation-design.md:240:| v3 PGIF-bayes | 粘滞 HMM:逐 tick 似然相乘,秩置信定错误率 | 闭环被漂移记忆俘获,correct 0.074(< 无纠偏 0.272) | 揭示误差自相关 → 引出回火(命题 2a),降为消融 |
+acot_note/1001_innovation-design.md:241:| **v4 PGIF-tempered** | 回火的置信加权 tracklet 证据 + 后验门控 | — | 主方法;三条预测闭环成立 |
+acot_note/1001_innovation-design.md:243:**Codex 审稿轨迹**:R1 MAJOR(novelty 不足、命题过强、闭环未闭)→ R2 MAJOR(filter 参数解析 bug、门控 vs 平滑、tracklet 依赖)→ R3 MAJOR(tracklet 接口声明、泛化待出)→ **R4 NO MAJOR ISSUES**。
+acot_note/1001_innovation-design.md:249:口径:scorer 帧率 10 Hz,只统计目标在画面内的帧。"正确锁定帧" = 逐帧选择为目标的帧数;"承诺正确率" = K=5 滞回后的承诺身份为目标的帧比例;**SR** = 全程无 ≥2s 的承诺错锁且未因丢失被截断;"最长连续正确跟踪" 由决策 tick 日志计算(1 tick = 0.6s,目标出画即断开,偏保守;上界两臂无 tick 日志)。
+acot_note/1001_innovation-design.md:251:| 设定 | 方法 | n | **SR**(成功数) | 正确锁定比例 | 正确锁定时长 / 在画面时长(均值) | 承诺正确率 | **最长连续正确跟踪**(均值 / 中位) | 最长错锁(均值 / 中位) | latch@2s | latch@5s | ID switches | 重捕获成功率 |
+acot_note/1001_innovation-design.md:254:| Town05·TAHRelM | **+ PGIF** | 19 | **0.158 (3)** | **0.613** | **32.3s / 43.1s** | **0.599** | **30.3s / 21.0s** | 10.8s / **0.8s** | **0.58** | **0.58** | 1.00 | **0.42** |
+acot_note/1001_innovation-design.md:257:| Town10HD·TAHRelM | 无纠偏 | 20 | 0.000 (0) | 0.356 | 18.0s / 43.8s | 0.351 | 12.7s / 6.3s | 16.3s / 15.0s | 0.00 | 0.15 | 3.15 | 0.31 |
+acot_note/1001_innovation-design.md:258:| Town10HD·TAHRelM | **+ PGIF** | 20 | **0.150 (3)** | 0.456 | 23.4s / 39.4s | 0.447 | 21.4s / 0.3s | 16.1s / 3.1s | 0.40 | 0.60 | 0.60 | **0.17 ↓** |
+acot_note/1001_innovation-design.md:260:| Town05·reid | **+ PGIF** | 19 | 0.105 (2) | 0.510 | 20.4s / 34.0s | 0.506 | 19.1s / 5.4s | 12.1s / 4.9s | 0.42 | 0.53 | 1.26 | **0.15 ↓** |
+acot_note/1001_innovation-design.md:264:- Town10HD 与 reid:SR 分别 0→0.150 与持平(0.105),正确比例与 latch 提升;Town10HD 最长连续正确跟踪呈双峰(均值 21.4s、中位 0.3s:一部分 episode 全程跟住,另一部分冷启动即错)。
+acot_note/1001_innovation-design.md:265:- **负面发现(须如实报告)**:PGIF 在 Town10HD 与 reid 上**重捕获成功率下降**(0.31→0.17、0.55→0.15)。机理推测:目标出画期间旧 tracklet 证据仍在衰减中、而回火使新出现的正确身份需要累积一段证据才能胜出;在 reid(本身重捕获较强)上代价最明显。Town05·TAHRelM 上反而提升(0.22→0.42)。这是下一步改进点(例如目标重新入画时对证据做"重捕获窗口"内的快速放大)。
+
+exec
+/bin/sh -lc "sed -n '1,260p' carla_uav_tracking/rollout/iter_mech.py" in /nvidia/hque/code/cyhe/uav-acot-track
+ succeeded in 0ms:
+"""1003 mechanism diagnostics from the per-tick ASD logs (runs/asd/iter/<arm>[_p<k>].jsonl), aligned to scorer seeds
+(skipped episodes never reset the policy → logged episodes map in order onto the NON-skipped seeds of the same part).
+Per arm: tick accuracy of every source and of the final output, opening correctness (first logged tick), and the
+committed correct-lock ratio stratified by opening correctness. Fusion arms (V3 family): error correlation between
+TAHRelM and DAM4SAM picks (pre-registered H3c: measured on V3-ensemble = no feedback), mis-gates (a source that was
+RIGHT gets rewritten to a WRONG posterior identity). V1: AUROC of the SAM2 predicted IoU for "DAM4SAM pick is right".
+  python iter_mech.py [--json eval_out/iter_mech.json]"""
+import argparse
+import glob
+import json
+import os
+import re
+
+import numpy as np
+
+EO = os.path.join(os.path.dirname(__file__), "eval_out")
+LG = os.path.join(os.path.dirname(__file__), "..", "..", "runs", "asd", "iter")
+ARMS = ["v1_t05", "v1nog_t05", "v2_t05", "v3_t05", "v3v2_t05", "v3ens_t05", "v3com_t05", "v3gt_t05",
+        "v3_t03", "v3_t10", "pgif_t03"]
+
+
+def _json_of(path):
+    for f in (path, path + ".partial"):
+        if os.path.exists(f):
+            return json.load(open(f))["episodes"]
+    return []
+
+
+def aligned(arm):
+    """→ {seed: (scorer episode, [tick records])}."""
+    out = {}
+    logs = sorted(glob.glob(os.path.join(LG, f"{arm}_p[0-9].jsonl"))) or [os.path.join(LG, f"{arm}.jsonl")]
+    for jl in logs:
+        if not os.path.exists(jl):
+            continue
+        m = re.search(r"_p(\d)\.jsonl$", jl)
+        eps = _json_of(os.path.join(EO, f"paper_it_{arm}_p{m.group(1)}.json" if m else f"paper_it_{arm}.json"))
+        scored = [e for e in eps if not e.get("skipped")]
+        E = {}
+        for line in open(jl):
+            r = json.loads(line)
+            E.setdefault(r["ep"], []).append(r)
+        for k, e in zip(sorted(E), scored):
+            out.setdefault(int(e["episode_seed"]), (e, E[k]))
+    return out
+
+
+def auroc(score, label):
+    s, y = np.asarray(score, float), np.asarray(label, bool)
+    if y.all() or (~y).all():
+        return float("nan")
+    r = np.argsort(np.argsort(s)) + 1.0
+    return float((r[y].sum() - y.sum() * (y.sum() + 1) / 2) / (y.sum() * (~y).sum()))
+
+
+def arm_stats(arm):
+    A = aligned(arm)
+    if not A:
+        return None
+    vis = lambda R: [r for r in R if r.get("true") is not None and r["true"] >= 0]
+    fused = any("picks" in r for _, R in A.values() for r in R)
+    out_key = "map" if fused else "anc"
+    res = {"arm": arm, "n_ep": len(A)}
+    T = [r for _, R in A.values() for r in vis(R)]
+    res["ticks"] = len(T)
+    res["acc_out"] = float(np.mean([r[out_key] == r["true"] for r in T]))
+    if fused:
+        for s in ("tah", "dam", "lang"):
+            P = [r for r in T if r["picks"].get(s) is not None and r["picks"][s] >= 0]
+            res[f"acc_{s}"] = float(np.mean([r["picks"][s] == r["true"] for r in P])) if P else float("nan")
+            res[f"present_{s}"] = len(P) / max(len(T), 1)
+        B = [r for r in T if r["picks"].get("tah") is not None and r["picks"].get("dam") is not None]
+        et = np.array([r["picks"]["tah"] != r["true"] for r in B], float)
+        ed = np.array([r["picks"]["dam"] != r["true"] for r in B], float)
+        res["rho_err"] = float(np.corrcoef(et, ed)[0, 1]) if len(B) > 2 and et.std() > 0 and ed.std() > 0 else float("nan")
+        res["p_dam_wrong_given_tah_wrong"] = float(ed[et == 1].mean()) if (et == 1).any() else float("nan")
+        res["both_wrong_same_id"] = float(np.mean([r["picks"]["tah"] == r["picks"]["dam"] != r["true"] for r in B]))
+        res["tah_eq_dam"] = float(np.mean([r["picks"]["tah"] == r["picks"]["dam"] for r in B]))
+        for s in ("tah", "dam"):   # gate events on a source = posterior ≠ its pick → its memory is rewritten
+            G = [r for r in T if r.get("gate", {}).get(s) and r["picks"].get(s) is not None]
+            res[f"gates_{s}"] = len(G)
+            res[f"misgate_{s}"] = float(np.mean([r["picks"][s] == r["true"] for r in G])) if G else float("nan")
+    else:
+        res["acc_mem"] = float(np.mean([r["mem"] == r["true"] for r in T]))
+        res["fires"] = int(sum(bool(r.get("fire")) or r["mem"] != r["anc"] for r in T))
+        F = [r for r in T if r["mem"] != r["anc"]]
+        res["misgate_mem"] = float(np.mean([r["mem"] == r["true"] for r in F])) if F else float("nan")
+        if arm.startswith("v1"):
+            res["auroc_iou"] = auroc([r["conf"] for r in T], [r["mem"] == r["true"] for r in T])
+    # opening correctness (first logged visible tick) and committed correct-lock ratio by stratum
+    op, cr = [], []
+    for e, R in A.values():
+        V = vis(R)
+        if not V:
+            continue
+        op.append(V[0][out_key] == V[0]["true"]); cr.append(1 - e["mis_follow_sustained"])
+    op, cr = np.array(op, bool), np.array(cr, float)
+    res["open_ok"] = f"{int(op.sum())}/{len(op)}"
+    res["correct_open_ok"] = float(cr[op].mean()) if op.any() else float("nan")
+    res["correct_open_wrong"] = float(cr[~op].mean()) if (~op).any() else float("nan")
+    return res
+
+
+def main():
+    ap = argparse.ArgumentParser(); ap.add_argument("--json"); a = ap.parse_args()
+    R = [x for x in (arm_stats(arm) for arm in ARMS) if x]
+    keys = ["n_ep", "ticks", "acc_out", "acc_mem", "acc_tah", "acc_dam", "acc_lang", "present_dam", "rho_err",
+            "p_dam_wrong_given_tah_wrong", "both_wrong_same_id", "tah_eq_dam", "gates_tah", "misgate_tah", "gates_dam",
+            "misgate_dam", "fires", "misgate_mem", "auroc_iou", "open_ok", "correct_open_ok", "correct_open_wrong"]
+    print("| 指标 | " + " | ".join(r["arm"] for r in R) + " |\n|---|" + "---|" * len(R))
+    for k in keys:
+        cells = []
+        for r in R:
+            v = r.get(k, "")
+            cells.append(f"{v:.3f}" if isinstance(v, float) else str(v))
+        print(f"| {k} | " + " | ".join(cells) + " |")
+    if a.json:
+        json.dump(R, open(a.json, "w"), indent=1)
+
+
+if __name__ == "__main__":
+    main()
+
+exec
+/bin/sh -lc "sed -n '1,260p' carla_uav_tracking/rollout/iter_gate.py" in /nvidia/hque/code/cyhe/uav-acot-track
+ succeeded in 0ms:
+"""1003 iteration gate check — pre-registered hypotheses (1003_v1_v2_design.md / 1003_v3_design.md), deployable only,
+three objective metrics, paired seed-bootstrap 95% CI on the seeds common to arm and reference.
+Arms are read from eval_out/paper_it_<name>.json, else merged from the watchdog parts paper_it_<name>_p*.json[.partial]
+(or a single .partial) → works on running arms too (n is printed; verdicts on partial n are provisional).
+  python iter_gate.py [--json eval_out/iter_gate.json]"""
+import argparse
+import glob
+import json
+import os
+import re
+
+import numpy as np
+
+EO = os.path.join(os.path.dirname(__file__), "eval_out")
+def _strict(e):
+    """per-frame pick == target over target-present frames; ABSTENTION (no pick) counts as NOT correct."""
+    nd, bn = e.get("n_dist") or {}, e.get("mis_by_N") or {}
+    t = sum(nd.values())
+    return 1 - sum(bn[k] * nd[k] for k in nd if k in bn) / t if t else float("nan")
+
+
+# correct-lock ratio, three definitions (they differ ONLY for trackers that abstain, e.g. DAM4SAM loses its mask):
+#   correct   = committed identity == target (abstention holds the last commitment) — SAME notion of lock as longC /
+#               longW → primary; correct_l = 1 − mis_follow_inst (abstention counted as CORRECT; the metric used up to
+#               1003 and in the pre-registration); correct_s = strict (abstention counted as WRONG).
+METRICS = {"correct": lambda e: 1 - e["mis_follow_sustained"],
+           "correct_l": lambda e: 1 - e["mis_follow_inst"],
+           "correct_s": _strict,
+           "longC": lambda e: e["max_correct_run_s"],
+           "longW": lambda e: e["max_wrong_run_s"]}
+LABEL = {"correct": "正确锁定比例(承诺)", "correct_l": "正确比例(宽松·弃权算对)", "correct_s": "正确比例(严格·弃权算错)",
+         "longC": "最长连续正确(s)", "longW": "最长锁错(s)"}
+REF = {"dam4sam": ["paper_dep_dam4sam.json"], "pgif": ["paper_dep_tahrelm_pgif.json"],
+       "tahrelm": ["paper_dep_tahrelm.json"], "dam4sam_t10": ["paper_it_dam4sam_t10.json"],
+       "tahrelm_t03": ["paper_it_tahrelm_t03.json"]}
+# (id, arm, reference, metric, kind)  kind: noninf = Δ lower > −0.05 · less = Δ upper < 0 · greater = Δ lower > 0 · desc
+TESTS = [
+    ("V0 vs DAM4SAM", "pgif", "dam4sam", "correct", "greater"),
+    ("V0 vs DAM4SAM", "pgif", "dam4sam", "longC", "greater"),
+    ("V0 vs DAM4SAM", "pgif", "dam4sam", "longW", "less"),
+    ("H1a 非劣", "v1_t05", "dam4sam", "correct", "noninf"),
+    ("H1b-all", "v1_t05", "dam4sam", "longW", "less"),
+    ("H1c(探索)", "v1_t05", "dam4sam", "longC", "desc"),
+    ("V1 vs commit-only", "v1_t05", "v1nog_t05", "longW", "less"),
+    ("V1 vs commit-only", "v1_t05", "v1nog_t05", "correct", "desc"),
+    ("H2b", "v2_t05", "pgif", "longW", "less"),
+    ("H2c 非劣", "v2_t05", "pgif", "correct", "noninf"),
+    ("H3a 非劣", "v3_t05", "dam4sam", "correct", "noninf"),
+    ("H3a 锁错", "v3_t05", "dam4sam", "longW", "less"),
+    ("H3a 连续正确", "v3_t05", "dam4sam", "longC", "desc"),
+    ("H3b", "v3_t05", "pgif", "correct", "greater"),
+    ("V3 > ensemble", "v3_t05", "v3ens_t05", "correct", "greater"),
+    ("V3 > ensemble", "v3_t05", "v3ens_t05", "longW", "less"),
+    ("V3 > commit-only", "v3_t05", "v3com_t05", "correct", "greater"),
+    ("V3 > commit-only", "v3_t05", "v3com_t05", "longW", "less"),
+    ("V3 vs gateTAH-only", "v3_t05", "v3gt_t05", "longW", "desc"),
+    ("H3a 非劣(V3+V2)", "v3v2_t05", "dam4sam", "correct", "noninf"),
+    ("H3a 锁错(V3+V2)", "v3v2_t05", "dam4sam", "longW", "less"),
+    ("超越 DAM4SAM", "v3_t05", "dam4sam", "correct", "greater"),
+    ("超越 DAM4SAM(V3+V2)", "v3v2_t05", "dam4sam", "correct", "greater"),
+    ("泛化 T03 正确", "v3_t03", "dam4sam_t03", "correct", "noninf"),
+    ("泛化 T03 锁错", "v3_t03", "dam4sam_t03", "longW", "less"),
+    ("泛化 T10 正确", "v3_t10", "dam4sam_t10", "correct", "noninf"),
+    ("泛化 T10 锁错", "v3_t10", "dam4sam_t10", "longW", "less"),
+    ("V0 泛化 T03", "pgif_t03", "tahrelm_t03", "correct", "desc"),
+]
+RNG = np.random.default_rng(20261003)
+
+
+def _eps(path):
+    return json.load(open(path))["episodes"] if os.path.exists(path) else []
+
+
+def load(name):
+    """seed → episode; first occurrence wins; skipped / unscored episodes dropped."""
+    if name == "dam4sam_t03":   # pre-reboot part (91000–06) + post-reboot remainder (91007–19)
+        files = [os.path.join(EO, "paper_it_dam4sam_t03_part1.json")] + _parts("dam4sam_t03b")
+    elif name in REF:
+        files = [os.path.join(EO, f) for f in REF[name]]
+    else:
+        files = _parts(name)
+    out = {}
+    for f in files:
+        for e in _eps(f):
+            if e.get("mis_follow_inst") is None or e.get("skipped"):
+                continue
+            out.setdefault(int(e["episode_seed"]), e)
+    return out or None
+
+
+def _parts(name):
+    full = os.path.join(EO, f"paper_it_{name}.json")
+    if os.path.exists(full):
+        return [full]
+    def part_no(p):
+        m = re.search(r"_p(\d+)\.json", p)
+        assert m is not None, p
+        return m.group(1)
+    parts = sorted(glob.glob(os.path.join(EO, f"paper_it_{name}_p[0-9]*.json*")), key=lambda p: int(part_no(p)))
+    keep = {}
+    for p in parts:   # prefer the final .json of a part over its .partial
+        k = part_no(p)
+        if k not in keep or not p.endswith(".partial"):
+            keep[k] = p
+    if keep:
+        return [keep[k] for k in sorted(keep, key=int)]
+    return [full + ".partial"]
+
+
+def ci_mean(x):
+    x = np.asarray(x, float); x = x[np.isfinite(x)]   # strict ratio is NaN for an episode without scored frames
+    b = x[RNG.integers(0, len(x), (20000, len(x)))].mean(1)
+    return float(x.mean()), float(np.percentile(b, 2.5)), float(np.percentile(b, 97.5))
+
+
+def verdict(kind, lo, hi):
+    if kind == "noninf":
+        return "✓" if lo > -0.05 else "✗"
+    if kind == "less":
+        return "✓" if hi < 0 else "✗"
+    if kind == "greater":
+        return "✓" if lo > 0 else "✗"
+    return "—"
+
+
+def main():
+    ap = argparse.ArgumentParser(); ap.add_argument("--json"); a = ap.parse_args()
+    names = sorted({t[1] for t in TESTS} | {t[2] for t in TESTS})
+    D = {n: load(n) for n in names}
+    res = {"arms": {}, "tests": []}
+    print("| 臂 | n | " + " | ".join(LABEL.values()) + " |\n|---|---|" + "---|" * len(LABEL))
+    for n in names:
+        A = D[n]
+        if A is None:
+            continue
+        m = {k: ci_mean([f(e) for e in A.values()]) for k, f in METRICS.items()}
+        res["arms"][n] = {"n": len(A), **{k: list(v) for k, v in m.items()}}
+        print(f"| {n} | {len(A)} | " + " | ".join(f"{v[0]:.3f} [{v[1]:.3f}, {v[2]:.3f}]" for v in m.values()) + " |")
+    print("\n| 假设 | 臂 − 参照 | 指标 | n 配对 | Δ [95% CI] | 判定 |\n|---|---|---|---|---|---|")
+    tests = []
+    for t in TESTS:   # every correct-ratio hypothesis is reported under all three definitions
+        tests += [(t[0], t[1], t[2], k, t[4]) for k in ("correct", "correct_l", "correct_s")] if t[3] == "correct" else [t]
+    for tid, arm, ref, k, kind in tests:
+        A, B = D[arm], D[ref]
+        if A is None or B is None:
+            print(f"| {tid} | {arm} − {ref} | {LABEL[k]} | — | pending | — |"); continue
+        S = sorted(set(A) & set(B))
+        if len(S) < 3:
+            print(f"| {tid} | {arm} − {ref} | {LABEL[k]} | {len(S)} | pending | — |"); continue
+        d = np.array([METRICS[k](A[s]) - METRICS[k](B[s]) for s in S])
+        mu, lo, hi = ci_mean(d)
+        v = verdict(kind, lo, hi) + ("(暂)" if len(S) < 19 else "")
+        print(f"| {tid} | {arm} − {ref} | {LABEL[k]} | {len(S)} | {mu:+.3f} [{lo:+.3f}, {hi:+.3f}] | {v} |")
+        res["tests"].append({"id": tid, "arm": arm, "ref": ref, "metric": k, "kind": kind, "n": len(S),
+                             "delta": [mu, lo, hi], "verdict": v})
+    if a.json:
+        json.dump(res, open(a.json, "w"), indent=2, ensure_ascii=False)
+
+
+if __name__ == "__main__":
+    main()
+
+exec
+/bin/sh -lc "sed -n '1,260p' carla_uav_tracking/rollout/eval_out/iter_mech.json" in /nvidia/hque/code/cyhe/uav-acot-track
+ succeeded in 0ms:
+[
+ {
+  "arm": "v1_t05",
+  "n_ep": 19,
+  "ticks": 540,
+  "acc_out": 0.4462962962962963,
+  "acc_mem": 0.4351851851851852,
+  "fires": 24,
+  "misgate_mem": 0.08333333333333333,
+  "auroc_iou": 0.5325427275898151,
+  "open_ok": "9/19",
+  "correct_open_ok": 0.9500000000000001,
+  "correct_open_wrong": 0.0
+ },
+ {
+  "arm": "v1nog_t05",
+  "n_ep": 19,
+  "ticks": 394,
+  "acc_out": 0.4720812182741117,
+  "acc_mem": 0.4619289340101523,
+  "fires": 25,
+  "misgate_mem": 0.08,
+  "auroc_iou": 0.656100974497201,
+  "open_ok": "9/19",
+  "correct_open_ok": 0.820236407004476,
+  "correct_open_wrong": 0.0
+ },
+ {
+  "arm": "v2_t05",
+  "n_ep": 19,
+  "ticks": 1412,
+  "acc_out": 0.5814447592067988,
+  "acc_mem": 0.5601983002832861,
+  "fires": 250,
+  "misgate_mem": 0.228,
+  "open_ok": "10/19",
+  "correct_open_ok": 0.9457955541225648,
+  "correct_open_wrong": 0.013483556288024556
+ },
+ {
+  "arm": "v3_t05",
+  "n_ep": 19,
+  "ticks": 1120,
+  "acc_out": 0.3517857142857143,
+  "acc_tah": 0.3392857142857143,
+  "present_tah": 1.0,
+  "acc_dam": 0.3302325581395349,
+  "present_dam": 0.7678571428571429,
+  "acc_lang": 0.24196428571428572,
+  "present_lang": 1.0,
+  "rho_err": 0.7223759858402324,
+  "p_dam_wrong_given_tah_wrong": 0.91651865008881,
+  "both_wrong_same_id": 0.48023255813953486,
+  "tah_eq_dam": 0.7558139534883721,
+  "gates_tah": 230,
+  "misgate_tah": 0.2,
+  "gates_dam": 131,
+  "misgate_dam": 0.22900763358778625,
+  "open_ok": "7/19",
+  "correct_open_ok": 0.9940631890790959,
+  "correct_open_wrong": 0.002906323079690585
+ },
+ {
+  "arm": "v3v2_t05",
+  "n_ep": 19,
+  "ticks": 1235,
+  "acc_out": 0.5384615384615384,
+  "acc_tah": 0.4898785425101215,
+  "present_tah": 1.0,
+  "acc_dam": 0.4430512016718913,
+  "present_dam": 0.7748987854251013,
+  "acc_lang": 0.27530364372469635,
+  "present_lang": 1.0,
+  "rho_err": 0.6890893931412859,
+  "p_dam_wrong_given_tah_wrong": 0.893223819301848,
+  "both_wrong_same_id": 0.3176593521421108,
+  "tah_eq_dam": 0.7063740856844305,
+  "gates_tah": 281,
+  "misgate_tah": 0.16725978647686832,
+  "gates_dam": 223,
+  "misgate_dam": 0.09865470852017937,
+  "open_ok": "8/19",
+  "correct_open_ok": 0.8832380684873181,
+  "correct_open_wrong": 0.034179688076253295
+ },
+ {
+  "arm": "v3ens_t05",
+  "n_ep": 19,
+  "ticks": 988,
+  "acc_out": 0.37449392712550605,
+  "acc_tah": 0.3360323886639676,
+  "present_tah": 1.0,
+  "acc_dam": 0.43302752293577984,
+  "present_dam": 0.5516194331983806,
+  "acc_lang": 0.24392712550607287,
+  "present_lang": 1.0,
+  "rho_err": 0.334834900091402,
+  "p_dam_wrong_given_tah_wrong": 0.6772486772486772,
+  "both_wrong_same_id": 0.22385321100917432,
+  "tah_eq_dam": 0.43302752293577984,
+  "gates_tah": 210,
+  "misgate_tah": 0.18571428571428572,
+  "gates_dam": 179,
+  "misgate_dam": 0.3407821229050279,
+  "open_ok": "9/19",
+  "correct_open_ok": 0.7146347793064115,
+  "correct_open_wrong": 0.14499125163872786
+ },
+ {
+  "arm": "v3com_t05",
+  "n_ep": 19,
+  "ticks": 1505,
+  "acc_out": 0.49700996677740866,
+  "acc_tah": 0.4232558139534884,
+  "present_tah": 1.0,
+  "acc_dam": 0.36,
+  "present_dam": 0.38205980066445183,
+  "acc_lang": 0.3295681063122924,
+  "present_lang": 1.0,
+  "rho_err": 0.6719999501646245,
+  "p_dam_wrong_given_tah_wrong": 0.8828337874659401,
+  "both_wrong_same_id": 0.1808695652173913,
+  "tah_eq_dam": 0.46608695652173915,
+  "gates_tah": 664,
+  "misgate_tah": 0.125,
+  "gates_dam": 81,
+  "misgate_dam": 0.024691358024691357,
+  "open_ok": "10/19",
+  "correct_open_ok": 0.7807301472311441,
+  "correct_open_wrong": 0.14569032018515224
+ },
+ {
+  "arm": "v3gt_t05",
+  "n_ep": 19,
+  "ticks": 1391,
+  "acc_out": 0.5930984902947519,
+  "acc_tah": 0.503235082674335,
+  "present_tah": 1.0,
+  "acc_dam": 0.5273972602739726,
+  "present_dam": 0.41984184040258804,
+  "acc_lang": 0.2314881380301941,
+  "present_lang": 1.0,
+  "rho_err": 0.7228562810710252,
+  "p_dam_wrong_given_tah_wrong": 0.8397212543554007,
+  "both_wrong_same_id": 0.3681506849315068,
+  "tah_eq_dam": 0.8167808219178082,
+  "gates_tah": 360,
+  "misgate_tah": 0.15,
+  "gates_dam": 29,
+  "misgate_dam": 0.3103448275862069,
+  "open_ok": "11/19",
+  "correct_open_ok": 0.9129326386398301,
+  "correct_open_wrong": 0.004316546762589926
+ },
+ {
+  "arm": "v3_t03",
+  "n_ep": 19,
+  "ticks": 1218,
+  "acc_out": 0.5188834154351396,
+  "acc_tah": 0.4827586206896552,
+  "present_tah": 1.0,
+  "acc_dam": 0.41271820448877805,
+  "present_dam": 0.6584564860426929,
+  "acc_lang": 0.22085385878489328,
+  "present_lang": 1.0,
+  "rho_err": 0.772834716290982,
+  "p_dam_wrong_given_tah_wrong": 0.9170305676855895,
+  "both_wrong_same_id": 0.4401496259351621,
+  "tah_eq_dam": 0.8054862842892768,
+  "gates_tah": 216,
+  "misgate_tah": 0.2175925925925926,
+  "gates_dam": 112,
+  "misgate_dam": 0.17857142857142858,
+  "open_ok": "7/19",
+  "correct_open_ok": 0.7047392194933179,
+  "correct_open_wrong": 0.16894977168949774
+ },
+ {
+  "arm": "v3_t10",
+  "n_ep": 20,
+  "ticks": 1267,
+  "acc_out": 0.36306235201262826,
+  "acc_tah": 0.34964483030781374,
+  "present_tah": 1.0,
+  "acc_dam": 0.32389162561576357,
+  "present_dam": 0.6408839779005525,
+  "acc_lang": 0.27940015785319655,
+  "present_lang": 1.0,
+  "rho_err": 0.6788489331609013,
+  "p_dam_wrong_given_tah_wrong": 0.9090909090909091,
+  "both_wrong_same_id": 0.46921182266009853,
+  "tah_eq_dam": 0.7339901477832512,
+  "gates_tah": 257,
+  "misgate_tah": 0.2178988326848249,
+  "gates_dam": 148,
+  "misgate_dam": 0.11486486486486487,
+  "open_ok": "7/20",
+  "correct_open_ok": 0.9928684117325091,
+  "correct_open_wrong": 0.0609308531384667
+ },
+ {
+  "arm": "pgif_t03",
+  "n_ep": 20,
+  "ticks": 1414,
+  "acc_out": 0.43847241867043846,
+  "acc_mem": 0.36775106082036774,
+  "fires": 335,
+  "misgate_mem": 0.1701492537313433,
+  "open_ok": "9/20",
+  "correct_open_ok": 0.8865909901467225,
+  "correct_open_wrong": 0.01649258881945802
+ }
+]
+codex
+一个小发现：`iter_gate.json` 是完整审计账本，roadmap 主表大多就是它的均值四舍五入；`iter_mech.json` 也支撑了新版对“开局准确率”和“逐 tick acc_lang”的区分。接下来我会把 test 条目也抽出来核对，尤其是判定表里的 Δ/CI。
+exec
+/bin/sh -lc "sed -n '620,1040p' carla_uav_tracking/rollout/eval_out/iter_gate.json" in /nvidia/hque/code/cyhe/uav-acot-track
+ succeeded in 0ms:
+    },
+    {
+      "id": "V1 vs commit-only",
+      "arm": "v1_t05",
+      "ref": "v1nog_t05",
+      "metric": "correct_l",
+      "kind": "desc",
+      "n": 19,
+      "delta": [
+        -0.03746912160522546,
+        -0.20552053578409413,
+        0.12227214817668572
+      ],
+      "verdict": "—"
+    },
+    {
+      "id": "V1 vs commit-only",
+      "arm": "v1_t05",
+      "ref": "v1nog_t05",
+      "metric": "correct_s",
+      "kind": "desc",
+      "n": 19,
+      "delta": [
+        0.029383307764648318,
+        -0.05483907250819635,
+        0.11521162805922164
+      ],
+      "verdict": "—"
+    },
+    {
+      "id": "H2b",
+      "arm": "v2_t05",
+      "ref": "pgif",
+      "metric": "longW",
+      "kind": "less",
+      "n": 19,
+      "delta": [
+        4.194736842105263,
+        -2.436973684210526,
+        11.405263157894735
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "H2c 非劣",
+      "arm": "v2_t05",
+      "ref": "pgif",
+      "metric": "correct",
+      "kind": "noninf",
+      "n": 19,
+      "delta": [
+        -0.07148880559922531,
+        -0.2475090129482588,
+        0.09359400068769143
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "H2c 非劣",
+      "arm": "v2_t05",
+      "ref": "pgif",
+      "metric": "correct_l",
+      "kind": "noninf",
+      "n": 19,
+      "delta": [
+        -0.07726048257174095,
+        -0.2561288052916057,
+        0.0886552051618546
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "H2c 非劣",
+      "arm": "v2_t05",
+      "ref": "pgif",
+      "metric": "correct_s",
+      "kind": "noninf",
+      "n": 19,
+      "delta": [
+        -0.07578094747836524,
+        -0.25365436073102327,
+        0.09208169792066054
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "H3a 非劣",
+      "arm": "v3_t05",
+      "ref": "dam4sam",
+      "metric": "correct",
+      "kind": "noninf",
+      "n": 19,
+      "delta": [
+        0.0013852434227999801,
+        -0.20266349165828407,
+        0.1969661500463467
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "H3a 非劣",
+      "arm": "v3_t05",
+      "ref": "dam4sam",
+      "metric": "correct_l",
+      "kind": "noninf",
+      "n": 19,
+      "delta": [
+        -0.41255487521329265,
+        -0.5925839235446806,
+        -0.2334054200889086
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "H3a 非劣",
+      "arm": "v3_t05",
+      "ref": "dam4sam",
+      "metric": "correct_s",
+      "kind": "noninf",
+      "n": 19,
+      "delta": [
+        0.18224703306042725,
+        -0.01289198474098878,
+        0.3712118653214981
+      ],
+      "verdict": "✓"
+    },
+    {
+      "id": "H3a 锁错",
+      "arm": "v3_t05",
+      "ref": "dam4sam",
+      "metric": "longW",
+      "kind": "less",
+      "n": 19,
+      "delta": [
+        -3.905263157894737,
+        -13.694999999999999,
+        6.805526315789451
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "H3a 连续正确",
+      "arm": "v3_t05",
+      "ref": "dam4sam",
+      "metric": "longC",
+      "kind": "desc",
+      "n": 19,
+      "delta": [
+        -1.3842105263157898,
+        -12.24736842105263,
+        10.389605263157886
+      ],
+      "verdict": "—"
+    },
+    {
+      "id": "H3b",
+      "arm": "v3_t05",
+      "ref": "pgif",
+      "metric": "correct",
+      "kind": "greater",
+      "n": 19,
+      "delta": [
+        -0.20759350808911545,
+        -0.4128998676821476,
+        -0.04917794003318295
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "H3b",
+      "arm": "v3_t05",
+      "ref": "pgif",
+      "metric": "correct_l",
+      "kind": "greater",
+      "n": 19,
+      "delta": [
+        -0.20998431967202671,
+        -0.41581986112603414,
+        -0.05181335824866306
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "H3b",
+      "arm": "v3_t05",
+      "ref": "pgif",
+      "metric": "correct_s",
+      "kind": "greater",
+      "n": 19,
+      "delta": [
+        -0.21188266953197946,
+        -0.42085624509033775,
+        -0.05253338570306363
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "V3 > ensemble",
+      "arm": "v3_t05",
+      "ref": "v3ens_t05",
+      "metric": "correct",
+      "kind": "greater",
+      "n": 19,
+      "delta": [
+        -0.046753017349211834,
+        -0.18877132073937056,
+        0.10571693717937605
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "V3 > ensemble",
+      "arm": "v3_t05",
+      "ref": "v3ens_t05",
+      "metric": "correct_l",
+      "kind": "greater",
+      "n": 19,
+      "delta": [
+        -0.046738501666097075,
+        -0.19180998834775,
+        0.10366366509196705
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "V3 > ensemble",
+      "arm": "v3_t05",
+      "ref": "v3ens_t05",
+      "metric": "correct_s",
+      "kind": "greater",
+      "n": 19,
+      "delta": [
+        -0.04640634208443909,
+        -0.18930217140021047,
+        0.10377938478674457
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "V3 > ensemble",
+      "arm": "v3_t05",
+      "ref": "v3ens_t05",
+      "metric": "longW",
+      "kind": "less",
+      "n": 19,
+      "delta": [
+        14.178947368421055,
+        5.147236842105263,
+        24.363289473684198
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "V3 > commit-only",
+      "arm": "v3_t05",
+      "ref": "v3com_t05",
+      "metric": "correct",
+      "kind": "greater",
+      "n": 19,
+      "delta": [
+        -0.11185242912988705,
+        -0.2817033744172779,
+        0.0494746014671831
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "V3 > commit-only",
+      "arm": "v3_t05",
+      "ref": "v3com_t05",
+      "metric": "correct_l",
+      "kind": "greater",
+      "n": 19,
+      "delta": [
+        -0.1076693480884664,
+        -0.2793650045632128,
+        0.0574817509644714
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "V3 > commit-only",
+      "arm": "v3_t05",
+      "ref": "v3com_t05",
+      "metric": "correct_s",
+      "kind": "greater",
+      "n": 19,
+      "delta": [
+        -0.10912765395010361,
+        -0.284312810665088,
+        0.05421143729228164
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "V3 > commit-only",
+      "arm": "v3_t05",
+      "ref": "v3com_t05",
+      "metric": "longW",
+      "kind": "less",
+      "n": 19,
+      "delta": [
+        0.2789473684210531,
+        -9.69473684210526,
+        10.189605263157883
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "V3 vs gateTAH-only",
+      "arm": "v3_t05",
+      "ref": "v3gt_t05",
+      "metric": "longW",
+      "kind": "desc",
+      "n": 19,
+      "delta": [
+        6.300000000000001,
+        -2.5789473684210513,
+        16.39486842105262
+      ],
+      "verdict": "—"
+    },
+    {
+      "id": "H3a 非劣(V3+V2)",
+      "arm": "v3v2_t05",
+      "ref": "dam4sam",
+      "metric": "correct",
+      "kind": "noninf",
+      "n": 19,
+      "delta": [
+        0.024993817961082826,
+        -0.21311846624512623,
+        0.2458127211268966
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "H3a 非劣(V3+V2)",
+      "arm": "v3v2_t05",
+      "ref": "dam4sam",
+      "metric": "correct_l",
+      "kind": "noninf",
+      "n": 19,
+      "delta": [
+        -0.39548034182529146,
+        -0.573726803506881,
+        -0.22059873025773252
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "H3a 非劣(V3+V2)",
+      "arm": "v3v2_t05",
+      "ref": "dam4sam",
+      "metric": "correct_s",
+      "kind": "noninf",
+      "n": 19,
+      "delta": [
+        0.2016403060505088,
+        -0.0031556882139758533,
+        0.41051949747741673
+      ],
+      "verdict": "✓"
+    },
+    {
+      "id": "H3a 锁错(V3+V2)",
+      "arm": "v3v2_t05",
+      "ref": "dam4sam",
+      "metric": "longW",
+      "kind": "less",
+      "n": 19,
+      "delta": [
+        -7.7368421052631575,
+        -19.610657894736843,
+        4.542499999999968
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "超越 DAM4SAM",
+      "arm": "v3_t05",
+      "ref": "dam4sam",
+      "metric": "correct",
+      "kind": "greater",
+      "n": 19,
+      "delta": [
+        0.0013852434227999801,
+        -0.20358806490683753,
+        0.1953163950184404
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "超越 DAM4SAM",
+      "arm": "v3_t05",
+      "ref": "dam4sam",
+      "metric": "correct_l",
+      "kind": "greater",
+      "n": 19,
+      "delta": [
+        -0.41255487521329265,
+        -0.59322520878609,
+        -0.2373692470543259
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "超越 DAM4SAM",
+      "arm": "v3_t05",
+      "ref": "dam4sam",
+      "metric": "correct_s",
+      "kind": "greater",
+      "n": 19,
+      "delta": [
+        0.18224703306042725,
+        -0.009928604403203787,
+        0.3714338674461363
+      ],
+      "verdict": "✗"
+    },
+
+exec
+/bin/sh -lc "sed -n '261,620p' carla_uav_tracking/rollout/eval_out/iter_gate.json" in /nvidia/hque/code/cyhe/uav-acot-track
+ succeeded in 0ms:
+      ],
+      "correct_l": [
+        0.40455181101898663,
+        0.20428771364349635,
+        0.6053956835936737
+      ],
+      "correct_s": [
+        0.3751394615571186,
+        0.16461314576764494,
+        0.5856657773465923
+      ],
+      "longC": [
+        15.059999999999997,
+        5.1,
+        26.770249999999983
+      ],
+      "longW": [
+        17.479999999999997,
+        9.064875,
+        26.714999999999996
+      ]
+    },
+    "v3_t05": {
+      "n": 19,
+      "correct": [
+        0.36806937897420827,
+        0.15934331240946403,
+        0.5785907859078591
+      ],
+      "correct_l": [
+        0.3733928073275042,
+        0.16373723457208622,
+        0.5837764901117004
+      ],
+      "correct_s": [
+        0.3718992555330542,
+        0.1614711329878853,
+        0.5824255713225279
+      ],
+      "longC": [
+        11.9,
+        2.8051315789473685,
+        23.705394736842095
+      ],
+      "longW": [
+        22.78421052631579,
+        12.863026315789474,
+        33.33710526315788
+      ]
+    },
+    "v3_t10": {
+      "n": 20,
+      "correct": [
+        0.38710899864638154,
+        0.18947790032787806,
+        0.5912665785285054
+      ],
+      "correct_l": [
+        0.3900296594624323,
+        0.19277699935210088,
+        0.5991309563219599
+      ],
+      "correct_s": [
+        0.39080193223530696,
+        0.19264819944598338,
+        0.6033240997229917
+      ],
+      "longC": [
+        13.495,
+        6.139875,
+        21.55512499999999
+      ],
+      "longW": [
+        24.32,
+        14.129750000000001,
+        35.11
+      ]
+    },
+    "v3com_t05": {
+      "n": 19,
+      "correct": [
+        0.47992180810409535,
+        0.29358979835785365,
+        0.6666012650794984
+      ],
+      "correct_l": [
+        0.4810621554159706,
+        0.2947918184504386,
+        0.6691254998180274
+      ],
+      "correct_s": [
+        0.48102690948315785,
+        0.2956363756967247,
+        0.6684447033675676
+      ],
+      "longC": [
+        18.157894736842106,
+        9.589473684210526,
+        27.815921052631566
+      ],
+      "longW": [
+        22.505263157894735,
+        13.242105263157896,
+        32.431710526315776
+      ]
+    },
+    "v3ens_t05": {
+      "n": 19,
+      "correct": [
+        0.41482239632342016,
+        0.2628827630124929,
+        0.5752845406384207
+      ],
+      "correct_l": [
+        0.4201313089936013,
+        0.26879480437817244,
+        0.5802373950858529
+      ],
+      "correct_s": [
+        0.41830559761749325,
+        0.26747315226000523,
+        0.5758986919073004
+      ],
+      "longC": [
+        6.557894736842105,
+        3.736842105263158,
+        9.842105263157896
+      ],
+      "longW": [
+        8.605263157894738,
+        5.500000000000001,
+        11.810526315789474
+      ]
+    },
+    "v3gt_t05": {
+      "n": 19,
+      "correct": [
+        0.5303574420599396,
+        0.31659164118565725,
+        0.7369430530419039
+      ],
+      "correct_l": [
+        0.5368254794066576,
+        0.3203041730067163,
+        0.7409947882502167
+      ],
+      "correct_s": [
+        0.5405592473613732,
+        0.3255824671756147,
+        0.7490664409697981
+      ],
+      "longC": [
+        23.794736842105266,
+        11.357894736842105,
+        37.35802631578946
+      ],
+      "longW": [
+        16.48421052631579,
+        8.084078947368422,
+        26.168552631578937
+      ]
+    },
+    "v3v2_t05": {
+      "n": 19,
+      "correct": [
+        0.3916779535124911,
+        0.19270386807642972,
+        0.5924173633665212
+      ],
+      "correct_l": [
+        0.3904673407155054,
+        0.1914833202201852,
+        0.5965694608779191
+      ],
+      "correct_s": [
+        0.39129252852313573,
+        0.1914679058819428,
+        0.5951574120773733
+      ],
+      "longC": [
+        18.178947368421053,
+        7.231578947368422,
+        30.04223684210525
+      ],
+      "longW": [
+        18.95263157894737,
+        9.689342105263156,
+        29.636973684210524
+      ]
+    }
+  },
+  "tests": [
+    {
+      "id": "V0 vs DAM4SAM",
+      "arm": "pgif",
+      "ref": "dam4sam",
+      "metric": "correct",
+      "kind": "greater",
+      "n": 19,
+      "delta": [
+        0.20897875151191544,
+        -0.002937423859963013,
+        0.4140863789401025
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "V0 vs DAM4SAM",
+      "arm": "pgif",
+      "ref": "dam4sam",
+      "metric": "correct_l",
+      "kind": "greater",
+      "n": 19,
+      "delta": [
+        -0.20257055554126596,
+        -0.384721251850549,
+        -0.026780547652999122
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "V0 vs DAM4SAM",
+      "arm": "pgif",
+      "ref": "dam4sam",
+      "metric": "correct_s",
+      "kind": "greater",
+      "n": 19,
+      "delta": [
+        0.3941297025924067,
+        0.16432936377940005,
+        0.6046546404136106
+      ],
+      "verdict": "✓"
+    },
+    {
+      "id": "V0 vs DAM4SAM",
+      "arm": "pgif",
+      "ref": "dam4sam",
+      "metric": "longC",
+      "kind": "greater",
+      "n": 19,
+      "delta": [
+        7.968421052631579,
+        -2.226447368421053,
+        18.215789473684207
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "V0 vs DAM4SAM",
+      "arm": "pgif",
+      "ref": "dam4sam",
+      "metric": "longW",
+      "kind": "less",
+      "n": 19,
+      "delta": [
+        -11.263157894736842,
+        -23.431578947368422,
+        0.6736842105263159
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "H1a 非劣",
+      "arm": "v1_t05",
+      "ref": "dam4sam",
+      "metric": "correct",
+      "kind": "noninf",
+      "n": 19,
+      "delta": [
+        0.0833158644485917,
+        -0.1503866425343505,
+        0.30641630894830213
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "H1a 非劣",
+      "arm": "v1_t05",
+      "ref": "dam4sam",
+      "metric": "correct_l",
+      "kind": "noninf",
+      "n": 19,
+      "delta": [
+        -0.11513190334379711,
+        -0.28049633234979315,
+        0.030443194671264093
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "H1a 非劣",
+      "arm": "v1_t05",
+      "ref": "dam4sam",
+      "metric": "correct_s",
+      "kind": "noninf",
+      "n": 19,
+      "delta": [
+        -0.006953687979061397,
+        -0.1376736748985927,
+        0.1104720671863631
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "H1b-all",
+      "arm": "v1_t05",
+      "ref": "dam4sam",
+      "metric": "longW",
+      "kind": "less",
+      "n": 19,
+      "delta": [
+        -9.410526315789474,
+        -22.05828947368421,
+        3.447368421052631
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "H1c(探索)",
+      "arm": "v1_t05",
+      "ref": "dam4sam",
+      "metric": "longC",
+      "kind": "desc",
+      "n": 19,
+      "delta": [
+        6.09473684210526,
+        -5.394736842105263,
+        18.300131578947358
+      ],
+      "verdict": "—"
+    },
+    {
+      "id": "V1 vs commit-only",
+      "arm": "v1_t05",
+      "ref": "v1nog_t05",
+      "metric": "longW",
+      "kind": "less",
+      "n": 19,
+      "delta": [
+        -2.6999999999999993,
+        -16.47921052631579,
+        10.189473684210526
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "V1 vs commit-only",
+      "arm": "v1_t05",
+      "ref": "v1nog_t05",
+      "metric": "correct",
+      "kind": "desc",
+      "n": 19,
+      "delta": [
+        0.061466965103142965,
+        -0.18014190767019939,
+        0.3032058058759611
+      ],
+      "verdict": "—"
+    },
+
+exec
+/bin/sh -lc "sed -n '101,110p' acot_note/1001_innovation-design.md && sed -n '112,156p' acot_note/1001_innovation-design.md" in /nvidia/hque/code/cyhe/uav-acot-track
+ succeeded in 0ms:
+### 指标口径(三项客观指标)
+| 指标 | 定义 | 来源 / 分辨率 |
+|---|---|---|
+| **正确锁定比例** ↑ | 目标在画面内的帧中,**承诺身份**(K=5 滞回)为真目标的帧比例;模型弃权(本帧不给任何选择)时沿用上一承诺——与另两项指标同一"锁定"定义 | scorer,逐帧 10 Hz(1 − `mis_follow_sustained`)。**2026-10-02 口径修正**见下方说明 |
+| **最长连续正确锁定时长** ↑ | 每个 episode 内连续锁定真目标的最长时长;目标出画即断开(偏保守) | 本轮各臂由决策 tick 日志计算(1 tick = 0.6s,经步数对齐到种子,`rollout/tick_align.py`);scorer 已新增逐帧字段 `max_correct_run_s`,此后实验直接记录 |
+| **最长锁错时长** ↓ | 每个 episode 内承诺身份(K=5 滞回)持续为错误车辆的最长时长 | scorer,逐帧(`max_wrong_run_s`) |
+
+> **口径修正(2026-10-02)**:此前正确锁定比例取 1 − `mis_follow_inst`,scorer 只把"选了错车"记为错,**弃权帧被计为正确**。会弃权的只有 DAM4SAM(SAM2 掩码为空或 160 px 关联门内无候选,约占目标在画面帧的 60%),其余各臂每帧都给出选择,三种口径相差 ≤ 0.01。DAM4SAM:原口径 0.786 → 承诺口径 0.367 → 严格口径(弃权算错)0.190。这一修正发生在看到 DAM4SAM 的弃权现象之后,属于**结果后修正**:主口径改为承诺口径,因为它与最长连续正确/最长锁错是同一"锁定"定义;1003 的预注册判定仍只按原口径(见 `1003_iteration_roadmap.md`)。三种口径同时报告:§5.5 图中 ◇ 标出原口径值,全部数字见 `eval_out/deploy_compare.json`(`correct_l` / `correct_s`)与 `rollout/iter_gate.py`。细节:episode 开头尚无承诺时的弃权帧在承诺口径下不计为错,对所有臂同样偏宽。
+
+一致性校验:tick 日志算出的正确比例与 scorer 逐帧值相关 r = 0.998–1.000;最长锁错 r = 0.87–0.99(差异来自 scorer 用滞回后的承诺身份)。全部数字:`rollout/pgif_three_metrics.py` → `eval_out/pgif_three_metrics.json`;配对 bootstrap 95% CI。
+### 5.1 主结果(TAHRelM,Town05,n=19 同种子配对)
+
+| 臂 | 正确锁定比例 ↑ | 最长连续正确锁定 ↑(均值 / 中位) | 最长锁错 ↓(均值 / 中位) |
+|---|---|---|---|
+| 无纠偏 | 0.272 | 5.9s / 1.8s | 15.7s / 11.6s |
+| **PGIF** | **0.613** | **30.3s / 21.0s** | 10.8s / **0.8s** |
+| 相对无纠偏 Δ [95% CI] | **+0.341 [+0.177,+0.512]** | **+24.4s [+12.0,+37.7]** | −5.0s [−14.0,+5.1](不显著) |
+| GT 漂移检测上界(参照) | 0.721 | 未记录 | 1.9s / 2.2s |
+
+- 正确锁定比例与最长连续正确锁定均**显著**提升;PGIF 收回 GT 漂移检测上界在正确锁定比例上增益的 **76%**(0.341/0.449),且完全 GT-free **[M]**。
+- 最长锁错:中位数 11.6s→0.8s(多数 episode 已无长时间锁错),但均值的下降**不显著**——长尾来自冷启动即锁错的 episode(见下)。
+- 门控行为:改写占 tick 20%;改写中 65% 把选择拉到真目标、11% 拉离 **[M]**。
+
+**冷启动分层(2026-10-02 更正)**:按各臂日志中首个可标注 tick 是否锁定真目标分层。此前版本的 tick 日志与种子错位(跳过的 episode 不触发策略 reset),曾错误得出"冷启动锁错子集也提升 0.365→0.521";按步数对齐后的正确结果:
+
+| 设定 | 初始锁定正确:正确锁定比例(无纠偏→PGIF,Δ [CI]) | 初始锁定错误:正确锁定比例(Δ [CI]) |
+|---|---|---|
+| Town05·TAHRelM | n=12:0.383→**0.961**,**+0.578 [+0.433,+0.724]** | n=7:0.082→0.017,−0.065 [−0.127,−0.011] |
+| Town10HD·TAHRelM | n=9:0.485→**0.899**,**+0.414 [+0.229,+0.597]** | n=11:0.250→0.094,−0.156 [−0.355,+0.056] |
+| Town05·reid | n=12:0.545→**0.802**,**+0.257 [+0.085,+0.443]** | n=7:0.152→0.008,−0.144 [−0.183,−0.108] |
+
+→ **初始锁定正确时,PGIF 几乎消除了后续漂移**(三个设定均显著);**初始锁定错误时,PGIF 会忠实地坚持错误身份**,略有恶化——这正是持续性机制的反面。PGIF 的整体增益上限由冷启动(语言初锁)正确率决定,这是下一步最重要的改进方向 **[M]**。
+
+### 5.2 组成部分消融 = 命题 2 的三条预测(Town05,n=19 配对)
+
+| 变体 | 正确锁定比例 | 最长连续正确锁定(均值) | 最长锁错(均值) | **PGIF − 变体**:正确比例 / 最长正确 / 最长锁错 [CI] | 预测 |
+|---|---|---|---|---|---|
+| 未回火贝叶斯滤波 | **0.074** | 2.9s | 26.9s | +0.540 [+0.309,+0.752] / +27.3s [+12.0,+43.6] / −16.1s [−24.8,−8.0] | (a) ✅ |
+| 等权驻留(无置信加权) | 0.376 | 19.5s | 17.0s | +0.237 [+0.058,+0.425] / +10.7s [−2.3,+23.2] / −6.2s [−12.2,−1.0] | (b) ✅ |
+| PGIF 去门控 | 0.396 | 14.7s | 20.0s | +0.217 [+0.034,+0.401] / +15.6s [−0.9,+31.9] / −9.3s [−17.8,−1.3] | (c) ✅ |
+| **PGIF** | **0.613** | **30.3s** | **10.8s** | — | — |
+
+→ PGIF 对三个变体在正确锁定比例与最长锁错上均显著更好;最长连续正确锁定对等权驻留与去门控的差为正但 CI 略含 0。未回火贝叶斯在三项指标上都比不纠偏更差(正确比例 Δ−0.198 [−0.338,−0.076],最长锁错 +11.1s [+2.6,+20.5]),直接印证"自更新使误差自相关" **[M]**。
+
+### 5.3 泛化(同一冻结超参)
+
+| 设定 | n | 正确锁定比例(基线→PGIF,Δ [CI]) | 最长连续正确锁定(均值,Δ [CI]) | 最长锁错(均值,Δ [CI]) |
+|---|---|---|---|---|
+| TAHRelM · Town05(主) | 19 | 0.272→0.613,**+0.341 [+0.177,+0.512]** | 5.9→30.3s,**+24.4s [+12.0,+37.7]** | 15.7→10.8s,−5.0s [−14.0,+5.1] |
+| TAHRelM · **Town10HD**(跨场景) | 20 | 0.356→0.456,+0.100 [−0.087,+0.287] | 12.7→21.4s,+8.7s [−4.4,+22.0] | 16.3→16.1s,−0.2s [−7.9,+8.1] |
+| **reid gallery**(跨记忆)· Town05 | 19 | 0.400→0.510,+0.110 [−0.025,+0.262] | 9.7→19.1s,+9.4s [−1.7,+22.5] | 11.4→12.1s,+0.7s [−5.6,+7.8] |
+| 三设定合并(分层配对 bootstrap) | 58 | **+0.182 [+0.086,+0.280]** | **+14.1s [+7.0,+21.6]** | −1.5s [−6.0,+3.3] |
+
+- **稳健结论**:合并 58 个 episode 时,正确锁定比例与最长连续正确锁定**均显著**提升;单设定中仅 Town05·TAHRelM 显著。最长锁错在各设定均**未显著改善**——由冷启动锁错 episode 主导(§5.1 分层)。
+- 跨场景/跨记忆增益较小的主要原因是冷启动锁错比例更高(Town10HD 20 个中 11 个);reid 另有"gallery 只存 committed 身份 = 自带一层门控"的原因(D4)。
+
+exec
+/bin/sh -lc "sed -n '160,210p' acot_note/1001_innovation-design.md && sed -n '200,210p' acot_note/1001_innovation-design.md" in /nvidia/hque/code/cyhe/uav-acot-track
+ succeeded in 0ms:
+
+| ID 碎片化/互换率 p(每 tick,tick=0.6s) | 0 | 0.005 | 0.01 | 0.02 | 0.05 | 0.1 |
+|---|---|---|---|---|---|---|
+| 记忆原始选择 | 0.332 | 0.332 | 0.332 | 0.332 | 0.332 | 0.332 |
+| PGIF(开环,无门控反馈) | 0.402 | 0.391 | 0.385 | 0.384 | 0.354 | 0.339 |
+| 增益 | +7.0pp | +5.9 | +5.3 | +5.2 | +2.2 | +0.7 |
+
+→ p≤0.02/tick(每目标约每 30s 至多一次关联错误)保留约 3/4 增益;p=0.1 时基本消失。PGIF 需要中等质量的持久关联层 **[M][L]**。开环回放中回火与等权驻留持平(0.402 vs 0.407),二者闭环差异(§5.2)来自门控对后续观测的反馈,开环无法体现。
+
+### 5.5 全部 WHICH 模块在可部署设定下的对比(2026-10-02 重跑,替代旧版 gt-seeded 对比)
+
+> **"deployable"的确切含义(措辞更正,2026-10-02)**:指**身份决策链路不使用真值**——不告诉模型哪辆是目标,身份记忆/轨迹状态/初始化只来自模型自己的选择(冷启动用语言)。但以下两项仍由仿真理想提供,对所有臂相同:① 候选框(由真值车辆位置投影 = 理想检测器 + 理想持久关联,`candidates.py::build_candidates`);② WHERE 使用被承诺车辆的世界坐标(`policy.py::_committed_world`)。因此此前"决策时不使用任何真值"的表述过强,应为"身份决策不使用真值,感知与定位假设理想"。
+> **为什么重跑**:旧版对比(`907_baseline_compare_906.md` 图 1,2026-09-06)中的 8 个方法都运行在 **gt-seeded** 设定——身份记忆/轨迹状态每一步用真值目标刷新,等于给模型一条作弊通道,不能作为方法比较。本节所有臂(含外部 baseline)均为 **deployable**:冷启动用语言选车,之后只用模型自己的承诺身份更新记忆;CARLA 在线闭环,同种子 91000–19(19 个计分 episode),三项指标由新版 scorer 逐帧记录(`max_correct_run_s` 与 `max_wrong_run_s` 均以承诺身份为准,目标出画即断开)。外部方法的可部署化:OC-SORT/DeepSORT 轨迹状态改为用自己关联到的车更新,DAM4SAM 改为用语言选中车辆的框初始化(`policy.py` `_assoc_select` / `_dam4sam_select` 的 `init_slot`)。批量脚本 `runs/asd/deploy_all/chains.sh`;统计 `rollout/deploy_compare.py` → `eval_out/deploy_compare.json`。
+
+![deployable comparison](figs/fig_deploy_compare.png)
+
+*图 2 · 全部模块在可部署设定下的三项指标(误差线 = 种子 bootstrap 95% CI;橙色虚线 = PGIF 均值;正确锁定比例为承诺口径,◇ = DAM4SAM 的原口径值,其弃权帧被计为正确)。源 `figs/fig_deploy_compare.py`。*
+
+| 方法 | 类别 | 正确锁定比例(承诺)↑ [95% CI] | 最长连续正确锁定 ↑(均值 / 中位,s) | 最长锁错 ↓(均值 / 中位,s) | **PGIF − 该方法**(配对 Δ [95% CI]):正确比例 / 最长正确 / 最长锁错 |
+|---|---|---|---|---|---|
+| xattn(单帧语言) | 语言基线 | 0.271 [0.20, 0.35] | 2.2 / 1.8 | 10.0 / 9.8 | +0.30 [+0.12, +0.48] / +19.01 [+9.27, +29.62] / +5.44 [-3.07, +14.80] |
+| l4(reid+置信门) | 我们的 | 0.429 [0.30, 0.56] | 9.2 / 2.8 | 7.9 / 5.7 | +0.15 [-0.02, +0.31] / +12.04 [+4.69, +20.21] / +7.50 [-0.53, +16.74] |
+| l5(+时序EMA) | 我们的 | 0.372 [0.21, 0.54] | 6.1 / 2.4 | 12.8 / 9.6 | +0.20 [+0.04, +0.39] / +15.19 [+6.83, +24.86] / +2.58 [-4.89, +10.59] |
+| borrow#1(+运动共识) | 我们的 | 0.450 [0.27, 0.63] | 11.1 / 3.2 | 8.8 / 8.2 | +0.13 [+0.00, +0.27] / +10.18 [+3.71, +18.04] / +6.61 [-0.61, +14.51] |
+| TAH+DAgger | 我们的 | 0.261 [0.16, 0.37] | 6.8 / 2.4 | 14.6 / 9.3 | +0.32 [+0.15, +0.49] / +14.47 [+6.44, +23.52] / +0.87 [-6.56, +9.13] |
+| TAHRelM 无纠偏 | 我们的 | 0.320 [0.21, 0.44] | 8.6 / 5.2 | 15.1 / 13.1 | +0.26 [+0.08, +0.43] / +12.68 [+3.29, +23.44] / +0.29 [-7.47, +9.35] |
+| OC-SORT | 外部 | 0.229 [0.16, 0.31] | 4.9 / 3.6 | 14.0 / 12.5 | +0.35 [+0.15, +0.54] / +16.38 [+7.06, +26.35] / +1.38 [-8.16, +12.08] |
+| DeepSORT | 外部 | 0.286 [0.17, 0.42] | 8.0 / 4.2 | 17.0 / 12.7 | +0.29 [+0.09, +0.50] / +13.29 [+2.52, +24.43] / -1.60 [-10.62, +8.42] |
+| DAM4SAM | 外部 | 0.367 [0.19, 0.55] | 13.3 / 6.4 | 26.7 / 21.6 | +0.21 [-0.00, +0.41] / +7.97 [-2.28, +18.43] / -11.26 [-23.19, +0.65] |
+| **TAHRelM+PGIF(ours)** | **ours** | 0.576 [0.37, 0.78] | 21.3 / 11.5 | 15.4 / 0.9 | — |
+
+**读法(如实,承诺口径)**:
+- **PGIF vs 我们的其他模块与 OC-SORT/DeepSORT**:正确锁定比例与最长连续正确锁定上,PGIF 对 xattn、l5、TAH+DAgger、TAHRelM 无纠偏、OC-SORT、DeepSORT 均**显著更好**(CI 不含 0);对 borrow#1 正确比例 +0.13 [+0.00, +0.27]、对 l4 +0.15 [−0.02, +0.31] 处于显著边界,最长连续正确均显著更好。**最长锁错上 PGIF 与它们都无显著差异**,l4(7.9s)、borrow#1(8.8s)的均值低于 PGIF(15.4s)——PGIF 的中位数仅 0.9s,均值被少数冷启动锁错的长尾拉高。
+- **DAM4SAM(外部 SOTA,SAM2-L 记忆)**:三项指标上 PGIF 方向均更好——正确锁定比例 +0.21 [−0.00, +0.41](边界)、最长连续正确 +8.0s [−2.3, +18.4]、最长锁错 −11.3s [−23.2, +0.7](均不显著)。DAM4SAM 的最长锁错均值 26.7s、中位 21.6s,为所有方法中最长——"粘滞记忆":锁错后长期不改。**此前"DAM4SAM 正确比例显著高于 PGIF(0.786 vs 0.583)"的结论来自旧口径把 DAM4SAM 的弃权帧(约 60%)算作正确,已撤回**;严格口径(弃权算错)下 PGIF 显著更好(+0.39 [+0.16, +0.61])。仍不声称"全面显著优于",n=19 下只有严格口径达到显著。
+- **作弊设定严重高估了外部方法**:OC-SORT/DeepSORT 在 gt-seeded 下正确比例约 0.75,可部署下只有 0.23/0.29。
+- **与 §5.1 的差异**:§5.1 中 PGIF 为 0.613,来自 10-01 的 PoC 批次(开局锁对 12/19);本节 0.576 来自 10-02 的同配置重跑(开局锁对 11/19)。两者差异属运行间方差,主要来自开局语言选择。
+- 全部 10 个臂均已完成(20 episode,19 计分,0 报错)。重算:`rollout/deploy_compare.py` → `figs/fig_deploy_compare.py` → `figs/update_s55_table.py`。
+
+**后续(1003 迭代,已完成)**:把 PGIF 包在 DAM4SAM 外层(V1)、异构记忆融合(V3)等版本的闭环结果、门控判定与泛化实验见 `1003_iteration_roadmap.md`。
+
+## 6. 贡献(范围已按 Codex R3/R4 收窄)
+
+> **核心 claim**:在**持久 tracklet 接口下**,TAHRelM 单场景(Town05)在线闭环 PoC 已闭合:正确锁定比例与最长连续正确锁定显著提升,三条机理预测全部成立。泛化 claim:三设定合并(n=58)时正确锁定比例与最长连续正确锁定均显著;最长锁错未显著改善(冷启动锁错主导)。
+
+1. **问题化**:把闭环指代重捕获中的身份失效刻画为自更新记忆的确认偏差;实证"自置信弱有信息、外观/语言参考在漂移时刻≈随机、tracklet 持续性携带信号"(§2)。
+2. **方法 PGIF**:尺度无关秩置信加权 + 按误差相关时间回火的 tracklet 证据累积 + 后验门控更新/承诺;无训练参数(两个冻结超参 λ、W);对记忆只需三个钩子,对环境需一个持久关联层。
+3. **理论**:命题 1(确认偏差 → 误差持续)+ 命题 2(相关误差下必须回火)给出三条可检验预测,闭环全部成立(§5.2)。
+4. **实证**:GT-free 收回 oracle 漂移检测上界 76% 的正确锁定比例增益;初始锁定正确时把正确锁定比例提到 0.96/0.90/0.80(三设定);锚/语言纠偏作为机理清楚的负结果;泛化与关联噪声敏感度曲线。
+5. **载体**:语言指定空中重捕获任务 + 连续指标方法学(沿用前期工作)。
+
+## 7. 与相关工作
+## 6. 贡献(范围已按 Codex R3/R4 收窄)
+
+> **核心 claim**:在**持久 tracklet 接口下**,TAHRelM 单场景(Town05)在线闭环 PoC 已闭合:正确锁定比例与最长连续正确锁定显著提升,三条机理预测全部成立。泛化 claim:三设定合并(n=58)时正确锁定比例与最长连续正确锁定均显著;最长锁错未显著改善(冷启动锁错主导)。
+
+1. **问题化**:把闭环指代重捕获中的身份失效刻画为自更新记忆的确认偏差;实证"自置信弱有信息、外观/语言参考在漂移时刻≈随机、tracklet 持续性携带信号"(§2)。
+2. **方法 PGIF**:尺度无关秩置信加权 + 按误差相关时间回火的 tracklet 证据累积 + 后验门控更新/承诺;无训练参数(两个冻结超参 λ、W);对记忆只需三个钩子,对环境需一个持久关联层。
+3. **理论**:命题 1(确认偏差 → 误差持续)+ 命题 2(相关误差下必须回火)给出三条可检验预测,闭环全部成立(§5.2)。
+4. **实证**:GT-free 收回 oracle 漂移检测上界 76% 的正确锁定比例增益;初始锁定正确时把正确锁定比例提到 0.96/0.90/0.80(三设定);锚/语言纠偏作为机理清楚的负结果;泛化与关联噪声敏感度曲线。
+5. **载体**:语言指定空中重捕获任务 + 连续指标方法学(沿用前期工作)。
+
+## 7. 与相关工作
+
+codex
+现在主要剩两个审稿判断：一是有没有“新过度声称”，二是是否仍有足以构成 MAJOR 的不诚实或数据不符。我会特别小心地区分 1003 路线报告和 1001 原报告，因为用户要求本轮对象是前者作为 1003 诚实记录是否合格。
+exec
+/bin/sh -lc 'rg -n "融合/PGIF|PGIF 家族|优于 DAM4SAM|优于 V0|方法成功|因果|导致|同步|不够 SCI|单靠这些|全部预注册|判定规则|显著|全面显著|泛化 claim|核心 claim" acot_note/1003_iteration_roadmap.md acot_note/1001_innovation-design.md' in /nvidia/hque/code/cyhe/uav-acot-track
+exec
+/bin/sh -lc "sed -n '1040,1320p' carla_uav_tracking/rollout/eval_out/iter_gate.json" in /nvidia/hque/code/cyhe/uav-acot-track
+ succeeded in 0ms:
+    },
+    {
+      "id": "超越 DAM4SAM(V3+V2)",
+      "arm": "v3v2_t05",
+      "ref": "dam4sam",
+      "metric": "correct",
+      "kind": "greater",
+      "n": 19,
+      "delta": [
+        0.024993817961082826,
+        -0.21073269824469223,
+        0.2476000957082489
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "超越 DAM4SAM(V3+V2)",
+      "arm": "v3v2_t05",
+      "ref": "dam4sam",
+      "metric": "correct_l",
+      "kind": "greater",
+      "n": 19,
+      "delta": [
+        -0.39548034182529146,
+        -0.5772884637272949,
+        -0.22359761946733403
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "超越 DAM4SAM(V3+V2)",
+      "arm": "v3v2_t05",
+      "ref": "dam4sam",
+      "metric": "correct_s",
+      "kind": "greater",
+      "n": 19,
+      "delta": [
+        0.2016403060505088,
+        -0.005738234743790771,
+        0.41267202369721023
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "泛化 T03 正确",
+      "arm": "v3_t03",
+      "ref": "dam4sam_t03",
+      "metric": "correct",
+      "kind": "noninf",
+      "n": 20,
+      "delta": [
+        0.14380606003516466,
+        0.013124222122766635,
+        0.30039969925915355
+      ],
+      "verdict": "✓"
+    },
+    {
+      "id": "泛化 T03 正确",
+      "arm": "v3_t03",
+      "ref": "dam4sam_t03",
+      "metric": "correct_l",
+      "kind": "noninf",
+      "n": 20,
+      "delta": [
+        -0.3276241184443921,
+        -0.48656090300110855,
+        -0.1687542517441612
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "泛化 T03 正确",
+      "arm": "v3_t03",
+      "ref": "dam4sam_t03",
+      "metric": "correct_s",
+      "kind": "noninf",
+      "n": 20,
+      "delta": [
+        0.21230943387845844,
+        0.06830290000747338,
+        0.3712094173454615
+      ],
+      "verdict": "✓"
+    },
+    {
+      "id": "泛化 T03 锁错",
+      "arm": "v3_t03",
+      "ref": "dam4sam_t03",
+      "metric": "longW",
+      "kind": "less",
+      "n": 20,
+      "delta": [
+        -11.020000000000001,
+        -20.134999999999998,
+        -2.6648750000000128
+      ],
+      "verdict": "✓"
+    },
+    {
+      "id": "泛化 T10 正确",
+      "arm": "v3_t10",
+      "ref": "dam4sam_t10",
+      "metric": "correct",
+      "kind": "noninf",
+      "n": 20,
+      "delta": [
+        0.08851159487925439,
+        -0.07182789701508532,
+        0.2587490955269664
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "泛化 T10 正确",
+      "arm": "v3_t10",
+      "ref": "dam4sam_t10",
+      "metric": "correct_l",
+      "kind": "noninf",
+      "n": 20,
+      "delta": [
+        -0.20784766637222205,
+        -0.4465124631039947,
+        0.04626966770076796
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "泛化 T10 正确",
+      "arm": "v3_t10",
+      "ref": "dam4sam_t10",
+      "metric": "correct_s",
+      "kind": "noninf",
+      "n": 20,
+      "delta": [
+        0.2879111056852839,
+        0.13445574088351323,
+        0.4585280165374938
+      ],
+      "verdict": "✓"
+    },
+    {
+      "id": "泛化 T10 锁错",
+      "arm": "v3_t10",
+      "ref": "dam4sam_t10",
+      "metric": "longW",
+      "kind": "less",
+      "n": 20,
+      "delta": [
+        1.7899999999999998,
+        -5.290249999999999,
+        9.249999999999998
+      ],
+      "verdict": "✗"
+    },
+    {
+      "id": "V0 泛化 T03",
+      "arm": "pgif_t03",
+      "ref": "tahrelm_t03",
+      "metric": "correct",
+      "kind": "desc",
+      "n": 20,
+      "delta": [
+        0.09612474294501268,
+        -0.039730516796417564,
+        0.24618559474386176
+      ],
+      "verdict": "—"
+    },
+    {
+      "id": "V0 泛化 T03",
+      "arm": "pgif_t03",
+      "ref": "tahrelm_t03",
+      "metric": "correct_l",
+      "kind": "desc",
+      "n": 20,
+      "delta": [
+        0.10890673681365234,
+        -0.024636753016549096,
+        0.2596649234109139
+      ],
+      "verdict": "—"
+    },
+    {
+      "id": "V0 泛化 T03",
+      "arm": "pgif_t03",
+      "ref": "tahrelm_t03",
+      "metric": "correct_s",
+      "kind": "desc",
+      "n": 20,
+      "delta": [
+        0.11149509979826928,
+        -0.022708432375633674,
+        0.2612902419640279
+      ],
+      "verdict": "—"
+    }
+  ]
+}
+ succeeded in 9ms:
+acot_note/1001_innovation-design.md:30:→ 漂移纠正是 deployable 的主杠杆(GT 检测即可收回大部分差距),但所有 GT-free 修补均无显著效果 **[M]**。
+acot_note/1001_innovation-design.md:84:- (b) 以 λ≈1−1/τ 回火的置信加权累积,有效样本量约 T/τ,只有错误持续显著超过 τ 才翻转 → **回火 + 置信加权 > 等权驻留**;
+acot_note/1001_innovation-design.md:99:实现:`policy.py --gallery-seed {gt, committed}`。TAHRelM 记忆更新源 `us = true_idx if gallery_seed != "committed" else _pred_slot`(`policy.py:636`);reid gallery 同理(`policy.py:299`);committed 模式冷启动用语言 grounding(`policy.py:594` 起)。两种在线设定的闭环、因果性(只用过去信息)与打分完全相同,GT 只在环境侧用于打分;区别仅在于 gt-seeded 额外把 GT 喂给身份记忆。gt-seeded 下 PGIF 只门控控制承诺(记忆按定义仍由 GT 更新,`policy.py:709`)。
+acot_note/1001_innovation-design.md:118:| 相对无纠偏 Δ [95% CI] | **+0.341 [+0.177,+0.512]** | **+24.4s [+12.0,+37.7]** | −5.0s [−14.0,+5.1](不显著) |
+acot_note/1001_innovation-design.md:121:- 正确锁定比例与最长连续正确锁定均**显著**提升;PGIF 收回 GT 漂移检测上界在正确锁定比例上增益的 **76%**(0.341/0.449),且完全 GT-free **[M]**。
+acot_note/1001_innovation-design.md:122:- 最长锁错:中位数 11.6s→0.8s(多数 episode 已无长时间锁错),但均值的下降**不显著**——长尾来自冷启动即锁错的 episode(见下)。
+acot_note/1001_innovation-design.md:133:→ **初始锁定正确时,PGIF 几乎消除了后续漂移**(三个设定均显著);**初始锁定错误时,PGIF 会忠实地坚持错误身份**,略有恶化——这正是持续性机制的反面。PGIF 的整体增益上限由冷启动(语言初锁)正确率决定,这是下一步最重要的改进方向 **[M]**。
+acot_note/1001_innovation-design.md:144:→ PGIF 对三个变体在正确锁定比例与最长锁错上均显著更好;最长连续正确锁定对等权驻留与去门控的差为正但 CI 略含 0。未回火贝叶斯在三项指标上都比不纠偏更差(正确比例 Δ−0.198 [−0.338,−0.076],最长锁错 +11.1s [+2.6,+20.5]),直接印证"自更新使误差自相关" **[M]**。
+acot_note/1001_innovation-design.md:155:- **稳健结论**:合并 58 个 episode 时,正确锁定比例与最长连续正确锁定**均显著**提升;单设定中仅 Town05·TAHRelM 显著。最长锁错在各设定均**未显著改善**——由冷启动锁错 episode 主导(§5.1 分层)。
+acot_note/1001_innovation-design.md:192:- **PGIF vs 我们的其他模块与 OC-SORT/DeepSORT**:正确锁定比例与最长连续正确锁定上,PGIF 对 xattn、l5、TAH+DAgger、TAHRelM 无纠偏、OC-SORT、DeepSORT 均**显著更好**(CI 不含 0);对 borrow#1 正确比例 +0.13 [+0.00, +0.27]、对 l4 +0.15 [−0.02, +0.31] 处于显著边界,最长连续正确均显著更好。**最长锁错上 PGIF 与它们都无显著差异**,l4(7.9s)、borrow#1(8.8s)的均值低于 PGIF(15.4s)——PGIF 的中位数仅 0.9s,均值被少数冷启动锁错的长尾拉高。
+acot_note/1001_innovation-design.md:193:- **DAM4SAM(外部 SOTA,SAM2-L 记忆)**:三项指标上 PGIF 方向均更好——正确锁定比例 +0.21 [−0.00, +0.41](边界)、最长连续正确 +8.0s [−2.3, +18.4]、最长锁错 −11.3s [−23.2, +0.7](均不显著)。DAM4SAM 的最长锁错均值 26.7s、中位 21.6s,为所有方法中最长——"粘滞记忆":锁错后长期不改。**此前"DAM4SAM 正确比例显著高于 PGIF(0.786 vs 0.583)"的结论来自旧口径把 DAM4SAM 的弃权帧(约 60%)算作正确,已撤回**;严格口径(弃权算错)下 PGIF 显著更好(+0.39 [+0.16, +0.61])。仍不声称"全面显著优于",n=19 下只有严格口径达到显著。
+acot_note/1001_innovation-design.md:202:> **核心 claim**:在**持久 tracklet 接口下**,TAHRelM 单场景(Town05)在线闭环 PoC 已闭合:正确锁定比例与最长连续正确锁定显著提升,三条机理预测全部成立。泛化 claim:三设定合并(n=58)时正确锁定比例与最长连续正确锁定均显著;最长锁错未显著改善(冷启动锁错主导)。
+acot_note/1001_innovation-design.md:222:- **[L2] 冷启动锁错**:语言初锁即错时没有正确历史可回退,PGIF 反而会坚持错误身份(分层见 §5.1);这是最长锁错未显著改善的主因,也是最主要的改进方向。
+acot_note/1001_innovation-design.md:223:- **[L3] 统计功效**:每臂 n≈19、单模拟器;最长锁错均值未显著;本轮最长连续正确锁定为 tick 级(0.6s)估计,上界臂与 09-06 臂未记录(scorer 已补逐帧字段)。
+acot_note/1001_innovation-design.md:239:| v1/v2 ASD | "记忆自置信不可辨识",用冻结外观锚 + 语言规格的多假设 CUSUM 纠偏 | 自置信 AUROC 0.71/0.82(D1);锚在漂移时刻指认目标≈随机(D2);闭环锚重锚 0.303(不显著) | 降为负结果,解释了语言/锚重锚为何失败 |
+acot_note/1001_innovation-design.md:263:- Town05·TAHRelM:SR 0→0.158(3/19,McNemar p=0.25 不显著),正确锁定时长 8.4s→32.3s(约 3.8×),最长连续正确跟踪均值 5.9s→30.3s、中位 1.8s→21.0s,最长错锁中位 11.6s→0.8s(多数 episode 不再出现长错锁;均值 10.8s 由少数长尾 episode 贡献)。
+acot_note/1003_iteration_roadmap.md:13:| V3 | 异构记忆 + 语言回火融合 + 后验回灌门控(核心) | R1:MAJOR → R2:**NO MAJOR**(`codex/1003_R3a*.md`) | 完成(Town05 五臂 + Town03/10HD) | H3a ✗ · H3b ✗(显著差于 V0)· V3>ensemble ✗ · V3>commit-only ✗ · H3c(ensemble 中 ρ_err<0.5)成立 | 负结果;融合闭环中两记忆误差高度重合(描述性发现) |
+acot_note/1003_iteration_roadmap.md:72:- **影响**:原定的「正确比例上超过 DAM4SAM」这一目标,是相对一个口径伪影定义的。换成与另两项一致的承诺口径后,V0 在三项指标上方向全部优于 DAM4SAM;严格口径下显著,承诺口径下临界。
+acot_note/1003_iteration_roadmap.md:75:  - **预注册是否成功只按原口径判定**:按原口径,1003 的全部预注册假设均未通过,见下方判定表的「宽松」值。
+acot_note/1003_iteration_roadmap.md:82:  - **现象**:重启后 V1 · T05、V3 · T05、V3-ensemble · T05 都在 ep0 结束后卡住,复现两次。卡住时 CARLA 帧不前进,新 client 看到 0 个 actor(同步模式下无 tick 的表象)。只有 V2 · T05 正常。
+acot_note/1003_iteration_roadmap.md:111:| H1b-all | V1 − DAM4SAM | — | −9.4 s [−22.2, +3.4] | ✗(方向对,不显著) |
+acot_note/1003_iteration_roadmap.md:117:| H3b | V3 − V0 | **−0.21 [−0.41, −0.05]** | — | ✗(显著更差) |
+acot_note/1003_iteration_roadmap.md:118:| V3 > ensemble | V3 − V3-ensemble | −0.05 [−0.19, +0.11] | **+14.2 s [+5.2, +24.4]** | ✗(锁错显著更长) |
+acot_note/1003_iteration_roadmap.md:122:| (参照,非预注册)V0 vs DAM4SAM | V0 − DAM4SAM | +0.21 [−0.00, +0.42] / −0.20 / **+0.39 [+0.16, +0.61]** | −11.3 s [−23.2, +0.6] | 修正口径下方向占优;仅严格口径显著 |
+acot_note/1003_iteration_roadmap.md:124:> 判定规则:**预注册是否通过只按原(宽松)口径判定——全部 ✗**;承诺/严格口径的结论是修正后分析,不计为预注册成功。
+acot_note/1003_iteration_roadmap.md:137:  - Town03:承诺口径正确比例与最长锁错均显著更好。
+acot_note/1003_iteration_roadmap.md:138:  - Town10HD:承诺口径不显著,严格口径显著,最长锁错不优。
+acot_note/1003_iteration_roadmap.md:139:- 缺 V0 · Town10HD 臂;V3 在 Town05 上显著差于 V0。因此**不能**支持"V3 优于 V0",也不能支持"方法族整体泛化"。
+acot_note/1003_iteration_roadmap.md:145:   - 同一种子的首帧语言选择在多次运行间基本可复现:91003、91006、91007、91008 在 V0、V1、V3、V3-ens 中都错选同一辆车。但也有少数种子翻转(91001、91005),导致臂间开局数相差 ±2–4 集,对应正确比例相差约 ±0.1–0.2。
+acot_note/1003_iteration_roadmap.md:146:   - 因此 n=19 的臂间差异有很大一部分是开局这一步的随机性。H3b 的显著负差中,V3 只有 7/19 开局锁对,V0 有 11/19,这一项占了主要部分。
+acot_note/1003_iteration_roadmap.md:157:   - **不能说的**:commit-only 不回灌记忆,ρ_err 也有 0.67,所以"回灌导致同步"不成立。更可能的共同原因是融合承诺决定了飞行轨迹,两个记忆看到的是同一段画面。此外各臂的 DAM 出现率(0.38–0.77)、episode 长度和飞行轨迹都不同,ρ_err 不是同一观测分布上的纯机制量。
+acot_note/1003_iteration_roadmap.md:158:   - **要主张因果,还需补的分析**:同种子、按开局对/错分层、按 DAM 出现率匹配、逐 episode ρ 的 Fisher-z bootstrap、门控前后窗口对比,最好再加固定轨迹的离线回放对照。
+acot_note/1003_iteration_roadmap.md:163:   - V1 与 DAM4SAM 的差异落在运行间方差之内(V1 − commit-only 不显著)。
+acot_note/1003_iteration_roadmap.md:170:   - 按原口径,V1、V2、V3 的全部预注册假设均未通过。
+acot_note/1003_iteration_roadmap.md:173:   - 三项指标方向都占优,但只有严格口径的正确比例显著(+0.39)。
+acot_note/1003_iteration_roadmap.md:174:   - 承诺口径正确比例 +0.21 处于边界;最长连续正确 +8.0 s、最长锁错 −11.3 s 均不显著。
+acot_note/1003_iteration_roadmap.md:175:   - 1003 的三个新版本都**没有超过 V0**。V3 在 Town05 上显著更差,其中开局锁对数的差异(7/19 vs 11/19)占了主要部分。
+acot_note/1003_iteration_roadmap.md:176:3. **定位**:这批结果应写成"指标修正 + 负结果机理诊断 + 下一步假设生成",**不能**包装成 V1/V2/V3 的方法成功。可进入论文的内容:
+acot_note/1003_iteration_roadmap.md:178:   - (b) 描述性发现:融合闭环中两记忆错误高度重合,双记忆回灌在开局锁错时固化错误身份(因果待补)。
+acot_note/1003_iteration_roadmap.md:180:   - **单靠这些不够 SCI 一区或 CCF-A 的主线。** 还缺一个正向的方法贡献,或更大规模的证据:更多种子、补齐预注册对照、真实检测/定位噪声、V0 · Town10HD、DAM4SAM 的 tick 日志与弃权原因、固定轨迹的机理验证。
+acot_note/1003_iteration_roadmap.md:182:   - 一是更强的开局 grounding。阶段 0 的 LoRA 未显著有效。
+
+exec
+/bin/sh -lc "sed -n '1,260p' carla_uav_tracking/rollout/deploy_compare.py && sed -n '1,160p' carla_uav_tracking/rollout/metrics.py" in /nvidia/hque/code/cyhe/uav-acot-track
+ succeeded in 0ms:
+"""§5.5 WHICH-module comparison — ALL models DEPLOYABLE (GT-free, online closed-loop CARLA), same seeds 91000-19,
+three objective metrics from the scorer (frame level): correct-lock ratio, longest continuous correct lock
+(max_correct_run_s, committed identity, out-of-frame ends the run), longest wrong lock (max_wrong_run_s).
+Per-arm mean with seed-bootstrap 95% CI; paired PGIF − arm with 95% paired-bootstrap CI. Missing arms → "pending".
+  python deploy_compare.py --json eval_out/deploy_compare.json"""
+import argparse
+import json
+import os
+
+import numpy as np
+
+EO = os.path.join(os.path.dirname(__file__), "eval_out")
+ARMS = [  # stem suffix, label, group
+    ("xattn", "xattn(单帧语言)", "language"),
+    ("l4", "l4(reid+置信门)", "ours"),
+    ("l5", "l5(+时序EMA)", "ours"),
+    ("borrow1", "borrow#1(+运动共识)", "ours"),
+    ("tahdag", "TAH+DAgger", "ours"),
+    ("tahrelm", "TAHRelM 无纠偏", "ours"),
+    ("ocsort", "OC-SORT", "external"),
+    ("deepsort", "DeepSORT", "external"),
+    ("dam4sam", "DAM4SAM", "external"),
+    ("tahrelm_pgif", "TAHRelM+PGIF(ours)", "pgif"),
+]
+def _strict(e):
+    """per-frame pick == target over target-present frames; ABSTENTION (no pick) counts as NOT correct."""
+    nd, bn = e.get("n_dist") or {}, e.get("mis_by_N") or {}
+    t = sum(nd.values())
+    return 1 - sum(bn[k] * nd[k] for k in nd if k in bn) / t if t else float("nan")
+
+
+# correct-lock ratio (2026-10-02 口径修正): COMMITTED identity == target over target-present frames — the same notion of
+# "lock" as longC / longW; an abstaining tracker (DAM4SAM: empty mask / nothing within its gate) holds its last commitment.
+# The former definition 1 − mis_follow_inst counted abstention frames as CORRECT (DAM4SAM abstains ~60% → 0.786 vs 0.367);
+# it and the strict one (abstention = wrong) are kept as correct_l / correct_s for the appendix.
+EXTRA = [("correct_l", lambda e: 1 - e["mis_follow_inst"]), ("correct_s", _strict)]
+METRICS = [("correct", "正确锁定比例(承诺)", lambda e: 1 - e["mis_follow_sustained"]),
+           ("longC", "最长连续正确锁定(s)", lambda e: e["max_correct_run_s"]),
+           ("longW", "最长锁错(s)", lambda e: e["max_wrong_run_s"])]
+RNG = np.random.default_rng(20261002)
+
+
+def load(stem):
+    p = os.path.join(EO, f"paper_dep_{stem}.json")
+    if not os.path.exists(p):
+        return None
+    d = json.load(open(p))
+    return {int(e["episode_seed"]): e for e in d["episodes"] if e.get("mis_follow_inst") is not None}
+
+
+def ci_mean(x):
+    x = np.asarray(x, float); x = x[np.isfinite(x)]; b = x[RNG.integers(0, len(x), (20000, len(x)))].mean(1)
+    return [float(x.mean()), float(np.percentile(b, 2.5)), float(np.percentile(b, 97.5))]
+
+
+def main():
+    ap = argparse.ArgumentParser(); ap.add_argument("--json"); a = ap.parse_args()
+    D = {s: load(s) for s, _, _ in ARMS}
+    P = D["tahrelm_pgif"]
+    out = {"arms": [], "pending": [s for s, _, _ in ARMS if D[s] is None]}
+    for s, lab, grp in ARMS:
+        A = D[s]
+        if A is None:
+            out["arms"].append({"stem": s, "label": lab, "group": grp, "pending": True}); continue
+        row = {"stem": s, "label": lab, "group": grp, "n": len(A)}
+        for k, _, f in METRICS:
+            v = [f(e) for e in A.values()]
+            row[k] = ci_mean(v); row[k + "_med"] = float(np.median(v))
+        for k, f in EXTRA:
+            row[k] = ci_mean([f(e) for e in A.values()])
+        if s != "tahrelm_pgif":
+            S = sorted(set(A) & set(P))
+            for k, _, f in METRICS:
+                d = np.array([f(P[x]) - f(A[x]) for x in S])
+                b = d[RNG.integers(0, len(d), (20000, len(d)))].mean(1)
+                row["pgif_minus_" + k] = [float(d.mean()), float(np.percentile(b, 2.5)), float(np.percentile(b, 97.5))]
+        out["arms"].append(row)
+    for r in out["arms"]:
+        if r.get("pending"):
+            print(f"{r['label']:22s} pending"); continue
+        msg = f"{r['label']:22s} n={r['n']} " + " | ".join(
+            f"{k} {r[k][0]:.3f}" if k == "correct" else f"{k} {r[k][0]:.1f}s(med {r[k + '_med']:.1f})" for k, _, _ in METRICS)
+        if "pgif_minus_correct" in r:
+            msg += " || PGIF−arm: " + "  ".join(f"{k} {r['pgif_minus_' + k][0]:+.2f}[{r['pgif_minus_' + k][1]:+.2f},{r['pgif_minus_' + k][2]:+.2f}]"
+                                                for k, _, _ in METRICS)
+        print(msg)
+    if a.json:
+        json.dump(out, open(a.json, "w"), indent=1, ensure_ascii=False)
+
+
+if __name__ == "__main__":
+    main()
+"""RolloutScorer — score a closed-loop episode from GT, per guide §6 / design §7.2.
+
+The controller never sees GT; the scorer does, every tick. Key rule (§3.4 族B, §7):
+closed-loop mis-follow is NOT per-frame argmax (that punishes single-frame flicker
+from flow-matching stochasticity). We maintain a COMMITTED target with K-frame
+hysteresis; a new candidate only takes over after winning K consecutive ticks.
+
+Reported:
+  mis_follow_inst      per-tick argmax≠target over target-present ticks (diagnostic, strict)
+  mis_follow_sustained committed≠target over target-present ticks (main; == MOT ID-switch)
+  id_switches          # times the committed target flips to a wrong car (held ≥K)
+  success              reached episode end with no committed-wrong run ≥ T_fail_s and
+                       never lost the target past truncation
+  track_frames         ticks the target stayed in frame
+  centering_rate       fraction of in-frame ticks with the target in the central region
+  reacquire_*          convergence time (delay OK) vs lock-wrong rate (hard failure, §7)
+  shortcut_*           "always nearest car" / "target dead-center" occupancy (捷径 checks, §7)
+
+The scorer maps the policy's predicted candidate SLOT → identity via the shuffled
+CandidateSet (cands[slot].is_target / .idx); it does not read any slot ordering
+into the control path.
+"""
+
+from __future__ import annotations
+
+import numpy as np
+
+
+def _identity_key(cand) -> str:
+    return "target" if cand.is_target else f"distractor_{cand.idx}"
+
+
+class RolloutScorer:
+    def __init__(self, fps: int = 10, commit_k: int = 5, t_fail_s: float = 2.0,
+                 max_lost_s: float = 5.0, central_frac: float = 0.3):
+        self.fps = fps
+        self.commit_k = commit_k
+        self.t_fail = int(t_fail_s * fps)
+        self.max_lost = int(max_lost_s * fps)
+        self.central_frac = central_frac
+
+    def reset(self, metadata: dict | None = None):
+        self.meta = metadata or {}
+        self.n = 0
+        # committed-target hysteresis
+        self._committed = None
+        self._challenger = None
+        self._chal_count = 0
+        self._id_switches = 0
+        self._wrong_run = 0          # consecutive committed-wrong ticks (target present)
+        self._max_wrong_run = 0
+        self._correct_run = 0           # committed==target consecutive in-frame ticks (symmetric to wrong run)
+        self._max_correct_run = 0
+        self._off_run = 0            # consecutive target-off-screen ticks
+        self._failed = False
+        # counters
+        self._present = 0            # target-present (in-frame) ticks
+        self._inst_wrong = 0
+        self._sustain_wrong = 0
+        self._central = 0
+        self._nearest_pred = 0       # ticks the pred == nearest candidate (shortcut)
+        self._nearest_denom = 0
+        self._central_target = 0     # ticks target is dead-center (shortcut)
+        self._dist_sum = 0.0
+        self._dist_n = 0
+        # per-frame grounding stratifiers (why is online mis_follow > offline?):
+        self._byN = {}          # N candidates -> [wrong, total]
+        self._byC = {"central": [0, 0], "off": [0, 0]}   # target central vs off-center
+        self._byD = {}          # target depth bucket -> [wrong, total]
+        # re-acquisition tracking: EVERY target-loss is one attempt, resolved on
+        # recovery (success) or left as timeout at episode end (no-WM baseline needs
+        # the failures, not just the successes).
+        self._was_lost = False
+        self._reacq_open = False
+        self._reacq_start = 0
+        self._reacq_wrong_counted = False
+        self._reacq_attempts = 0
+        self._reacq_success = 0      # re-locked the TRUE target
+        self._reacq_wrong = 0        # committed to a WRONG car during recovery (≥1 tick)
+        self._reacq_conv = []        # convergence frames, successful re-acquisitions only
+
+    # ------------------------------------------------------------------
+    def update(self, *, step: int, target_present: bool, target_central: bool,
+               in_loss_window: bool, info, uav_target_dist: float | None = None):
+        """info: policy.ActInfo (cand_set + pred_slot). target_present: target in-frame."""
+        self.n = step + 1
+        cset = getattr(info, "cand_set", None)
+        pred_slot = getattr(info, "pred_slot", -1)
+        pred_cand = cset.cands[pred_slot] if (cset is not None and 0 <= pred_slot < len(cset.cands)) else None
+        pred_key = _identity_key(pred_cand) if pred_cand is not None else None
+
+        # --- hysteresis commit ---
+        if pred_key is not None:
+            if self._committed is None:
+                self._committed = pred_key
+            elif pred_key == self._committed:
+                self._challenger, self._chal_count = None, 0
+            else:
+                if pred_key == self._challenger:
+                    self._chal_count += 1
+                else:
+                    self._challenger, self._chal_count = pred_key, 1
+                if self._chal_count >= self.commit_k:
+                    if self._committed == "target" and pred_key != "target":
+                        self._id_switches += 1
+                    self._committed = pred_key
+                    self._challenger, self._chal_count = None, 0
+
+        # --- off-screen / truncation bookkeeping ---
+        if target_present:
+            self._off_run = 0
+        else:
+            self._off_run += 1
+
+        # --- mis-follow accounting (only over target-present ticks) ---
+        if target_present:
+            self._present += 1
+            if target_central:
+                self._central += 1
+                self._central_target += 1
+            if pred_cand is not None and not pred_cand.is_target:
+                self._inst_wrong += 1
+            # per-frame stratified mis_follow (matches offline argmax≠target over target-present)
+            ti = getattr(cset, "true_idx", -1) if cset is not None else -1
+            if cset is not None and ti >= 0:
+                N = len(cset.cands)
+                wrong = int(pred_slot != ti)
+                nb = min(N, 6)
+                b = self._byN.setdefault(nb, [0, 0]); b[0] += wrong; b[1] += 1
+                ck = "central" if target_central else "off"
+                self._byC[ck][0] += wrong; self._byC[ck][1] += 1
+                td = float(cset.cands[ti].depth)
+                db = "d<30" if td < 30 else ("d30-60" if td < 60 else "d>=60")
+                bd = self._byD.setdefault(db, [0, 0]); bd[0] += wrong; bd[1] += 1
+            committed_wrong = self._committed is not None and self._committed != "target"
+            if committed_wrong:
+                self._sustain_wrong += 1
+                self._wrong_run += 1
+                self._max_wrong_run = max(self._max_wrong_run, self._wrong_run)
+                if self._wrong_run >= self.t_fail:
+                    self._failed = True
+            else:
+                self._wrong_run = 0
+            if self._committed == "target":
+                self._correct_run += 1
+                self._max_correct_run = max(self._max_correct_run, self._correct_run)
+            else:
+                self._correct_run = 0
+            # shortcut: does pred coincide with the nearest (smallest-depth) candidate?
+            if cset is not None and len(cset.cands) > 1 and pred_cand is not None:
+                nearest = min(range(len(cset.cands)), key=lambda i: cset.cands[i].depth)
+                self._nearest_pred += int(pred_slot == nearest)
+                self._nearest_denom += 1
+        else:
+            self._correct_run = 0           # target out of frame ends a correct-lock run (conservative)
+
+        if uav_target_dist is not None:
+            self._dist_sum += float(uav_target_dist); self._dist_n += 1
+
+        # --- re-acquisition: each target-loss is one attempt, resolved on recovery ---
+
+codex
+数字核对到这里，roadmap 里有几处 CI 末位和 JSON 因 bootstrap 随机/四舍五入略有差异，但没有发现改变结论的错数。比较值得点出的残余问题反而是 1001 的贡献段仍偏“论文 claim”口吻，不过它不是 1003 路线报告的核心判定对象。
+codex
+最后我再快速抽一下 `deploy_compare.json`，确认 1001 §5.5 的重跑表不是只在文字上改了。这个部分关系到上一轮那个 0.613/0.576 的批次差异说明。
+exec
+/bin/sh -lc "sed -n '1,260p' carla_uav_tracking/rollout/eval_out/deploy_compare.json" in /nvidia/hque/code/cyhe/uav-acot-track
+ succeeded in 0ms:
+{
+ "arms": [
+  {
+   "stem": "xattn",
+   "label": "xattn(单帧语言)",
+   "group": "language",
+   "n": 19,
+   "correct": [
+    0.2706995688378673,
+    0.1987821169355937,
+    0.35364224204556793
+   ],
+   "correct_med": 0.2405498281786942,
+   "longC": [
+    2.2473684210526317,
+    1.6526315789473685,
+    2.878947368421052
+   ],
+   "longC_med": 1.8,
+   "longW": [
+    9.984210526315792,
+    7.468421052631581,
+    12.505263157894737
+   ],
+   "longW_med": 9.8,
+   "correct_l": [
+    0.27567052259381103,
+    0.2018479152279639,
+    0.3629160264929839
+   ],
+   "correct_s": [
+    0.27719398229818737,
+    0.20025738509397606,
+    0.36709433831314503
+   ],
+   "pgif_minus_correct": [
+    0.30496331822545636,
+    0.12271841463706211,
+    0.48127762046170136
+   ],
+   "pgif_minus_longC": [
+    19.005263157894735,
+    9.273684210526318,
+    29.6211842105263
+   ],
+   "pgif_minus_longW": [
+    5.442105263157895,
+    -3.073815789473684,
+    14.80013157894736
+   ]
+  },
+  {
+   "stem": "l4",
+   "label": "l4(reid+置信门)",
+   "group": "ours",
+   "n": 19,
+   "correct": [
+    0.4289116420072256,
+    0.30278581887781525,
+    0.5608740919544287
+   ],
+   "correct_med": 0.4032258064516129,
+   "longC": [
+    9.210526315789474,
+    4.342105263157895,
+    15.542236842105252
+   ],
+   "longC_med": 2.8,
+   "longW": [
+    7.9263157894736835,
+    5.252631578947367,
+    10.999999999999998
+   ],
+   "longW_med": 5.7,
+   "correct_l": [
+    0.4323684763789035,
+    0.30644895308976516,
+    0.5635110645077317
+   ],
+   "correct_s": [
+    0.43384059697753447,
+    0.308716096431498,
+    0.5674626794504801
+   ],
+   "pgif_minus_correct": [
+    0.1467512450560981,
+    -0.021866502254172533,
+    0.3138750634296455
+   ],
+   "pgif_minus_longC": [
+    12.042105263157895,
+    4.689473684210525,
+    20.205526315789456
+   ],
+   "pgif_minus_longW": [
+    7.500000000000002,
+    -0.5264473684210527,
+    16.736973684210515
+   ]
+  },
+  {
+   "stem": "l5",
+   "label": "l5(+时序EMA)",
+   "group": "ours",
+   "n": 19,
+   "correct": [
+    0.37198546076422595,
+    0.2130336772928578,
+    0.544629924077196
+   ],
+   "correct_med": 0.2222222222222222,
+   "longC": [
+    6.057894736842106,
+    3.021052631578948,
+    9.889473684210525
+   ],
+   "longC_med": 2.4,
+   "longW": [
+    12.847368421052634,
+    7.526184210526314,
+    19.458026315789464
+   ],
+   "longW_med": 9.6,
+   "correct_l": [
+    0.3711517315303024,
+    0.21373045990649572,
+    0.5369833689366611
+   ],
+   "correct_s": [
+    0.37119229886683575,
+    0.21604032200641166,
+    0.5434742918224227
+   ],
+   "pgif_minus_correct": [
+    0.20367742629909774,
+    0.03818844938027686,
+    0.3870504292085624
+   ],
+   "pgif_minus_longC": [
+    15.194736842105266,
+    6.831578947368421,
+    24.857894736842102
+   ],
+   "pgif_minus_longW": [
+    2.5789473684210527,
+    -4.889473684210526,
+    10.589473684210526
+   ]
+  },
+  {
+   "stem": "borrow1",
+   "label": "borrow#1(+运动共识)",
+   "group": "ours",
+   "n": 19,
+   "correct": [
+    0.44955454348677754,
+    0.26809822967042657,
+    0.6330274936977922
+   ],
+   "correct_med": 0.17703349282296654,
+   "longC": [
+    11.073684210526315,
+    5.1157894736842096,
+    18.321052631578947
+   ],
+   "longC_med": 3.2,
+   "longW": [
+    8.821052631578947,
+    5.336842105263158,
+    12.757894736842104
+   ],
+   "longW_med": 8.2,
+   "correct_l": [
+    0.4532604792242758,
+    0.2721721025482225,
+    0.6362771976951451
+   ],
+   "correct_s": [
+    0.45198574742870556,
+    0.27484677468759633,
+    0.637673314275069
+   ],
+   "pgif_minus_correct": [
+    0.12610834357654624,
+    0.004677394102499052,
+    0.2749081557101702
+   ],
+   "pgif_minus_longC": [
+    10.178947368421051,
+    3.705131578947369,
+    18.037105263157873
+   ],
+   "pgif_minus_longW": [
+    6.605263157894738,
+    -0.605263157894737,
+    14.505394736842096
+   ]
+  },
+  {
+   "stem": "tahdag",
+   "label": "TAH+DAgger",
+   "group": "ours",
+   "n": 19,
+   "correct": [
+    0.26057026900924857,
+    0.15648787825441085,
+    0.3739735497919076
+   ],
+   "correct_med": 0.1723237597911227,
+   "longC": [
+    6.784210526315788,
+    2.431578947368421,
+    13.632105263157849
+   ],
+   "longC_med": 2.4,
+   "longW": [
+    14.552631578947368,
+    9.963026315789476,
+    19.852631578947364
+   ],
+   "longW_med": 9.3,
+   "correct_l": [
+    0.2615215449848595,
+    0.1604879241684089,
+    0.37156234242210057
+   ],
+   "correct_s": [
+    0.2611276745177258,
+    0.1583412060265569,
+    0.3714304075589332
+   ],
+   "pgif_minus_correct": [
+    0.3150926180540751,
+    0.1535227226298932,
+    0.4857310623874174
+   ],
+   "pgif_minus_longC": [
+    14.46842105263158,
+    6.441842105263158,
+    23.51578947368421
+   ],
+   "pgif_minus_longW": [
+    0.8736842105263163,
+    -6.563157894736841,
+    9.126447368421042
+   ]
+  },
+  {
+   "stem": "tahrelm",
+   "label": "TAHRelM 无纠偏",
+   "group": "ours",
+   "n": 19,
+   "correct": [
+    0.3198863589475874,
+    0.20918196633140226,
+    0.44287971871691395
+   ],
+   "correct_med": 0.28671328671328666,
+   "longC": [
+    8.573684210526318,
+
+exec
+/bin/sh -lc "sed -n '260,620p' carla_uav_tracking/rollout/eval_out/deploy_compare.json" in /nvidia/hque/code/cyhe/uav-acot-track
+ succeeded in 0ms:
+    8.573684210526318,
+    4.531578947368421,
+    13.557894736842107
+   ],
+   "longC_med": 5.2,
+   "longW": [
+    15.13684210526316,
+    10.836842105263159,
+    20.41578947368421
+   ],
+   "longW_med": 13.1,
+   "correct_l": [
+    0.325698501096296,
+    0.21597635947175586,
+    0.44803103784232434
+   ],
+   "correct_s": [
+    0.3259206375294556,
+    0.21533456599622824,
+    0.4494754969950881
+   ],
+   "pgif_minus_correct": [
+    0.25577652811573637,
+    0.07559233466846299,
+    0.4301216936214331
+   ],
+   "pgif_minus_longC": [
+    12.678947368421051,
+    3.289473684210526,
+    23.437105263157875
+   ],
+   "pgif_minus_longW": [
+    0.2894736842105263,
+    -7.4684210526315775,
+    9.34736842105263
+   ]
+  },
+  {
+   "stem": "ocsort",
+   "label": "OC-SORT",
+   "group": "external",
+   "n": 19,
+   "correct": [
+    0.22926354890693662,
+    0.15838466903772214,
+    0.30550191029538026
+   ],
+   "correct_med": 0.21727019498607247,
+   "longC": [
+    4.868421052631579,
+    2.8421052631578947,
+    7.515789473684211
+   ],
+   "longC_med": 3.6,
+   "longW": [
+    14.047368421052633,
+    11.005263157894737,
+    17.426315789473687
+   ],
+   "longW_med": 12.5,
+   "correct_l": [
+    0.23819103776400183,
+    0.16328869093491563,
+    0.3190273373400074
+   ],
+   "correct_s": [
+    0.240258873189764,
+    0.16437019623416277,
+    0.32171163785624896
+   ],
+   "pgif_minus_correct": [
+    0.34639933815638707,
+    0.1530978218080568,
+    0.5390405632832066
+   ],
+   "pgif_minus_longC": [
+    16.38421052631579,
+    7.062894736842105,
+    26.347499999999986
+   ],
+   "pgif_minus_longW": [
+    1.3789473684210523,
+    -8.163157894736841,
+    12.08421052631579
+   ]
+  },
+  {
+   "stem": "deepsort",
+   "label": "DeepSORT",
+   "group": "external",
+   "n": 19,
+   "correct": [
+    0.28615513429389555,
+    0.17221342086038588,
+    0.42060316789739655
+   ],
+   "correct_med": 0.2524752475247525,
+   "longC": [
+    7.963157894736843,
+    3.6789473684210527,
+    13.478947368421052
+   ],
+   "longC_med": 4.2,
+   "longW": [
+    17.02631578947369,
+    12.436842105263159,
+    22.221052631578946
+   ],
+   "longW_med": 12.7,
+   "correct_l": [
+    0.29714449058182835,
+    0.18184508270061933,
+    0.43000760676600147
+   ],
+   "correct_s": [
+    0.29556792808431576,
+    0.17711534251188266,
+    0.42977315767547125
+   ],
+   "pgif_minus_correct": [
+    0.2895077527694282,
+    0.09329811320127697,
+    0.49593690936626567
+   ],
+   "pgif_minus_longC": [
+    13.289473684210526,
+    2.5209210526315786,
+    24.43171052631578
+   ],
+   "pgif_minus_longW": [
+    -1.5999999999999996,
+    -10.621184210526316,
+    8.41592105263157
+   ]
+  },
+  {
+   "stem": "dam4sam",
+   "label": "DAM4SAM",
+   "group": "external",
+   "n": 19,
+   "correct": [
+    0.36668413555140833,
+    0.1905022330867976,
+    0.5541558806533655
+   ],
+   "correct_med": 0.17358490566037732,
+   "longC": [
+    13.284210526315789,
+    6.721052631578947,
+    20.721052631578946
+   ],
+   "longC_med": 6.4,
+   "longW": [
+    26.689473684210526,
+    16.768421052631577,
+    37.315921052631566
+   ],
+   "longW_med": 21.6,
+   "correct_l": [
+    0.7859476825407968,
+    0.6566960553692059,
+    0.8973066311487822
+   ],
+   "correct_s": [
+    0.18965222247262695,
+    0.0834956777782207,
+    0.3172691667104191
+   ],
+   "pgif_minus_correct": [
+    0.20897875151191544,
+    -0.0007760016437954862,
+    0.41415929012520547
+   ],
+   "pgif_minus_longC": [
+    7.968421052631579,
+    -2.2843421052631583,
+    18.43171052631578
+   ],
+   "pgif_minus_longW": [
+    -11.263157894736842,
+    -23.189736842105262,
+    0.6473684210526318
+   ]
+  },
+  {
+   "stem": "tahrelm_pgif",
+   "label": "TAHRelM+PGIF(ours)",
+   "group": "pgif",
+   "n": 19,
+   "correct": [
+    0.5756628870633238,
+    0.3651932456800108,
+    0.7843652871997797
+   ],
+   "correct_med": 0.9770773638968482,
+   "longC": [
+    21.25263157894737,
+    11.221052631578948,
+    32.07368421052632
+   ],
+   "longC_med": 11.5,
+   "longW": [
+    15.426315789473685,
+    6.278947368421052,
+    25.921184210526306
+   ],
+   "longW_med": 0.9,
+   "correct_l": [
+    0.5833771269995309,
+    0.37268906502578386,
+    0.7903456387217775
+   ],
+   "correct_s": [
+    0.5837819250650336,
+    0.3713011095718044,
+    0.7922495202023412
+   ]
+  }
+ ],
+ "pending": []
+}
+codex
+**Verdict: NO MAJOR**
+
+按“1003 路线报告是否是诚实记录”这个标准，本轮已合格。上一轮 4 个 MAJOR 都已实质降级；仍有两个文字/表格口径的小修建议，但不改变结论。
+
+**逐条结论**
+
+1. **MAJOR 1 指标口径 / HARKing 风险：已解决，附小修。**  
+   新版明确写出：原预注册 endpoint 是宽松口径；承诺口径是看到 DAM4SAM 弃权后做的结果后修正；预注册成功只按原宽松口径判定；`mis_follow_sustained` 的开头未承诺 nuance 也写清楚了。数字与 JSON 基本一致：DAM4SAM Town05 为宽松 `0.786`、承诺 `0.367`、严格 `0.190`；V0 为 `0.583 / 0.576 / 0.584`；V0−DAM4SAM 承诺约 `+0.209`、宽松约 `-0.203`、严格约 `+0.394`。  
+   小修：roadmap 中“除 DAM4SAM 外各臂三种口径差别 ≤0.01 / 其余各臂每帧都会给出选择”对 V1/V1-commit-only 不成立。`iter_gate.json` 显示 V1 为 `0.671 / 0.450 / 0.183`，V1-commit-only 为 `0.708 / 0.389 / 0.153`，它们继承了 DAM4SAM 弃权问题。建议改成“除 DAM4SAM 及其 V1 派生臂外”。
+
+2. **MAJOR 2 预注册门控闭合：已解决。**  
+   V1-selfreset 未跑、V2-single@K 未跑现在都被显式标成“未检验”；V3 的 `V3 > ensemble`、`V3 > commit-only`、`gateTAH-only` 也拆开报告。作为路线记录，这已经诚实闭合；科学上仍是未补齐实验，但作者没有再把它包装成通过。
+
+3. **MAJOR 3 机理因果表述过强：已解决。**  
+   新版把“回灌导致同步”收窄为“融合闭环中两记忆错误高度重合，描述性发现，因果待补”。机制表数字与 `iter_mech.json` 一致：`rho_err` 为 ensemble `0.335`、commit-only `0.672`、gateTAH-only `0.723`、V3 `0.722`；`present_dam` 差异也被列出。这已经避免了上一轮的因果过claim。
+
+4. **MAJOR 4 泛化与贡献措辞：已解决。**  
+   roadmap 现在明确写：Town03 对 DAM4SAM 较好，Town10HD 证据不一致；缺 V0·Town10HD，不能支持 V3 优于 V0 或方法族整体泛化。总结也承认“单靠这些不够 SCI 一区或 CCF-A 主线”。这符合数据。
+
+**MINOR 复核**
+
+- 单帧语言准确率 vs 开局锁对：已解决。新版区分 `acc_lang=0.22–0.33` 与开局 `7–11/19`。
+- `0.613` vs `0.576`：已解决。1001 §5.5 已说明 10-01 PoC 批次与 10-02 重跑批次差异；`deploy_compare.json` 中 PGIF 承诺口径确为 `0.576`。
+- V0 开局分层非同批日志：已解决。roadmap 脚注已标注仅作参考。
+- “PGIF 跨记忆弱证据”：已解决/降级，1003 中未再包装为正结果。
+- “足够 SCI 一区/CCF-A”：已解决。总结明确否认。
+
+**新增问题**
+
+无新的 MAJOR。建议小修两处：一是上面提到的 V1/V1-commit-only 弃权口径文字；二是预注册表标题里“判定以承诺口径为主”与后文“预注册是否通过只按原宽松口径判定”略冲突，建议改成“表中并列三口径；预注册判定按原宽松口径，承诺/严格为修正后分析”。
+tokens used
+80,261
+**Verdict: NO MAJOR**
+
+按“1003 路线报告是否是诚实记录”这个标准，本轮已合格。上一轮 4 个 MAJOR 都已实质降级；仍有两个文字/表格口径的小修建议，但不改变结论。
+
+**逐条结论**
+
+1. **MAJOR 1 指标口径 / HARKing 风险：已解决，附小修。**  
+   新版明确写出：原预注册 endpoint 是宽松口径；承诺口径是看到 DAM4SAM 弃权后做的结果后修正；预注册成功只按原宽松口径判定；`mis_follow_sustained` 的开头未承诺 nuance 也写清楚了。数字与 JSON 基本一致：DAM4SAM Town05 为宽松 `0.786`、承诺 `0.367`、严格 `0.190`；V0 为 `0.583 / 0.576 / 0.584`；V0−DAM4SAM 承诺约 `+0.209`、宽松约 `-0.203`、严格约 `+0.394`。  
+   小修：roadmap 中“除 DAM4SAM 外各臂三种口径差别 ≤0.01 / 其余各臂每帧都会给出选择”对 V1/V1-commit-only 不成立。`iter_gate.json` 显示 V1 为 `0.671 / 0.450 / 0.183`，V1-commit-only 为 `0.708 / 0.389 / 0.153`，它们继承了 DAM4SAM 弃权问题。建议改成“除 DAM4SAM 及其 V1 派生臂外”。
+
+2. **MAJOR 2 预注册门控闭合：已解决。**  
+   V1-selfreset 未跑、V2-single@K 未跑现在都被显式标成“未检验”；V3 的 `V3 > ensemble`、`V3 > commit-only`、`gateTAH-only` 也拆开报告。作为路线记录，这已经诚实闭合；科学上仍是未补齐实验，但作者没有再把它包装成通过。
+
+3. **MAJOR 3 机理因果表述过强：已解决。**  
+   新版把“回灌导致同步”收窄为“融合闭环中两记忆错误高度重合，描述性发现，因果待补”。机制表数字与 `iter_mech.json` 一致：`rho_err` 为 ensemble `0.335`、commit-only `0.672`、gateTAH-only `0.723`、V3 `0.722`；`present_dam` 差异也被列出。这已经避免了上一轮的因果过claim。
+
+4. **MAJOR 4 泛化与贡献措辞：已解决。**  
+   roadmap 现在明确写：Town03 对 DAM4SAM 较好，Town10HD 证据不一致；缺 V0·Town10HD，不能支持 V3 优于 V0 或方法族整体泛化。总结也承认“单靠这些不够 SCI 一区或 CCF-A 主线”。这符合数据。
+
+**MINOR 复核**
+
+- 单帧语言准确率 vs 开局锁对：已解决。新版区分 `acc_lang=0.22–0.33` 与开局 `7–11/19`。
+- `0.613` vs `0.576`：已解决。1001 §5.5 已说明 10-01 PoC 批次与 10-02 重跑批次差异；`deploy_compare.json` 中 PGIF 承诺口径确为 `0.576`。
+- V0 开局分层非同批日志：已解决。roadmap 脚注已标注仅作参考。
+- “PGIF 跨记忆弱证据”：已解决/降级，1003 中未再包装为正结果。
+- “足够 SCI 一区/CCF-A”：已解决。总结明确否认。
+
+**新增问题**
+
+无新的 MAJOR。建议小修两处：一是上面提到的 V1/V1-commit-only 弃权口径文字；二是预注册表标题里“判定以承诺口径为主”与后文“预注册是否通过只按原宽松口径判定”略冲突，建议改成“表中并列三口径；预注册判定按原宽松口径，承诺/严格为修正后分析”。

@@ -9,6 +9,7 @@ multiple target classes (car / motorcycle / scooter / bicycle / pedestrian).
 from __future__ import annotations
 
 import os
+import math
 import random
 import time
 from typing import Any
@@ -53,6 +54,7 @@ class SceneManager:
         self._maneuver_injector: ManeuverInjector | None = None
         self._distractors: list = []
         self._distractor_meta: list[dict] = []
+        self._retarget_log: list[dict] = []    # 1003_dynamic-retarget-design.md §2.2: [{tick, slot}, ...]
         self._ambient_walkers: list = []   # background pedestrians (manual control)
         self._perturbation_injector = None
         self._obstacle_avoider = None
@@ -160,7 +162,19 @@ class SceneManager:
 
         # -- Spawn target + distractors (co-located & co-visible) --
         if self._target_class in VEHICLE_CLASSES:
-            self._setup_vehicle_scene(plan, scene_cfg)
+            # v6.1: the spawn filter narrows the anchor set → a slot spawn can fail at every try; re-pick
+            # the anchor (destroying the distractors of the failed attempt) instead of crashing later.
+            for _anchor_try in range(5):
+                self._setup_vehicle_scene(plan, scene_cfg)
+                if self._target is not None:
+                    break
+                for o in self._distractors:
+                    try:
+                        o.destroy()
+                    except (RuntimeError, AttributeError):
+                        pass
+            if self._target is None:
+                raise RuntimeError("target spawn failed at 5 anchors")
         else:
             self._setup_pedestrian_scene(plan, scene_cfg)
 
@@ -170,6 +184,46 @@ class SceneManager:
 
         # -- Background traffic (official-style): diverse vehicles + pedestrians --
         self._spawn_ambient_traffic(scene_cfg)
+
+        # v6: the target sat still 40-70 % of the time (red lights / queues behind 80 ambient cars) →
+        # little motion, no real losses. Let the scene actors (target + distractors, so the look-alike
+        # group stays together) ignore lights/signs; ambient traffic keeps obeying them.
+        # v6.1: queues behind ambient cars waiting at long reds (CARLA default 4-way red ≈ 30-45 s) kept the
+        # target still → shorten every light's cycle (set per episode; lights persist on the server).
+        tl_cfg = scene_cfg.get("traffic_lights") or {}
+        if tl_cfg:
+            for tl in self._world.get_actors().filter("traffic.traffic_light"):
+                try:
+                    tl.set_green_time(float(tl_cfg.get("green_s", 6.0)))
+                    tl.set_yellow_time(float(tl_cfg.get("yellow_s", 2.0)))
+                    tl.set_red_time(float(tl_cfg.get("red_s", 2.0)))
+                except RuntimeError:
+                    pass
+        ign = float(scene_cfg.get("scene_actors_ignore_lights", 0.0))
+        if ign > 0:
+            tm = self._client.get_trafficmanager(_tm_port())
+            for o in [self._target] + list(self._distractors):
+                v = getattr(o, "_vehicle", None)
+                if v is None:
+                    continue
+                try:
+                    tm.ignore_lights_percentage(v, ign)
+                    tm.ignore_signs_percentage(v, ign)
+                except RuntimeError:
+                    pass
+        if scene_cfg.get("scene_actors_lane_change", False):
+            # v6.1: VehicleTarget disables lane changes → a stopped car ahead blocked the target for good
+            tm = self._client.get_trafficmanager(_tm_port())
+            for o in [self._target] + list(self._distractors):
+                v = getattr(o, "_vehicle", None)
+                if v is not None:
+                    try:
+                        tm.auto_lane_change(v, True)
+                    except RuntimeError:
+                        pass
+
+        # 2026-10-09: realistic urban speeds + anti-gridlock (scene.kinematics; absent = legacy behaviour)
+        self._apply_kinematics()
 
         # -- Spawn UAV behind & above the target --
         self._spawn_uav(self._config.get("uav", {}))
@@ -271,13 +325,58 @@ class SceneManager:
         """Target spawn transform. On occlusion-biased episodes, spawn on a map spawn
         point whose forward lane drives under an overhead occluder (A1c③); otherwise a
         random spawn point. Falls back to random if no occluder anchors in this town."""
+        cands = None
         if getattr(self, "_occlusion_biased", False):
             anchors = self._occluder_anchors()
             if anchors:
-                return random.choice(anchors)
-        if self._spawn_points:
-            return random.choice(self._spawn_points)
-        return carla.Transform(carla.Location(0, 0, 1))
+                cands = anchors
+        if cands is None:
+            cands = self._spawn_points
+        if not cands:
+            return carla.Transform(carla.Location(0, 0, 1))
+        sf = self._config.get("scene", {}).get("spawn_filter") or {}
+        if not sf:
+            return random.choice(cands)
+        # v6.1 explicit scope: a UAV trailing at 16-34 m must be ABOVE the local rooftops, so only spawn
+        # where every non-ground surface within 40 m is <= max_roof_m above the road (downtown high-rise
+        # canyons put the camera against walls/roofs). Recorded in attrs as spawn_filter.
+        # Per-town fallback (probe 10-03: Town10HD has only 3 % of spawns <= 12 m, median roof 33 m): if fewer
+        # than `min_frac` qualify, use the town's lowest-roof `min_frac` quantile instead (keeps diversity).
+        max_roof, min_frac = float(sf.get("max_roof_m", 12.0)), float(sf.get("min_frac", 0.2))
+        c0 = cands[0].location
+        key = (self._map.name, len(cands), round(c0.x, 1), round(c0.y, 1))   # stable across episodes in a process
+        cache = getattr(SceneManager, "_roof_cache", {})
+        if key not in cache:
+            cache[key] = [self._max_roof_around(sp.location, (20.0, 40.0)) for sp in cands]
+            SceneManager._roof_cache = cache
+        roofs = cache[key]
+        ok = [i for i, r in enumerate(roofs) if r <= max_roof]
+        if len(ok) < min_frac * len(cands):
+            ok = sorted(range(len(cands)), key=lambda i: roofs[i])[:max(1, int(round(min_frac * len(cands))))]
+        i = random.choice(ok)
+        self._spawn_roof_m = float(roofs[i])
+        return cands[i]
+
+    def _max_roof_around(self, loc, radii=(20.0, 40.0), n_dir: int = 8) -> float:
+        """Max height (m above loc.z) of non-ground surfaces sampled by vertical rays on rings around loc."""
+        L = carla.CityObjectLabel
+        ground = {getattr(L, n) for n in ("Roads", "Sidewalks", "Ground", "Terrain", "RoadLines", "Water",
+                                          "Car", "Truck", "Bus", "Motorcycle", "Bicycle", "Pedestrians", "Rider")
+                  if hasattr(L, n)}
+        best = 0.0
+        pts = [(0.0, 0.0)] + [(r * math.cos(2 * math.pi * k / n_dir), r * math.sin(2 * math.pi * k / n_dir))
+                              for r in radii for k in range(n_dir)]
+        for dx, dy in pts:
+            a = carla.Location(loc.x + dx, loc.y + dy, loc.z + 150.0)
+            b = carla.Location(loc.x + dx, loc.y + dy, loc.z - 5.0)
+            try:
+                for h in self._world.cast_ray(a, b):
+                    if h.label not in ground:
+                        best = max(best, h.location.z - loc.z)
+                        break
+            except RuntimeError:
+                pass
+        return float(best)
 
     def _occluder_anchors(self) -> list:
         """Lazily load (build + cache once) the current town's occluder-leading spawns."""
@@ -510,6 +609,7 @@ class SceneManager:
         kept near the hero (target) by hybrid-physics + respawn_dormant_vehicles; plus
         manually-controlled background pedestrians on the nearby navmesh."""
         amb = scene_cfg.get("ambient", {})
+        self._ambient_ids = []                 # 2026-10-09: ids of this episode's ambient cars (kinematics / unjam)
         n_veh = int(amb.get("vehicles", 0))
         n_walk = int(amb.get("walkers", 0))
         radius = float(amb.get("radius", 90.0))
@@ -544,8 +644,16 @@ class SceneManager:
                     vbps = cars
             sps = sorted(self._world.get_map().get_spawn_points(),
                          key=lambda sp: sp.location.distance(tloc))
+            if amb.get("spawn_mode", "nearest") == "ring":
+                # v6.1: the n nearest points packed the target into a queue from t=0 (stationary 40-100 %);
+                # sample uniformly from a ring instead so traffic is around, not on top of, the target.
+                r0, r1 = (float(x) for x in amb.get("ring_m", [30.0, 200.0]))
+                ring = [sp for sp in sps if r0 <= sp.location.distance(tloc) <= r1]
+                sel = random.sample(ring, min(n_veh, len(ring)))
+            else:
+                sel = sps[1:n_veh + 1]     # nearest points (skip target's own) — original v5 behaviour
             batch = []
-            for sp in sps[1:n_veh + 1]:    # nearest points (skip target's own)
+            for sp in sel:
                 bp = random.choice(vbps)
                 if bp.has_attribute("color"):
                     try:
@@ -557,9 +665,20 @@ class SceneManager:
                 batch.append(SpawnActor(bp, sp)
                              .then(SetAutopilot(FutureActor, True, tm.get_port())))
             try:
-                self._client.apply_batch_sync(batch, True)
+                res = self._client.apply_batch_sync(batch, True)
             except RuntimeError:
-                pass
+                res = []
+            self._ambient_ids = [r.actor_id for r in res if not r.error]
+            kin = self._kin()
+            if kin and kin.get("ambient_speed_mps"):
+                # 2026-10-09: ambient cars at urban speed too (legacy: limit − 20 % ≈ 6.7 m/s) so the convoy is not
+                # permanently queued behind them; TM keeps the per-vehicle value across dormant respawns.
+                lo, hi = (float(x) for x in kin["ambient_speed_mps"])
+                for a in self._world.get_actors(self._ambient_ids):
+                    try:
+                        tm.set_desired_speed(a, self._kmh(random.uniform(lo, hi)))
+                    except RuntimeError:
+                        pass
 
         # --- pedestrians: manual WalkerControl on the navmesh NEAR the target ---
         self._ambient_walkers = []
@@ -667,6 +786,24 @@ class SceneManager:
         assert self._target is not None
         return self._target.get_state()
 
+    def retarget(self, k: int, tick: int | None = None) -> bool:
+        """1003_dynamic-retarget-design.md §2.2 — mid-episode re-designation: swap the TARGET
+        with distractor slot `k`. Slot `k` keeps its scene-design meta (similar/desired_off —
+        those describe the SLOT, not the occupying vehicle); only the two vehicle objects
+        swap, so get_distractor_states()/Candidate.idx for every OTHER slot is untouched and
+        downstream (candidates.py build_candidates, scorer) needs no changes: is_target is
+        always derived from whichever object self._target currently points to. Returns False
+        if k is out of range or either side is already gone (actor destroyed)."""
+        if self._target is None or not (0 <= k < len(self._distractors)):
+            return False
+        new_t = self._distractors[k]
+        if new_t is None:
+            return False
+        old_t = self._target
+        self._target, self._distractors[k] = new_t, old_t
+        self._retarget_log.append({"tick": tick, "slot": k})
+        return True
+
     def recycle_lost_lookalikes(self) -> None:
         """Smooth off-screen recycle (spec §4d): keep >=2 SIMILAR look-alikes co-visible
         with the target by teleporting one that has drifted FAR off-camera back into view
@@ -716,7 +853,9 @@ class SceneManager:
             if _visible(p):
                 on_screen += 1
             elif np.linalg.norm(np.asarray(p)[:2] - tpos[:2]) > far:
-                needy.append(obj)
+                v_ = getattr(obj, "_vehicle", None)          # just relocated by _unjam_step → not back in front yet
+                if v_ is None or getattr(self, "_kin_quarantine", {}).get(v_.id, -1) < getattr(self, "_kin_tick", 0):
+                    needy.append(obj)
         if on_screen >= 2 or not needy:
             return                               # co-visibility already fine → do nothing
 
@@ -827,6 +966,7 @@ class SceneManager:
                         dtype=np.uint8)
 
     def step_target(self, dt: float = 0.1) -> None:
+        self._unjam_step()
         if self._target is not None and hasattr(self._target, "step"):
             try:
                 self._target.step(dt)
@@ -873,8 +1013,60 @@ class SceneManager:
         return False
 
     def check_obstacles(self, action, uav_pos, uav_yaw, timestamp) -> tuple[tuple, Any]:
+        ev = None
         if self._obstacle_avoider is not None:
-            return self._obstacle_avoider.check(action, uav_pos, timestamp)
+            action, ev = self._obstacle_avoider.check(action, uav_pos, timestamp)
+        if self._config.get("uav", {}).get("geometry_avoidance", False):
+            action, gev = self._geometry_avoid(action, uav_pos, timestamp, uav_yaw)
+            ev = ev or gev
+        return action, ev
+
+    def _geometry_avoid(self, action, uav_pos, timestamp, uav_yaw=0.0):
+        """v6: the kinematic drone has no collision and the altitude floor assumes <30 m buildings, so
+        it could fly THROUGH high-rises (camera inside geometry → black / wall frames). Raycast the
+        horizontal path ~3 s ahead (at camera height and 3 m below); if blocked, stop horizontally and
+        climb; never descend onto a roof directly below."""
+        from carla_uav.obstacle_avoidance import ObstacleEvent
+        L = carla.CityObjectLabel
+        block = {getattr(L, n) for n in ("Buildings", "Walls", "Fences", "Poles", "Vegetation", "Bridge",
+                                         "Static", "GuardRail", "TrafficLight", "TrafficSigns") if hasattr(L, n)}
+        dx, dy, dz, dyaw = action
+        p = carla.Location(float(uav_pos[0]), float(uav_pos[1]), float(uav_pos[2]))
+
+        def hit(b):
+            try:
+                return any(h.label in block for h in self._world.cast_ray(p, b))
+            except RuntimeError:
+                return False
+        # clearance ring: 8 horizontal 5 m rays at camera height and 2 m below — structures beside the
+        # drone (e.g. an elevated highway it flies parallel to) would otherwise slowly swallow the camera
+        push = np.zeros(2)
+        for k in range(8):
+            ang = k * math.pi / 4.0
+            ux, uy = math.cos(ang), math.sin(ang)
+            for zoff in (0.0, -2.0):
+                if hit(carla.Location(p.x + 5.0 * ux, p.y + 5.0 * uy, p.z + zoff)):
+                    push -= (ux, uy)
+                    break
+        if np.any(push != 0.0):
+            n = float(np.linalg.norm(push)) or 1.0
+            return ((0.5 * push[0] / n), (0.5 * push[1] / n), 0.6, dyaw), ObstacleEvent(timestamp, "geom_clear", 5.0)
+        hz = math.hypot(dx, dy)
+        # camera optical axis: never let the camera come within 12 m of a surface it looks at (a roof or
+        # facade filling the frame from 2-5 m away is not a realistic aerial view)
+        pitch = math.radians(float(getattr(self, "_camera_pitch", -50.0)))
+        yaw = math.radians(float(uav_yaw))
+        ax = (math.cos(pitch) * math.cos(yaw), math.cos(pitch) * math.sin(yaw), math.sin(pitch))
+        if hit(carla.Location(p.x + 12.0 * ax[0], p.y + 12.0 * ax[1], p.z + 12.0 * ax[2])):
+            return (0.0, 0.0, 0.8, dyaw), ObstacleEvent(timestamp, "geom_axis_climb", 12.0)
+        if hz > 1e-3:
+            look = max(8.0, 30.0 * hz)
+            ux, uy = dx / hz, dy / hz
+            for zoff in (0.0, -3.0):
+                if hit(carla.Location(p.x + ux * look, p.y + uy * look, p.z + zoff)):
+                    return (0.0, 0.0, 0.8, dyaw), ObstacleEvent(timestamp, "geom_climb", look)
+        if dz < 0 and hit(carla.Location(p.x, p.y, p.z + dz - 4.0)):
+            return (dx, dy, 0.0, dyaw), ObstacleEvent(timestamp, "geom_hold_alt", -dz)
         return action, None
 
     def expert_action(
@@ -982,7 +1174,7 @@ class SceneManager:
             return
         try:
             tm.set_route(veh, [random.choice(["Left", "Right"]) for _ in range(4)])
-            tm.set_desired_speed(veh, 16.0)   # moderate → stays close (re-acquirable), not sprint-away
+            tm.set_desired_speed(veh, self._evade_kmh())   # moderate → stays close (re-acquirable), not sprint-away
         except (RuntimeError, AttributeError):
             pass
 
@@ -994,7 +1186,7 @@ class SceneManager:
         if veh is None or tm is None:
             return
         try:
-            tm.set_desired_speed(veh, 16.0)
+            tm.set_desired_speed(veh, self._evade_kmh())
         except (RuntimeError, AttributeError):
             pass
 
@@ -1005,7 +1197,10 @@ class SceneManager:
         if veh is None or tm is None:
             return
         try:
-            tm.set_desired_speed(veh, 9.0)
+            # legacy: 9.0 — TM.set_desired_speed takes km/h, i.e. 2.5 m/s for the rest of the episode. In kinematics
+            # mode the target returns to its own episode speed instead.
+            base = getattr(self, "_kin_target_speed", None)
+            tm.set_desired_speed(veh, self._kmh(base) if (self._kin() and base) else 9.0)
         except (RuntimeError, AttributeError):
             pass
 
@@ -1098,6 +1293,210 @@ class SceneManager:
                         pass
                     break
 
+    # ------------------------------------------------------------------ 2026-10-09 kinematics / anti-gridlock
+    def _kin(self):
+        """scene.kinematics config (dict) or None (legacy behaviour everywhere)."""
+        return (self._config.get("scene", {}) or {}).get("kinematics") or None
+
+    @staticmethod
+    def _kmh(mps: float) -> float:
+        return float(mps) * 3.6               # TM.set_desired_speed takes km/h
+
+    def _evade_kmh(self) -> float:
+        kin = self._kin()
+        return self._kmh(kin["evade_speed_mps"]) if (kin and kin.get("evade_speed_mps")) else 16.0
+
+    def _apply_kinematics(self) -> None:
+        """Target: TM desired speed ~ U(actor_speed_mps); vehicle distractors: the target's ± jitter (clipped to the
+        range) so the look-alike convoy stays together. set_desired_speed replaces the speed-limit percentage given
+        at spawn (TM keeps whichever was set last; nothing else re-sets these in this scenario: maneuvers are off,
+        station_keep_lookalikes is unused)."""
+        self._kin_still, self._kin_tick, self._kin_relocated, self._kin_lane_kicks = {}, 0, 0, 0
+        self._kin_events = []                 # unjam relocations → episode metadata (recorder)
+        self._kin_quarantine = {}             # relocated actor id → tick until which recycle must not bring it back
+        self._kin_target_speed = None
+        kin = self._kin()
+        if not kin or self._target_type != "vehicle" or self._target is None:
+            return
+        tm = self._client.get_trafficmanager(_tm_port())
+        lo, hi = (float(x) for x in kin.get("actor_speed_mps", [10.0, 12.0]))
+        jit = float(kin.get("distractor_jitter_mps", 0.5))
+        base = random.uniform(lo, hi)
+        speeds = [base] + [float(np.clip(base + random.uniform(-jit, jit), lo, hi)) for _ in self._distractors]
+        for obj, mps in zip([self._target] + list(self._distractors), speeds):
+            v = getattr(obj, "_vehicle", None)
+            if v is None:
+                continue
+            try:
+                tm.set_desired_speed(v, self._kmh(mps))
+            except (RuntimeError, AttributeError):
+                pass
+        self._kin_target_speed = base
+        print(f"  [kinematics] target {base:.1f} m/s, distractors {lo:.0f}-{hi:.0f} m/s (±{jit} around the target)")
+
+    def _unjam_step(self) -> None:
+        """No single stuck vehicle may freeze the scene (scene.kinematics.unjam). Every 10 steps (1 s at 10 Hz) on one
+        snapshot of all vehicles:
+          · "still" = speed < still_mps and NOT part of a queue waiting at a red light (the lead chain of up to 8 cars
+            in the same lane, ≤ 15 m apart, ends at a car that is_at_traffic_light with state Red); counted per actor;
+          · target / vehicle distractor still >= actor_still_s → TM force_lane_change every 4 s, sides alternating;
+            still >= blocker_still_s → the vehicle right in front of it in its lane (≤ 15 m; else the nearest stopped
+            car in a ±4 m corridor ≤ 12 m — junction box) is relocated: an ambient car anywhere 150-300 m away, a
+            distractor too (recycle_lost_lookalikes later brings a look-alike back near the target off-camera);
+          · ambient car within radius_m of the target still >= ambient_still_s → relocated, off-camera ones first;
+            one visible in the frame only once still >= ambient_visible_still_s.
+        Relocation = set_transform to a free spawn point (no vehicle within 10 m) + zero linear/angular velocity;
+        TM keeps driving it (the same mechanism as its own dormant respawn). Last resort (recorder): target moved < 5 m
+        in truncate_stuck_s → episode truncated → fails QC. Counters: self._kin_relocated / self._kin_lane_kicks."""
+        kin = self._kin()
+        un = (kin or {}).get("unjam")
+        if not un or self._target is None or getattr(self, "_target_type", None) != "vehicle":
+            return
+        self._kin_tick = getattr(self, "_kin_tick", 0) + 1
+        if self._kin_tick % 10:
+            return
+        try:
+            tloc = self._target.transform.location
+            vehicles = list(self._world.get_actors().filter("vehicle.*"))
+        except (RuntimeError, AttributeError):
+            return
+        tm = self._client.get_trafficmanager(_tm_port())
+        still_mps, radius = float(un.get("still_mps", 0.3)), float(un.get("radius_m", 80.0))
+        a_still, b_still = int(un.get("actor_still_s", 12)), int(un.get("blocker_still_s", 20))
+        amb_still, amb_vis_still = int(un.get("ambient_still_s", 25)), int(un.get("ambient_visible_still_s", 40))
+        red = carla.TrafficLightState.Red
+        snap = {}                                            # id → (actor, x, y, yaw_rad, speed, z)
+        for a in vehicles:
+            try:
+                tr, vel = a.get_transform(), a.get_velocity()
+                snap[a.id] = (a, tr.location.x, tr.location.y, np.radians(tr.rotation.yaw), vel.length(), tr.location.z)
+            except RuntimeError:
+                pass
+
+        ids = list(snap)
+        P = np.array([[snap[i][1], snap[i][2]] for i in ids]).reshape(-1, 2)
+        SP = np.array([snap[i][4] for i in ids])
+
+        def ahead(aid, lat_max=1.8, fwd_max=15.0, need_stopped=False):
+            """nearest vehicle in front of aid: 0.5 < forward ≤ fwd_max, |lateral| < lat_max (its own lane)"""
+            _, x, y, yaw, _, _ = snap[aid]
+            r = P - np.array([x, y])
+            df = r[:, 0] * np.cos(yaw) + r[:, 1] * np.sin(yaw)
+            dl = np.abs(r[:, 0] * np.sin(yaw) - r[:, 1] * np.cos(yaw))
+            ok = (df > 0.5) & (df <= fwd_max) & (dl < lat_max)
+            if need_stopped:
+                ok &= SP < still_mps
+            if not ok.any():
+                return None
+            k = np.flatnonzero(ok)
+            return ids[int(k[np.argmin(df[k])])]
+
+        def at_red(aid):
+            try:
+                a = snap[aid][0]
+                return bool(a.is_at_traffic_light()) and a.get_traffic_light_state() == red
+            except RuntimeError:
+                return False
+
+        def queued_at_red(aid):
+            cur = aid
+            for _ in range(8):
+                if at_red(cur):
+                    return True
+                nxt = ahead(cur)
+                if nxt is None:
+                    return False
+                cur = nxt
+            return False
+
+        def tick_still(aid):
+            n = self._kin_still.get(aid, 0)
+            if snap[aid][4] >= still_mps:
+                n = 0                                        # real motion → reset
+            elif not queued_at_red(aid):
+                n += 1                                       # queued at a red → paused, not reset (codex R2-1)
+            self._kin_still[aid] = n
+            return n
+
+        cam = None
+        try:
+            cam_t = self.drone.get_camera_transform() if self.drone is not None else None
+            if cam_t is not None:
+                W, H = self._config.get("output", {}).get("rgb_resolution", [336, 336])
+                fov = float(self._config.get("output", {}).get("fov", 90.0))
+                cam = (np.array(cam_t.get_inverse_matrix()), W, H, W / (2.0 * np.tan(np.radians(fov) / 2.0)))
+        except RuntimeError:
+            cam = None
+
+        def visible(aid):
+            if cam is None:
+                return True                                  # unknown → treat as visible (conservative)
+            M, W, H, foc = cam
+            _, x, y, _, _, z = snap[aid]
+            q = M @ np.array([x, y, z, 1.0])
+            if q[0] <= 0.1:
+                return False
+            u, v = foc * (q[1] / q[0]) + W / 2.0, foc * (-q[2] / q[0]) + H / 2.0
+            return -20 <= u < W + 20 and -20 <= v < H + 20
+
+        free_pts = None
+
+        def relocate(aid, why):
+            nonlocal free_pts
+            if free_pts is None:
+                occ = [(sx, sy) for (_, sx, sy, _, _, _) in snap.values()]
+                free_pts = [sp for sp in self._map.get_spawn_points()
+                            if 150.0 <= sp.location.distance(tloc) <= 300.0
+                            and all(np.hypot(sp.location.x - ox, sp.location.y - oy) > 10.0 for ox, oy in occ)]
+                random.shuffle(free_pts)
+            if not free_pts:
+                return False
+            a, sp, vis = snap[aid][0], free_pts.pop(), visible(aid)
+            try:
+                a.set_transform(sp)
+                a.set_target_velocity(carla.Vector3D(0.0, 0.0, 0.0))
+                a.set_target_angular_velocity(carla.Vector3D(0.0, 0.0, 0.0))
+            except RuntimeError:
+                return False
+            self._kin_still[aid] = 0
+            self._kin_relocated += 1
+            self._kin_events.append({"tick": self._kin_tick, "kind": why, "actor": aid, "in_view": bool(vis)})
+            self._kin_quarantine[aid] = self._kin_tick + 10 * int(un.get("quarantine_s", 30))   # codex R2-2
+            print(f"  [unjam] relocated {why} {aid} (in view: {vis}); total relocated {self._kin_relocated}, "
+                  f"lane kicks {self._kin_lane_kicks}", flush=True)
+            return True
+
+        tgt_v = getattr(self._target, "_vehicle", None)
+        tgt_id = tgt_v.id if tgt_v is not None else None
+        dis_ids = {v.id for v in (getattr(o, "_vehicle", None) for o in self._distractors) if v is not None}
+        scene_ids = [i for i in [tgt_id] + sorted(dis_ids) if i is not None and i in snap]
+        for aid in scene_ids:                                # target + distractors: lane kick → clear the blocker
+            n = tick_still(aid)
+            if n >= a_still and (n - a_still) % 4 == 0:
+                try:
+                    tm.force_lane_change(snap[aid][0], bool(((n - a_still) // 4) % 2))
+                    self._kin_lane_kicks += 1
+                except RuntimeError:
+                    pass
+            if n >= b_still and (n - b_still) % 5 == 0:
+                blk = ahead(aid) or ahead(aid, lat_max=4.0, fwd_max=12.0, need_stopped=True)
+                if blk is not None and blk != tgt_id:           # never teleport the target itself
+                    relocate(blk, ("distractor" if blk in dis_ids else "ambient") + f" blocking {aid}")
+        amb = set(getattr(self, "_ambient_ids", [])) & set(snap)
+        cand = []
+        for aid in amb:
+            _, x, y, _, _, _ = snap[aid]
+            if np.hypot(x - tloc.x, y - tloc.y) > radius:
+                self._kin_still[aid] = 0
+                continue
+            n = tick_still(aid)
+            if n >= amb_still:
+                vis = visible(aid)
+                if not vis or n >= amb_vis_still:
+                    cand.append((vis, -n, aid))
+        for _, _, aid in sorted(cand):                       # off-camera first, then the longest-stuck
+            relocate(aid, "ambient")
+
     def step_drone(self, action: tuple[float, float, float, float]) -> None:
         assert self.drone is not None
         self.drone.step(*action)
@@ -1134,7 +1533,7 @@ class SceneManager:
         for a in victims:  # stop autopilot/controllers so TM drops them first
             try:
                 if a.type_id.startswith("vehicle."):
-                    a.set_autopilot(False)
+                    a.set_autopilot(False, _tm_port())  # default port 8000 may be another worker's TM → hang
                 elif a.type_id.startswith("controller."):
                     a.stop()
             except RuntimeError:

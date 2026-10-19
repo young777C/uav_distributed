@@ -1,0 +1,1526 @@
+Reading additional input from stdin...
+OpenAI Codex v0.159.3
+--------
+workdir: /nvidia/hque/code/cyhe/uav-acot-track
+model: gpt-5.5
+provider: openai
+approval: never
+sandbox: read-only
+reasoning effort: high
+reasoning summaries: none
+session id: 01a0fcc0-a8d8-7f31-a272-68fd0f2e01db
+--------
+user
+你是机器人领域 SCI 一区期刊(T-RO/RA-L 级)审稿人兼 CCF-A 会议 AC,严苛但公正。请审阅 acot_note/1003_v1_v2_design.md(V1 PGIF∘DAM4SAM、V2 延迟承诺冷启动;均为闭环前预注册的设计)。背景:acot_note/1001_innovation-design.md(当前 v4 方法 PGIF 与证据)、acot_note/1003_iteration_workflow.md(12h 迭代计划)、figs/fig_architecture.png 描述的系统;实现见 carla_uav_tracking/rollout/asd.py、policy.py。只审创新点与逻辑:(1) V1、V2 各自的创新点是否足够支撑 SCI 一区 / CCF-A(相对 DAM4SAM 的 DRM、MOT 的轨迹确认 n_init、指代 MOT、TLD、自训练确认偏差);(2) 预注册假设是否可证伪、门控是否合理;(3) 设计中的逻辑漏洞或混杂因素(例如重置 SAM2 丢失 DRM、冷启动窗口内的控制)。输出:对 V1 与 V2 分别给 verdict(NO MAJOR / MAJOR),逐条 MAJOR/MINOR 与具体修改建议。中文,≤1000 字。不要修改任何文件,不要运行耗时超过 2 分钟的命令。
+codex
+我会只做只读审阅，先快速抓取三份 note、两份实现文件以及架构图的关键信息；不会改文件，也会把命令控制在很短时间内。
+exec
+/bin/sh -lc "sed -n '1,240p' acot_note/1003_v1_v2_design.md" in /nvidia/hque/code/cyhe/uav-acot-track
+exec
+/bin/sh -lc "sed -n '1,220p' acot_note/1003_iteration_workflow.md" in /nvidia/hque/code/cyhe/uav-acot-track
+exec
+/bin/sh -lc "sed -n '1,220p' acot_note/1001_innovation-design.md" in /nvidia/hque/code/cyhe/uav-acot-track
+exec
+/bin/sh -lc "sed -n '1,260p' carla_uav_tracking/rollout/asd.py" in /nvidia/hque/code/cyhe/uav-acot-track
+exec
+/bin/sh -lc "sed -n '1,260p' carla_uav_tracking/rollout/policy.py" in /nvidia/hque/code/cyhe/uav-acot-track
+ succeeded in 1271ms:
+# 1003 · 12h 迭代升级 workflow(创新点 + 性能 + deployable/泛化验证 + 每版 codex 审核)
+
+> 2026-10-02 · 目标:机器人领域 SCI 一区期刊(T-RO / IJRR / RA-L 级别的审稿标准)或 CCF-A 会议。
+> 出发点:`1001_innovation-design.md`(v4,TAHRelM + PGIF)与 `figs/fig_architecture.png`。
+> 产出:`acot_note/1003_iteration_roadmap.md`(每个版本:假设 → 设计 → 证据 → codex 结论 → 去留),外加更新后的 1001 文档与图。
+
+---
+
+## 0. 现状诊断(全部来自已测数据,deployable、CARLA 在线闭环、同种子)
+
+| # | 问题 | 证据 | 含义 |
+|---|---|---|---|
+| P1 | **正确锁定比例不是 SOTA** | DAM4SAM 0.786 vs PGIF 0.583(PGIF − DAM4SAM = −0.20 [−0.39, −0.03]) | TAHRelM(4,740 参数)的单帧关联能力弱于 SAM2-L 记忆 |
+| P2 | **最长锁错没有改善** | PGIF 15.4s(中位 0.9s);l4 7.9s、borrow#1 8.8s;对各方法差异都不显著 | 长尾来自少数 episode |
+| P3 | **冷启动锁错主导长尾** | 初始锁对:PGIF 正确比例 0.96/0.90/0.80;初始锁错:0.017/0.094/0.008(Town05 / Town10HD / reid),锁错开局占 7/19、11/20、7/19 | PGIF 会坚持错误的初始身份 |
+| P4 | **DAM4SAM 粘滞错锁** | 最长锁错 26.7s(中位 21.6s),全场最长 | SAM2 记忆同样是"自更新确认偏差",恰好是 PGIF 的目标问题 |
+| P5 | **重捕获率在部分设定下降** | Town10HD 0.31→0.17,reid 0.55→0.15(附录 B) | 回火让重新入画的正确身份需要时间积累证据 |
+| P6 | **泛化证据弱** | 单设定 Town10HD/reid 不显著,合并 n=58 才显著;Town10HD 在训练数据中出现过 | 缺真正没见过的场景 |
+| P7 | **感知与定位理想化** | 候选框 / 被承诺车辆位置来自仿真 | 写作中声明边界(本轮不解决,列为后续) |
+
+## 1. 创新点升级方向(本轮要验证的核心假设)
+
+**从"给单个记忆加一个门控包装器"升级为:"闭环身份 = 对多个异构自更新记忆 + 语言规格的、按误差相关性回火的证据融合,并把融合后验反馈门控每个记忆的更新"。**
+
+- **C1(问题化,沿用)**:闭环指代重捕获中的身份失效 = 自更新记忆的确认偏差;对 SAM2 类强记忆同样成立(P4 是新的直接证据)。
+- **C2(方法,升级)**:PGIF 从"包 TAHRelM"推广为**异构记忆融合层**——每个记忆(TAHRelM、DAM4SAM、语言 grounding)给出"选择 + 置信度",按各自的置信度秩加权、按误差相关时间回火,融合成一个 tracklet 级后验;后验再门控**每个**记忆的更新/重置。
+- **C3(方法,新增)**:**延迟承诺的冷启动**——开局先在 tracklet 上积累语言(+ 记忆)证据,证据充分才承诺,攻 P3。
+- **C4(理论,沿用并扩展)**:命题 2 扩展到多源:各源误差相关性不同 → 各自回火;源之间误差近似独立时融合才有增益(可检验)。
+
+各版本对应的可检验预测见 §3。
+
+## 2. 版本路线(每版先过 codex 创新点审核,再做闭环)
+
+| 版本 | 内容 | 攻哪个问题 | 预注册假设(Town05,n=19 配对) | 主要改动 |
+|---|---|---|---|---|
+| **V0** | 冻结当前基线(TAHRelM + PGIF;所有臂 deployable 结果已有) | — | — | 无 |
+| **V1** | **PGIF ∘ DAM4SAM**:把 PGIF 包在 DAM4SAM 外层;重置钩子 = 用 ŝ 的框重新 `init` SAM2 | P1、P4,并检验 C2 的跨记忆泛化 | 正确比例不低于 DAM4SAM(非劣,Δ 下界 > −0.05),最长锁错显著低于 DAM4SAM | `dam4sam_service.py` 返回 SAM2 预测 IoU 作置信度;`policy.py` 加 dam4sam 的 PGIF 门控(重新 init) |
+| **V2** | **延迟承诺冷启动**:前 k 个决策步只积累语言证据(回火)、不承诺;可选:把阶段 0 的 LoRA r16 grounding 头作为语言打分器 | P3、P2 | 冷启动锁错比例下降;最长锁错均值显著下降 | `asd.py` 增加冷启动窗口;`policy.py` 冷启动路径 |
+| **V3** | **异构证据融合**:TAHRelM + DAM4SAM + 语言 三路观测进入同一个回火后验,门控两个记忆 | P1、P2、C2/C4 | 正确比例显著高于 DAM4SAM,最长锁错显著低于 DAM4SAM 与 PGIF(V0) | 两个记忆同时运行(DAM4SAM 服务 + TAHRelM),`asd.py` 多观测融合 |
+| **V4**(时间允许) | **重捕获感知回火**:目标 tracklet 重新入画后短窗口内提高新证据权重 | P5 | 重捕获率不低于无纠偏,正确比例不下降 | `asd.py` |
+
+**去留规则**:某版本闭环未达到预注册假设 → 如实记为负结果(写进 roadmap),不进入下一版的组合;达到 → 作为下一版的基座。
+
+## 3. 每个版本的流水线(固定步骤与门控)
+
+```
+(a) 设计文档 v_k(≤30 min)
+      → codex 审核 R_k^a:只审创新点与逻辑(是否足够 SCI 一区 / CCF-A;与 DAM4SAM、MHT、自训练确认偏差、TLD 等的区别)
+        判据:无 MAJOR → 进入 (b);有 MAJOR → 修改设计后重审,最多 2 轮;仍有 MAJOR → 该版降级或放弃
+(b) 实现 + 单测 + 1 episode 冒烟(≤45 min)
+(c) 闭环主实验:Town05,seeds 91000–19,deployable,3 台 CARLA 并行(约 80–90 min/臂)
+(d) 门控 G_k:按 §2 预注册假设判定(配对 bootstrap 95% CI,三项指标)
+(e) 泛化实验(仅通过 G_k 的版本):Town10HD + Town03(训练集外地图)各 20 ep,与 DAM4SAM、V0 配对
+(f) codex 审核 R_k^b:审"证据是否支撑创新点"(过度声称、统计、公平性)
+(g) 写入 1003_iteration_roadmap.md:假设 / 设计 / 数据路径 / 两轮 codex 结论 / 去留
+```
+
+**审稿 prompt 模板**(`runs/asd/codex_review.sh <out.md> "<prompt>"`,stdin 已关闭):
+- R^a:"你是 [T-RO/RA-L 审稿人 + CCF-A AC]。审 `acot_note/1003_v{k}_design.md`:创新点是否足够、与相关工作的差异是否成立、逻辑是否闭合、预注册假设是否可证伪。输出 verdict(NO MAJOR / MAJOR)+ MAJOR/MINOR 与修改建议。"
+- R^b:"审 `1003_v{k}_evidence.md` 与数据 `eval_out/...json`:证据是否支撑主张、有无过度声称、统计与公平性问题。"
+
+## 4. 12 小时时间表(3 台健康 CARLA:2000 / 2010 / 2040;policy 放 GPU 1/3/4/7;DAM4SAM 服务 GPU 6)
+
+| 时段 | 设计/审核/实现(CPU) | 闭环槽位 S1 | S2 | S3 |
+|---|---|---|---|---|
+| 0:00–0:45 | 预检:Town03 加入场景配置并冒烟;DAM4SAM 服务返回置信度;V1/V2 设计文档 + R1^a、R2^a | Town03 冒烟(2 ep) | DAM4SAM · Town10HD(泛化对照所需) | TAHRelM 无纠偏 · Town03 |
+| 0:45–2:15 | 实现 V1、V2;R3^a(V3 设计) | **V1** · Town05 | **V2** · Town05 | DAM4SAM · Town03 |
+| 2:15–3:45 | G1/G2 判定;实现 V3 | V1 · Town10HD(若过 G1) | V2 · Town10HD(若过 G2) | PGIF(V0)· Town03 |
+| 3:45–5:15 | R1^b、R2^b | **V3** · Town05 | V1 · Town03 | V2 · Town03 |
+| 5:15–6:45 | G3 判定;V4 设计 + R4^a(可选) | V3 · Town10HD | V3 · Town03 | 最优版本扩种子 91020–39 |
+| 6:45–8:15 | R3^b | 最优版本 reid 记忆(跨记忆) | DAM4SAM 扩种子 91020–39 | V0 扩种子 91020–39 |
+| 8:15–9:45 | V4(若做) | V4 · Town05 | 补跑 / 失败重跑 | 补跑 |
+| 9:45–12:00 | 汇总:三指标配对统计、冷启动分层、泛化合并;更新 1001 文档、架构图、对比图;roadmap 全文 + 终审 codex | — | — | — |
+
+> 槽位按"上一步结果"动态调整:未过门控的版本,其泛化槽位让给下一版或扩种子。
+
+## 5. 统一规范(所有版本必须遵守)
+
+1. **只用 deployable**:身份决策不使用真值(候选框与车辆定位为仿真理想输入,写作中声明)。gt-seeded 不进入任何对比。
+2. **三项客观指标**:正确锁定比例、最长连续正确锁定、最长锁错(scorer 逐帧字段);SR 只放附录。
+3. **同种子配对**:主实验 seeds 91000–19;扩种子 91020–39;配对 bootstrap 95% CI;冷启动分层用 `rollout/tick_align.py` 对齐。
+4. **预注册**:每版的超参数在跑闭环前写入设计文档并冻结,不在评测种子上调参。
+5. **诚实记录**:未达预期的版本作为负结果写入 roadmap,并给出机理解释。
+6. **基础设施**:每个臂独立 TM 端口;CARLA 与 policy 不共用 GPU;后台任务关闭 stdin;运行日志写入 `runs/asd/iter/`。
+
+## 6. 主要风险与预案
+
+| 风险 | 预案 |
+|---|---|
+| Town03 场景生成失败(场景配置/遮挡缓存) | 预检时 2 ep 冒烟;失败则泛化只用 Town10HD + 跨记忆,并在 roadmap 中说明 |
+| DAM4SAM 重新 init 开销大、闭环变慢 | 限制重置频率(冷却 r 步);记录每 ep 耗时 |
+| V3 两个记忆同时运行显存/时间翻倍 | DAM4SAM 服务单独占 GPU 6;必要时 V3 只跑 Town05 + Town03 |
+| 只有 3 台 CARLA 健康,槽位不足 | 优先级:V1 > V2 > V3 主实验 > 泛化 > 扩种子 > V4 |
+| codex 连续两轮 MAJOR | 该版本降级为消融或放弃,roadmap 记录原因 |
+
+## 7. 成功判据(12h 结束时)
+
+- **性能**:存在一个版本在 Town05 上正确锁定比例 **不低于** DAM4SAM(非劣)且最长锁错 **显著低于** DAM4SAM;最好同时在 Town03(训练集外)上方向一致。
+- **创新点**:最终版本的设计与证据各通过一轮 codex 审核且无 MAJOR。
+- **文档**:`1003_iteration_roadmap.md` 完整记录每个版本(含负结果)。
+
+ succeeded in 1271ms:
+# 1003 · V1 / V2 设计文档(预注册;闭环前冻结)
+
+> 2026-10-02 · 属于 `1003_iteration_workflow.md` 的 V1、V2。所有实验:deployable(身份决策不用真值;候选框与车辆定位为仿真理想输入),CARLA 在线闭环,Town05 seeds 91000–19(19 计分),三项客观指标(正确锁定比例、最长连续正确锁定、最长锁错),配对 bootstrap 95% CI。基线 V0 = TAHRelM + PGIF(`1001_innovation-design.md` v4)。
+
+## 背景数据(deployable,`eval_out/deploy_compare.json`)
+| | 正确锁定比例 | 最长连续正确(均值/中位) | 最长锁错(均值/中位) |
+|---|---|---|---|
+| DAM4SAM(SAM2.1-L + 干扰物感知记忆,CVPR'25) | 0.786 | 13.3 / 6.4 s | **26.7 / 21.6 s** |
+| V0:TAHRelM + PGIF | 0.583 | 21.3 / 11.5 s | 15.4 / 0.9 s |
+
+冷启动分层(V0):初始锁对时正确比例 0.96/0.90/0.80,初始锁错时接近 0(Town05 / Town10HD / reid),锁错开局占 7/19、11/20、7/19。TAHRelM 的冷启动目前是**单帧**语言选车(第 1 个决策步的 grounding argmax 直接写入记忆)。
+
+---
+
+## V1 · PGIF ∘ DAM4SAM:把后验门控推广到强外观记忆
+
+**动机**:DAM4SAM 的长时间错锁(26.7 s)是 SAM2 记忆"用自己的预测掩码更新自己"造成的确认偏差,与 PGIF 在 TAHRelM 上处理的是同一机制(命题 1)。若 PGIF 的门控能在不同类型的记忆上起作用,则 C2"记忆无关的闭环身份门控"得到直接验证,同时有望保留 DAM4SAM 的高正确比例并压缩其错锁。
+
+**方法(与 V0 的 PGIF 完全相同的规则与超参)**:
+- 观测:DAM4SAM 每个决策步的选择 s^M = 与 SAM2 预测框中心最近的候选(160 px 门限内);置信度 c = SAM2 对所选掩码的**预测 IoU**(服务新增返回字段)。无匹配时该步不更新证据。
+- 回火证据:L_k ← 0.98·L_k;L_{s^M} += 0.5 + rank(c; 最近 30 步)。
+- 门控:ŝ = argmax_{可见 k} L_k;若 ŝ ≠ s^M → **重置钩子 = 用 ŝ 的候选框重新 init SAM2**(丢弃 RAM/DRM 记忆),控制承诺 ŝ。
+- 预注册附加参数:重置冷却 3 个决策步(避免频繁 re-init 抹掉 DRM);只在 committed 模式启用。
+
+**预注册假设(Town05,n=19 配对,V1 vs DAM4SAM)**:
+- H1a:正确锁定比例**非劣**——Δ 的 95% CI 下界 > −0.05;
+- H1b:最长锁错**显著降低**——Δ 的 95% CI 上界 < 0;
+- H1c(探索性):最长连续正确锁定不下降。
+- 失败解释预案:若 H1b 失败且冷启动锁错占主导 → 说明长尾来自初始身份错误而非漂移,转由 V2/V3 处理。
+
+**与相关工作的差异**:DAM4SAM 自身的 DRM 用"备选掩码与所选掩码分歧"来**选择写入哪些帧**,仍以 SAM2 的当前预测作为身份;V1 在 tracklet 层引入独立于该记忆的、按误差相关时间回火的身份后验,并在后验与记忆冲突时**重置**记忆——处理的是"记忆已经锁到错误实例"之后的纠错,而非写入策略。
+
+---
+
+## V2 · 延迟承诺冷启动(sequential language commitment)
+
+**动机**:长尾错锁主要来自开局锁错(P3);单帧语言选车准确率约 0.42(离线 xattn,mis 0.579),而 PGIF 会忠实维持初始身份。把"开局选谁"也变成一个带回火的序贯证据决策。
+
+**方法**:
+- 冷启动窗口:前 K = 5 个决策步(≈3 s)**不写入身份记忆**;每步对可见 tracklet 累积语言证据 G_k ← 0.9·G_k + (0.5 + rank(语言 margin; 窗口内)) · 1[k = 语言 argmax](与 PGIF 同形式的回火投票,λ_lang = 0.9 预注册)。
+- 窗口内控制:承诺当前 argmax_k G_k(临时承诺,仅用于飞行;记忆不更新)。
+- 窗口结束:承诺 k* = argmax_k G_k,用其当前截图初始化 TAHRelM 记忆;PGIF 证据以 L_{k*} = G_{k*} 初始化(保留开局的语言支持度)。
+- 语言来源:沿用部署中的 Stage-2 grounding 头(冻结);LoRA r16 打分器作为可选 V2b(阶段 0 未显著,暂不预注册)。
+
+**预注册假设(Town05,n=19 配对,V2 vs V0)**:
+- H2a:开局锁错的 episode 数下降(描述性,配对比较各种子的开局是否锁对);
+- H2b:最长锁错均值显著下降(Δ 的 95% CI 上界 < 0);
+- H2c:正确锁定比例不下降(Δ 下界 > −0.05)。
+
+**与相关工作的差异**:多目标跟踪中的"轨迹确认"(tentative → confirmed,如 DeepSORT 的 n_init)按检测连续性确认轨迹,不涉及"哪条轨迹是语言所指";指代多目标跟踪(RMOT/iKUN)逐帧做语言匹配。V2 把"语言指代"本身作为带回火的序贯证据决策,并把开局证据作为后续 PGIF 后验的先验。
+
+---
+
+## 统一实现清单
+- `external/DAM4SAM/dam4sam_tracker.py`:输出所选掩码的预测 IoU(已改);`rollout/dam4sam_service.py` 返回 `iou`(已改)。
+- `rollout/policy.py`:dam4sam 分支接入 ASD/PGIF(观测 = s^M、c = IoU;门控 = 重新 init);tah 分支冷启动窗口(V2)。
+- `rollout/asd.py`:PGIF 证据初始化接口(V2)。
+- 单测:合成序列上冷启动窗口选出语言证据最多的 tracklet;dam4sam 门控在冷却期内不重复 re-init。
+
+ succeeded in 1360ms:
+# 1001 · 创新点设计报告(终版 v4):PGIF — 后验门控身份滤波
+
+> 2026-10-01 · 目标 venue:NeurIPS/ICML/ICLR 方法向 · 状态:**PoC 闭环完成,Codex 第 4 轮评审 "NO MAJOR ISSUES"**(`1001_codex_review_r4.md`)
+> 配套:`1001_poc-closure.md`(claim→证据矩阵、闭合判据核对)· 审稿记录 `1001_codex_review_r{1..4}.md` · 记忆 `acot-uav-pgif-poc`
+> **评价指标(2026-10-02 起)**:论文只用三个客观指标——**正确锁定比例**(↑)、**最长连续正确锁定时长**(↑)、**最长锁错时长**(↓)。成功率 SR 依赖人为设定的阈值(≥2s 承诺错锁即判失败),**不作为评价指标**,仅在附录 B 留作参考。
+> 标注:**[M] 已测** · **[T] 理论/解释性模型** · **[L] 局限**。路径约定:`eval_out/` = `carla_uav_tracking/rollout/eval_out/`;日志在 `runs/asd/`。所有闭环臂:live CARLA、seeds 91000–19、STEPS 900、s2=6,同种子配对 bootstrap 95% CI(`asd_stats.py`)。
+
+---
+
+## 0. 一句话
+
+**闭环指代跟踪中,自更新的身份记忆用自己的逐帧选择作伪标签更新自己——这是闭环版的确认偏差:单帧误选被写进记忆、下一帧再被自己确认,放大为持续错锁。PGIF 在任意身份记忆外层,对持久 tracklet 维护"按误差相关时间回火、以置信度秩加权"的身份证据,并让记忆更新与控制承诺都以证据 argmax 为门。无训练参数;只需记忆暴露"选择 + 置信度 + 更新钩子",并假设环境提供持久 tracklet 关联。**
+
+![PGIF architecture](figs/fig_pgif_architecture.png)
+
+*图 1 · (a) PGIF 位于身份记忆与(i)记忆自身更新、(ii)控制承诺之间,切断"原始自更新"这条确认偏差回路;(b) 一个真实闭环 episode(TAHRelM + PGIF,seed 91009):记忆原始选择 44% 的 tick 指向 look-alike(阴影),回火证据始终保持真目标领先,门控改写 47 次(▲),PGIF 输出 100% 正确;(c) 组成部分消融。源 `figs/fig_pgif_architecture.py`(b 面板由 `runs/asd/tah_tempered_91000.jsonl` 重放生成)。*
+
+---
+
+## 1. 问题:deployable 身份的断点
+
+| 设定(TAHRelM 记忆,Town05) | 正确锁定比例 ↑ | 最长锁错 ↓(均值) | 来源 |
+|---|---|---|---|
+| oracle 记忆(每帧 GT crop 喂记忆,**非 deployable 上界**) | 0.746 | 1.9s | `paper_ext_tahrelm_gt` |
+| GT 漂移检测上界(GT 判错 → 重置) | 0.721 | 1.9s | `paper_ext_tahrelm_oracledrift` |
+| **deployable 无纠偏**(committed 记忆 + 语言冷启动) | **0.272** | 15.7s | `paper_asd_tah_observe` |
+| 低置信语言重锚 | 0.263 | 13.3s | `paper_ext_tahrelm_deploy` |
+| 冻结外观锚重锚(连续 3 tick 分歧) | 0.303 | 12.2s | `paper_asd_tah_anchor_p3` |
+
+→ 漂移纠正是 deployable 的主杠杆(GT 检测即可收回大部分差距),但所有 GT-free 修补均无显著效果 **[M]**。
+
+## 2. 诊断:为什么旧修补失败、信号在哪里
+
+observe 模式(只记录不干预)日志,GT 仅用于离线打分:
+
+| # | 发现 | TAH | reid | 含义 |
+|---|---|---|---|---|
+| D1 | 记忆自置信检测"当前选择≠目标"的 AUROC | 0.710 [0.546,0.811](30 ep) | 0.819 [0.792,0.862](8 ep) | 自置信**弱但有信息**,不是不可辨识 |
+| D2 | 错锁时刻,参考指认真目标的命中率 | 冻结外观锚 0.25 · 语言 EMA 0.28 · 融合 0.27(随机 0.32) | 0.10 · 0.39 · 0.11(随机 0.36) | 外观/语言参考在 look-alike 漂移时刻**≈随机** → 锚/语言重锚必然失败 |
+| D2' | 冻结外观锚相异度的 AUROC | 0.501 [0.421,0.622] | — | 同上 |
+| D3 | 错锁时刻,tracklet 历史指认真目标 | 历史驻留 0.45 · 上一稳定身份 0.44 | 1.00 · 0.97 | **漂移免疫信号在 tracklet 持续性**;右→错切换时真目标仍可见 85–92% |
+| D4 | 确认偏差机制 | 记忆逐帧用自身选择更新:错 tick 0.52,episode 末吸收于错锁 1/4–2/3 | gallery 只存 committed 身份(自带一层门控):错锁平均 2.9 tick | 自更新使误差**自相关** |
+
+数据:`eval_out/auroc_{tah,reid}_observe.json`,`runs/asd/partial1/`。
+
+## 3. 方法:PGIF
+
+**接口**:记忆每 tick 给出选择 s^M_t、置信度 c_t(任意尺度)、更新钩子 `update(slot)`;环境提供持久 tracklet id(本 harness 为模拟器理想关联,§6.3 给出非理想关联敏感度)。
+
+```
+状态:每个已见 tracklet k 的证据 L_k;最近 W 个置信度的窗口 H
+每个决策 tick t:
+  ① ρ_t ← rank(c_t ; H) ∈ [0,1],  w_t ← 0.5 + ρ_t        # 尺度无关:不同记忆无需标定
+  ② L_k ← λ·L_k  (所有 k);  L_{s^M_t} ← L_{s^M_t} + w_t   # 回火:有效记忆长度 τ ≈ 1/(1−λ)
+  ③ ŝ_t ← argmax_{可见 k} L_k
+     若 ŝ_t ≠ s^M_t:  M.update(crop of ŝ_t) 取代 M.update(crop of s^M_t)   # 后验门控更新
+                      控制承诺 ŝ_t                                         # 后验门控承诺
+```
+- 超参 λ=0.98(τ≈50 tick≈30s)、W=30:实现时先验默认值,**未在评测种子上调**;TAH、reid、Town10HD 同一组。
+- 实现:`carla_uav_tracking/rollout/asd.py::ASD._filter_step`(`mode="filter", filter_kind="tempered"`),`policy.py::_asd_gate_memory`;启动 `rollout/eval_asd.sh`。
+
+### 3.1 可训练模块与参数量
+
+**PGIF 本身没有任何可训练参数(0 个)**:它是一个纯推理期的递推规则,只有两个**人工设定、冻结**的超参(λ=0.98、W=30),既不训练也没有在评测种子上调。下表是 PGIF 包裹的整个 deployable 系统的参数构成(由 ckpt 实测计数):
+
+| 模块 | 作用 | 参数量 | 是否可训练 / 本轮是否更新 |
+|---|---|---|---|
+| **PGIF**(`asd.py::_filter_step`) | 回火证据累积 + 后验门控 | **0**(超参 λ、W 各 1 个,冻结) | 无可训练参数 |
+| TAHRelM(`train/tah.py::TAHRelM`,`runs/tah_relm_dag.pt`) | 被包裹的身份记忆:7 个相对特征 → MLP 7·64·64·1 + 3 个可学门(gate/vbeta/mgate) | **4,740** | 可训练(此前已用 offline + DAgger 训练);**本轮冻结,未重训** |
+| Qwen3-VL-4B(第 24 层特征) | 语言条件视觉特征、冷启动语言 grounding | ~4B | 冻结 |
+| crop-DINOv2 ViT-S/14 | 候选外观特征 | ~22M | 冻结 |
+| Stage-2 TargetIDHead(xattn,`stage2_best.pt`) | 冷启动语言选车 logits | 2,296,577 | 冻结 |
+| EAR / IAR | 隐式动作先验 z_im 等 | 5,071,107 / 972,866 | 冻结 |
+| DiT(32 层 flow-matching) | 动作生成 | 136,778,757 | 冻结 |
+
+→ 整个系统中**唯一经过训练的身份相关参数是 TAHRelM 的 4,740 个**,PGIF 在其外层**不新增任何参数、不需要任何训练数据**;换成启发式 reid gallery(本身 0 参数)时,整条身份链路完全无训练参数。
+
+## 4. 理论
+
+**命题 1(闭环确认偏差 → 近似吸收;受限)[T]**:两个外观对称的 look-alike、EMA 自更新、无外部信号时,一旦误选,记忆以几何速率收敛到错误实例,此后每步回到目标的概率 ≤ exp(−δ²/cσ²)(δ 为外观间隙);且自置信在对称不动点处对"锁对/锁错"同分布。Toy 验证 **[M]** `eval_out/toy_drift.json`:错锁占比 0.27,连续 5 tick 错后回到目标仅 0.60。*边界*:真实系统有运动/历史等破坏对称的信号,故实测自置信 AUROC 为 0.71/0.82(D1)而非 0.5;命题只说明自更新使误差持续(自相关)。
+
+**命题 2(解释性模型:相关误差下的证据回火)[T]**:设 (B1) 记忆选择指向目标的概率 >1/2,且秩置信度对正确性 AUROC>0.5(D1 满足);(B2') 误选指示序列平稳、相关时间为 τ(自更新使 τ≫1);(B3) 真身份切换稀少。模型给出三条**可检验预测**:
+- (a) 把每 tick 当独立证据相乘会把有效证据高估约 τ 倍,一段长度 ~τ 的相关误选即可翻转后验 → **未回火滤波会被俘获,甚至差于不纠偏**;
+- (b) 以 λ≈1−1/τ 回火的置信加权累积,有效样本量约 T/τ,只有错误持续显著超过 τ 才翻转 → **回火 + 置信加权 > 等权驻留**;
+- (c) 门控阻止误选写入记忆,预期降低误差相关时间 → **门控 > 只改承诺不门控**。
+
+*地位*:解释性模型,非闭环严格界(闭环改变观测分布);(c) 未直接测 τ,仅由消融间接支持。三条预测的闭环检验见 §5.2,**全部成立**。
+
+## 5. PoC 结果
+
+### 评测设定(离线 / 在线 gt-seeded / 在线 deployable)
+
+| 设定 | 在哪里跑 | 身份记忆用什么更新 | 控制闭环 | 用途 |
+|---|---|---|---|---|
+| **离线** | 已采集数据(`runs/tah_cache.pt` 64 ep + DAgger 23 ep) | 训练时用 GT 身份(teacher forcing) | 否(逐帧打分,不飞行) | 训练/验证 TAHRelM(val 0.990);PGIF 开环回放分析(§5.4) |
+| **gt-seeded(oracle 记忆)** | **CARLA 在线闭环** | **每个决策步用 GT 目标的 crop/位置更新** | 是 | 上界:记忆永不漂移 |
+| **deployable** | **CARLA 在线闭环** | **用模型自己的承诺身份更新**;冷启动用语言选车 | 是 | 部署条件下的身份表现:身份决策不用 GT(候选框与车辆定位仍为仿真理想输入) |
+
+实现:`policy.py --gallery-seed {gt, committed}`。TAHRelM 记忆更新源 `us = true_idx if gallery_seed != "committed" else _pred_slot`(`policy.py:636`);reid gallery 同理(`policy.py:299`);committed 模式冷启动用语言 grounding(`policy.py:594` 起)。两种在线设定的闭环、因果性(只用过去信息)与打分完全相同,GT 只在环境侧用于打分;区别仅在于 gt-seeded 额外把 GT 喂给身份记忆。gt-seeded 下 PGIF 只门控控制承诺(记忆按定义仍由 GT 更新,`policy.py:709`)。
+
+### 指标口径(三项客观指标)
+| 指标 | 定义 | 来源 / 分辨率 |
+|---|---|---|
+| **正确锁定比例** ↑ | 目标在画面内的帧中,当前选择为真目标的帧比例 | scorer,逐帧 10 Hz(`mis_follow_inst` 的补) |
+| **最长连续正确锁定时长** ↑ | 每个 episode 内连续锁定真目标的最长时长;目标出画即断开(偏保守) | 本轮各臂由决策 tick 日志计算(1 tick = 0.6s,经步数对齐到种子,`rollout/tick_align.py`);scorer 已新增逐帧字段 `max_correct_run_s`,此后实验直接记录 |
+| **最长锁错时长** ↓ | 每个 episode 内承诺身份(K=5 滞回)持续为错误车辆的最长时长 | scorer,逐帧(`max_wrong_run_s`) |
+
+一致性校验:tick 日志算出的正确比例与 scorer 逐帧值相关 r = 0.998–1.000;最长锁错 r = 0.87–0.99(差异来自 scorer 用滞回后的承诺身份)。全部数字:`rollout/pgif_three_metrics.py` → `eval_out/pgif_three_metrics.json`;配对 bootstrap 95% CI。
+
+### 5.1 主结果(TAHRelM,Town05,n=19 同种子配对)
+
+| 臂 | 正确锁定比例 ↑ | 最长连续正确锁定 ↑(均值 / 中位) | 最长锁错 ↓(均值 / 中位) |
+|---|---|---|---|
+| 无纠偏 | 0.272 | 5.9s / 1.8s | 15.7s / 11.6s |
+| **PGIF** | **0.613** | **30.3s / 21.0s** | 10.8s / **0.8s** |
+| 相对无纠偏 Δ [95% CI] | **+0.341 [+0.177,+0.512]** | **+24.4s [+12.0,+37.7]** | −5.0s [−14.0,+5.1](不显著) |
+| GT 漂移检测上界(参照) | 0.721 | 未记录 | 1.9s / 2.2s |
+
+- 正确锁定比例与最长连续正确锁定均**显著**提升;PGIF 收回 GT 漂移检测上界在正确锁定比例上增益的 **76%**(0.341/0.449),且完全 GT-free **[M]**。
+- 最长锁错:中位数 11.6s→0.8s(多数 episode 已无长时间锁错),但均值的下降**不显著**——长尾来自冷启动即锁错的 episode(见下)。
+- 门控行为:改写占 tick 20%;改写中 65% 把选择拉到真目标、11% 拉离 **[M]**。
+
+**冷启动分层(2026-10-02 更正)**:按各臂日志中首个可标注 tick 是否锁定真目标分层。此前版本的 tick 日志与种子错位(跳过的 episode 不触发策略 reset),曾错误得出"冷启动锁错子集也提升 0.365→0.521";按步数对齐后的正确结果:
+
+| 设定 | 初始锁定正确:正确锁定比例(无纠偏→PGIF,Δ [CI]) | 初始锁定错误:正确锁定比例(Δ [CI]) |
+|---|---|---|
+| Town05·TAHRelM | n=12:0.383→**0.961**,**+0.578 [+0.433,+0.724]** | n=7:0.082→0.017,−0.065 [−0.127,−0.011] |
+| Town10HD·TAHRelM | n=9:0.485→**0.899**,**+0.414 [+0.229,+0.597]** | n=11:0.250→0.094,−0.156 [−0.355,+0.056] |
+| Town05·reid | n=12:0.545→**0.802**,**+0.257 [+0.085,+0.443]** | n=7:0.152→0.008,−0.144 [−0.183,−0.108] |
+
+→ **初始锁定正确时,PGIF 几乎消除了后续漂移**(三个设定均显著);**初始锁定错误时,PGIF 会忠实地坚持错误身份**,略有恶化——这正是持续性机制的反面。PGIF 的整体增益上限由冷启动(语言初锁)正确率决定,这是下一步最重要的改进方向 **[M]**。
+
+### 5.2 组成部分消融 = 命题 2 的三条预测(Town05,n=19 配对)
+
+| 变体 | 正确锁定比例 | 最长连续正确锁定(均值) | 最长锁错(均值) | **PGIF − 变体**:正确比例 / 最长正确 / 最长锁错 [CI] | 预测 |
+|---|---|---|---|---|---|
+| 未回火贝叶斯滤波 | **0.074** | 2.9s | 26.9s | +0.540 [+0.309,+0.752] / +27.3s [+12.0,+43.6] / −16.1s [−24.8,−8.0] | (a) ✅ |
+| 等权驻留(无置信加权) | 0.376 | 19.5s | 17.0s | +0.237 [+0.058,+0.425] / +10.7s [−2.3,+23.2] / −6.2s [−12.2,−1.0] | (b) ✅ |
+| PGIF 去门控 | 0.396 | 14.7s | 20.0s | +0.217 [+0.034,+0.401] / +15.6s [−0.9,+31.9] / −9.3s [−17.8,−1.3] | (c) ✅ |
+| **PGIF** | **0.613** | **30.3s** | **10.8s** | — | — |
+
+→ PGIF 对三个变体在正确锁定比例与最长锁错上均显著更好;最长连续正确锁定对等权驻留与去门控的差为正但 CI 略含 0。未回火贝叶斯在三项指标上都比不纠偏更差(正确比例 Δ−0.198 [−0.338,−0.076],最长锁错 +11.1s [+2.6,+20.5]),直接印证"自更新使误差自相关" **[M]**。
+
+### 5.3 泛化(同一冻结超参)
+
+| 设定 | n | 正确锁定比例(基线→PGIF,Δ [CI]) | 最长连续正确锁定(均值,Δ [CI]) | 最长锁错(均值,Δ [CI]) |
+|---|---|---|---|---|
+| TAHRelM · Town05(主) | 19 | 0.272→0.613,**+0.341 [+0.177,+0.512]** | 5.9→30.3s,**+24.4s [+12.0,+37.7]** | 15.7→10.8s,−5.0s [−14.0,+5.1] |
+| TAHRelM · **Town10HD**(跨场景) | 20 | 0.356→0.456,+0.100 [−0.087,+0.287] | 12.7→21.4s,+8.7s [−4.4,+22.0] | 16.3→16.1s,−0.2s [−7.9,+8.1] |
+| **reid gallery**(跨记忆)· Town05 | 19 | 0.400→0.510,+0.110 [−0.025,+0.262] | 9.7→19.1s,+9.4s [−1.7,+22.5] | 11.4→12.1s,+0.7s [−5.6,+7.8] |
+| 三设定合并(分层配对 bootstrap) | 58 | **+0.182 [+0.086,+0.280]** | **+14.1s [+7.0,+21.6]** | −1.5s [−6.0,+3.3] |
+
+- **稳健结论**:合并 58 个 episode 时,正确锁定比例与最长连续正确锁定**均显著**提升;单设定中仅 Town05·TAHRelM 显著。最长锁错在各设定均**未显著改善**——由冷启动锁错 episode 主导(§5.1 分层)。
+- 跨场景/跨记忆增益较小的主要原因是冷启动锁错比例更高(Town10HD 20 个中 11 个);reid 另有"gallery 只存 committed 身份 = 自带一层门控"的原因(D4)。
+- reid 基线为同会话重跑(与 9 月 `reid_deploy` 一致:正确比例 Δ−0.016 [−0.099,+0.057])。
+
+### 5.4 对 tracklet 关联噪声的敏感度(开环回放,30 个 TAH observe episode,`eval_out/pgif_idnoise_tah.json`)
+
+| ID 碎片化/互换率 p(每 tick,tick=0.6s) | 0 | 0.005 | 0.01 | 0.02 | 0.05 | 0.1 |
+|---|---|---|---|---|---|---|
+| 记忆原始选择 | 0.332 | 0.332 | 0.332 | 0.332 | 0.332 | 0.332 |
+| PGIF(开环,无门控反馈) | 0.402 | 0.391 | 0.385 | 0.384 | 0.354 | 0.339 |
+| 增益 | +7.0pp | +5.9 | +5.3 | +5.2 | +2.2 | +0.7 |
+
+→ p≤0.02/tick(每目标约每 30s 至多一次关联错误)保留约 3/4 增益;p=0.1 时基本消失。PGIF 需要中等质量的持久关联层 **[M][L]**。开环回放中回火与等权驻留持平(0.402 vs 0.407),二者闭环差异(§5.2)来自门控对后续观测的反馈,开环无法体现。
+
+### 5.5 全部 WHICH 模块在可部署设定下的对比(2026-10-02 重跑,替代旧版 gt-seeded 对比)
+
+> **"deployable"的确切含义(措辞更正,2026-10-02)**:指**身份决策链路不使用真值**——不告诉模型哪辆是目标,身份记忆/轨迹状态/初始化只来自模型自己的选择(冷启动用语言)。但以下两项仍由仿真理想提供,对所有臂相同:① 候选框(由真值车辆位置投影 = 理想检测器 + 理想持久关联,`candidates.py::build_candidates`);② WHERE 使用被承诺车辆的世界坐标(`policy.py::_committed_world`)。因此此前"决策时不使用任何真值"的表述过强,应为"身份决策不使用真值,感知与定位假设理想"。
+> **为什么重跑**:旧版对比(`907_baseline_compare_906.md` 图 1,2026-09-06)中的 8 个方法都运行在 **gt-seeded** 设定——身份记忆/轨迹状态每一步用真值目标刷新,等于给模型一条作弊通道,不能作为方法比较。本节所有臂(含外部 baseline)均为 **deployable**:冷启动用语言选车,之后只用模型自己的承诺身份更新记忆;CARLA 在线闭环,同种子 91000–19(19 个计分 episode),三项指标由新版 scorer 逐帧记录(`max_correct_run_s` 与 `max_wrong_run_s` 均以承诺身份为准,目标出画即断开)。外部方法的可部署化:OC-SORT/DeepSORT 轨迹状态改为用自己关联到的车更新,DAM4SAM 改为用语言选中车辆的框初始化(`policy.py` `_assoc_select` / `_dam4sam_select` 的 `init_slot`)。批量脚本 `runs/asd/deploy_all/chains.sh`;统计 `rollout/deploy_compare.py` → `eval_out/deploy_compare.json`。
+
+![deployable comparison](figs/fig_deploy_compare.png)
+
+*图 2 · 全部模块在可部署设定下的三项指标(误差线 = 种子 bootstrap 95% CI;橙色虚线 = PGIF 均值)。源 `figs/fig_deploy_compare.py`。*
+
+| 方法 | 类别 | 正确锁定比例 ↑ [95% CI] | 最长连续正确锁定 ↑(均值 / 中位,s) | 最长锁错 ↓(均值 / 中位,s) | **PGIF − 该方法**(配对 Δ [95% CI]):正确比例 / 最长正确 / 最长锁错 |
+|---|---|---|---|---|---|
+| xattn(单帧语言) | 语言基线 | 0.276 [0.20, 0.36] | 2.2 / 1.8 | 10.0 / 9.8 | +0.31 [+0.13, +0.49] / +19.01 [+9.29, +29.66] / +5.44 [-3.08, +14.94] |
+| l4(reid+置信门) | 我们的 | 0.432 [0.31, 0.57] | 9.2 / 2.8 | 7.9 / 5.7 | +0.15 [-0.01, +0.32] / +12.04 [+4.74, +20.36] / +7.50 [-0.61, +16.80] |
+| l5(+时序EMA) | 我们的 | 0.371 [0.21, 0.54] | 6.1 / 2.4 | 12.8 / 9.6 | +0.21 [+0.05, +0.39] / +15.19 [+6.80, +24.63] / +2.58 [-5.18, +10.64] |
+| borrow#1(+运动共识) | 我们的 | 0.453 [0.27, 0.64] | 11.1 / 3.2 | 8.8 / 8.2 | +0.13 [+0.01, +0.28] / +10.18 [+3.49, +18.05] / +6.61 [-0.45, +14.63] |
+| TAH+DAgger | 我们的 | 0.262 [0.16, 0.37] | 6.8 / 2.4 | 14.6 / 9.3 | +0.32 [+0.16, +0.49] / +14.47 [+6.54, +23.38] / +0.87 [-6.52, +9.08] |
+| TAHRelM 无纠偏 | 我们的 | 0.326 [0.22, 0.45] | 8.6 / 5.2 | 15.1 / 13.1 | +0.26 [+0.07, +0.44] / +12.68 [+3.00, +23.56] / +0.29 [-7.41, +9.28] |
+| OC-SORT | 外部 | 0.238 [0.16, 0.32] | 4.9 / 3.6 | 14.0 / 12.5 | +0.35 [+0.15, +0.53] / +16.38 [+7.08, +26.21] / +1.38 [-8.15, +11.51] |
+| DeepSORT | 外部 | 0.297 [0.18, 0.43] | 8.0 / 4.2 | 17.0 / 12.7 | +0.29 [+0.09, +0.49] / +13.29 [+2.63, +24.34] / -1.60 [-10.71, +8.45] |
+| DAM4SAM | 外部 | 0.786 [0.65, 0.90] | 13.3 / 6.4 | 26.7 / 21.6 | -0.20 [-0.38, -0.03] / +7.97 [-2.40, +18.63] / -11.26 [-23.27, +0.45] |
+| **TAHRelM+PGIF(ours)** | **ours** | 0.583 [0.37, 0.79] | 21.3 / 11.5 | 15.4 / 0.9 | — |
+
+**读法(如实)**:
+- **PGIF vs 我们的其他模块与 OC-SORT/DeepSORT**:正确锁定比例与最长连续正确锁定上,PGIF 对 l5、borrow#1、TAH+DAgger、TAHRelM 无纠偏、OC-SORT、DeepSORT 均**显著更好**(CI 不含 0;对此前最强的启发式 borrow#1:正确比例 +0.13 [+0.01, +0.28],最长正确 +10.2s [+3.5, +18.0]);对 l4 的正确比例差 +0.15 [−0.01, +0.32] 刚好不显著,最长正确显著更好。**最长锁错上 PGIF 与它们都无显著差异**,且 l4(7.9s)、borrow#1(8.8s)的均值低于 PGIF(15.4s)——PGIF 的中位数仅 0.9s,均值被少数冷启动锁错的长尾拉高。
+- **DAM4SAM(外部 SOTA,SAM2-L 记忆)**:正确锁定比例 **显著高于 PGIF**(PGIF − DAM4SAM = −0.20 [−0.39, −0.03]);但它的最长锁错均值 26.7s、中位 21.6s,是所有方法中最长的——典型的"粘滞记忆":锁对就一直对,锁错就一直错。最长连续正确锁定上 PGIF 高 8.0s,但不显著。两者形成取舍,**不能声称 PGIF 全面优于 DAM4SAM**。
+- **作弊设定严重高估了外部方法**:OC-SORT/DeepSORT 在 gt-seeded 下正确比例约 0.75,可部署下只有 0.24/0.30。
+- 全部 10 个臂均已完成(20 episode,19 计分,0 报错)。重算:`rollout/deploy_compare.py` → `figs/fig_deploy_compare.py` → `figs/update_s55_table.py`。
+
+**下一步**:DAM4SAM 的长时间锁错正是命题 1 的自更新确认偏差;为其增加"用 ŝ 的框重新初始化"的重置钩子后,PGIF 可直接包在 DAM4SAM 外层——这是检验 PGIF 跨记忆泛化、同时攻 DAM4SAM 粘滞错锁的最直接实验。
+
+## 6. 贡献(范围已按 Codex R3/R4 收窄)
+
+> **核心 claim**:在**持久 tracklet 接口下**,TAHRelM 单场景(Town05)在线闭环 PoC 已闭合:正确锁定比例与最长连续正确锁定显著提升,三条机理预测全部成立。泛化 claim:三设定合并(n=58)时正确锁定比例与最长连续正确锁定均显著;最长锁错未显著改善(冷启动锁错主导)。
+
+1. **问题化**:把闭环指代重捕获中的身份失效刻画为自更新记忆的确认偏差;实证"自置信弱有信息、外观/语言参考在漂移时刻≈随机、tracklet 持续性携带信号"(§2)。
+2. **方法 PGIF**:尺度无关秩置信加权 + 按误差相关时间回火的 tracklet 证据累积 + 后验门控更新/承诺;无训练参数(两个冻结超参 λ、W);对记忆只需三个钩子,对环境需一个持久关联层。
+3. **理论**:命题 1(确认偏差 → 误差持续)+ 命题 2(相关误差下必须回火)给出三条可检验预测,闭环全部成立(§5.2)。
+4. **实证**:GT-free 收回 oracle 漂移检测上界 76% 的正确锁定比例增益;初始锁定正确时把正确锁定比例提到 0.96/0.90/0.80(三设定);锚/语言纠偏作为机理清楚的负结果;泛化与关联噪声敏感度曲线。
+5. **载体**:语言指定空中重捕获任务 + 连续指标方法学(沿用前期工作)。
+
+## 7. 与相关工作
+
+- **MHT(Reid 1979)/ identity management(Schumitsch et al., RSS 2006)/ JPDA**:多目标身份推断经典。PGIF 只跟踪单一指代身份的证据,观测来自另一个学习模块的选择与置信度,并把证据**反馈去门控该模块的自更新**——关注闭环确认偏差,而非多目标关联本身。
+- **自训练确认偏差(Arazo et al., IJCNN 2020;Mean Teacher, Tarvainen & Valpola 2017)**:离线半监督里用阈值/教师平滑伪标签。PGIF 是闭环、在线、时序版本,伪标签由带持续性先验的回火证据产生;§5.2(a) 表明在闭环自相关误差下,不回火的概率平滑反而有害。
+- **TLD P-N learning(Kalal et al., TPAMI 2012)/ SiamFC 固定模板**:靠外观参考抑制漂移。D2 实测外观参考在 look-alike 漂移时刻≈随机,本设定下这类方案失效(锚重锚臂为直接证据)。
+- **DAM4SAM(CVPR'25)**:更强记忆 → 16.3s 粘滞错窗 **[M]** `paper_ext_dam4sam`,与命题 1 一致。
+- 经典 CUSUM / quickest change detection(Page 1954;Lorden 1971):本项目早期版本(ASD)曾采用,已证伪为负结果(附录 A)。
+(引用写作前须逐条核验存在性与细节。)
+
+## 8. 局限
+
+- **[L1] 理想关联**:所有臂的候选 id 来自模拟器理想持久关联;非理想关联下增益衰减(§5.4)。最终稿须接入真实 MOT 关联层或报告其 ID-switch 率。
+- **[L2] 冷启动锁错**:语言初锁即错时没有正确历史可回退,PGIF 反而会坚持错误身份(分层见 §5.1);这是最长锁错未显著改善的主因,也是最主要的改进方向。
+- **[L3] 统计功效**:每臂 n≈19、单模拟器;最长锁错均值未显著;本轮最长连续正确锁定为 tick 级(0.6s)估计,上界臂与 09-06 臂未记录(scorer 已补逐帧字段)。
+
+ succeeded in 1317ms:
+"""ASD module — drift correction for closed-loop self-updating identity memories.
+
+MAIN METHOD (mode="filter", filter_kind="tempered") = PGIF, Posterior-Gated Identity Filtering:
+  a memory-agnostic wrapper around ANY identity memory that (i) picks a candidate, (ii) reports a confidence on any
+  scale, (iii) exposes an update hook. Per decision tick it keeps a tempered, confidence-weighted evidence count per
+  persistent tracklet  L_k <- lam*L_k + (0.5 + rank(conf))*1[k = memory pick]  and, when argmax_k L_k disagrees with
+  the memory's pick, re-does the memory update with the argmax crop and commits control to it (posterior gating).
+  Rationale (acot_note/1001_innovation-design.md): self-update makes the memory's errors autocorrelated, so evidence
+  must be tempered (untempered Bayes = ablation, gets captured); gating stops wrong picks being written into memory.
+ABLATIONS: filter_kind="resid" (equal weights), "bayes" (untempered sticky HMM), gate_memory=False (commit-only).
+LEGACY (negative results, kept for reproducibility): modes "rule"/"learned" = frozen appearance+language anchor with
+  multi-hypothesis CUSUM; "observe" = log statistics only (no intervention).
+GT is never used at decision time; `true_slot` is only written to the log for offline scoring."""
+from __future__ import annotations
+
+import json
+
+import numpy as np
+
+STAT_NAMES = ["disagree", "margin", "anc_dissim", "lang_disfavor", "disagree_x_margin"]
+
+
+class ASD:
+    def __init__(self, mode: str = "rule", k_anchor: int = 3, beta_lang: float = 0.25, lang_ema: float = 0.7,
+                 tau: float = 0.1, kappa: float = 0.25, h: float = 2.0, refractory: int = 3,
+                 learned_ckpt: str | None = None, log_path: str | None = None, anchor_mode: str = "first",
+                 eps_switch: float = 0.01, q_lo: float = 0.2, q_hi: float = 0.7, conf_window: int = 30,
+                 gate_memory: bool = True, filter_kind: str = "bayes", resid_decay: float = 0.98):
+        assert mode in ("observe", "rule", "learned", "filter"), mode
+        self.mode, self.k_anchor, self.beta, self.lema = mode, int(k_anchor), float(beta_lang), float(lang_ema)
+        self.tau, self.kappa, self.h, self.refractory = float(tau), float(kappa), float(h), int(refractory)
+        self.w = self.b = None
+        if mode == "learned":
+            assert learned_ckpt, "mode=learned needs learned_ckpt"
+            ck = json.load(open(learned_ckpt))
+            self.w, self.b = np.asarray(ck["w"], np.float64), float(ck["b"])
+            self.prior_logit = float(ck.get("prior_logit", 0.0))
+            self.h = float(ck.get("h", self.h))
+            self.mu, self.sd = np.asarray(ck["mu"]), np.asarray(ck["sd"])
+        self.log_path = log_path
+        # anchor_mode: 'first' = anchor = M's picks during the window (inherits cold-start errors) |
+        # 'spec' = sequential SPEC identification: integrate language evidence per actor over the window, anchor
+        # to the argmax actor's crops and correct M if it disagrees (also fixes wrong cold-start locks).
+        assert anchor_mode in ("first", "spec"), anchor_mode
+        self.anchor_mode = anchor_mode
+        # filter mode (ASD-IF): sticky Bayes filter over persistent tracklets; the memory's pick is a noisy
+        # observation whose error rate q is set by the rank of its confidence within a sliding window
+        # (scale-free → memory-agnostic, no per-memory calibration). Output = MAP tracklet (posterior gating).
+        self.eps_switch, self.q_lo, self.q_hi, self.conf_window = float(eps_switch), float(q_lo), float(q_hi), int(conf_window)
+        self.gate_memory = bool(gate_memory)          # ablation: False = override commitment only, memory still self-updates
+        assert filter_kind in ("bayes", "resid", "tempered"), filter_kind
+        self.filter_kind, self.resid_decay = filter_kind, float(resid_decay)   # 'resid' = longest-residence heuristic
+        self.ep = -1
+        self.reset()
+
+    # ------------------------------------------------------------------ state
+    def reset(self):
+        self.anchor: list[np.ndarray] = []      # frozen early-track appearance bank (drift-immune reference)
+        self.win_feats: dict[int, list] = {}    # spec-anchor window: actor id -> crops seen
+        self.win_ticks = 0
+        self.belief: dict[int, float] = {}      # filter: posterior over tracklet ids
+        self.conf_hist: list[float] = []
+        self.lang_score: dict[int, float] = {}  # per-actor EMA of z-scored language logit (spec integration)
+        self.S: dict[int, float] = {}           # multi-hypothesis CUSUM: per challenger identity (actor id)
+        self.cool = 0                           # refractory ticks after an alarm
+        self.tick = 0
+        self.fires = 0
+        self.ep += 1
+
+    # ------------------------------------------------------------------ stats
+    def _lang_z(self, aidx, lang):
+        if lang is None or len(lang) == 0:
+            return np.zeros(len(aidx))
+        l = np.asarray(lang, np.float64)
+        z = (l - l.mean()) / (l.std() + 1e-6) if len(l) > 1 else np.zeros_like(l)
+        for a, v in zip(aidx, z):
+            p = self.lang_score.get(int(a), float(v))
+            self.lang_score[int(a)] = self.lema * p + (1 - self.lema) * float(v)
+        return np.array([self.lang_score[int(a)] for a in aidx])
+
+    def stats(self, feats, aidx, mem_slot, lang):
+        zl = self._lang_z(aidx, lang)
+        cosA = (feats @ np.stack(self.anchor).T).max(axis=1) if self.anchor else np.zeros(len(aidx))
+        a = cosA + self.beta * zl                                    # anchor (spec-side) score
+        anc = int(a.argmax())
+        dis = float(anc != mem_slot)
+        margin = float(a[anc] - a[mem_slot])
+        x = np.array([dis, margin, 1.0 - float(cosA[mem_slot]), float(zl.max() - zl[mem_slot]), dis * margin])
+        self._last = (cosA, zl)                                      # per-candidate view (offline ablations)
+        return x, anc
+
+    def increment(self, x):
+        if self.mode == "learned":
+            z = (x - self.mu) / self.sd
+            return float(z @ self.w + self.b - self.prior_logit)      # log-likelihood ratio (wrong vs right)
+        return float(x[0] * min(x[1] / self.tau, 2.0) - self.kappa)  # rule: disagreement weighted by margin
+
+    # ------------------------------------------------------------------ main
+    def step(self, feats, aidx, mem_slot, mem_conf=None, lang=None, true_slot=None, t=None):
+        out = {"fire": False, "slot": mem_slot}
+        if mem_slot is None or mem_slot < 0 or len(aidx) == 0:
+            return out
+        if self.mode == "filter":
+            return self._filter_step(aidx, mem_slot, mem_conf, true_slot, t)
+        feats = np.asarray(feats, np.float64)
+        if self.anchor_mode == "first" and len(self.anchor) < self.k_anchor:   # window: anchor = M's early picks
+            self._lang_z(aidx, lang)
+            self.anchor.append(feats[mem_slot].copy())
+            self.tick += 1
+            self._log(t, aidx, mem_slot, mem_conf, true_slot, None, None, False)
+            return out
+        if self.anchor_mode == "spec" and not self.anchor:                  # window: integrate spec evidence
+            self._lang_z(aidx, lang)
+            for s_, a_ in enumerate(aidx):
+                self.win_feats.setdefault(int(a_), []).append(feats[s_].copy())
+            self.win_ticks += 1
+            self.tick += 1
+            fire = False
+            if self.win_ticks >= self.k_anchor:
+                seen = [a_ for a_ in self.lang_score if len(self.win_feats.get(a_, [])) >= max(1, self.win_ticks // 2)]
+                best = max(seen or list(self.lang_score), key=lambda a_: self.lang_score[a_])
+                self.anchor = self.win_feats[best][-self.k_anchor:]
+                if best in [int(a_) for a_ in aidx] and int(aidx[mem_slot]) != best and self.mode != "observe":
+                    fire = True; self.fires += 1; self.cool = self.refractory
+                    out = {"fire": True, "slot": [int(a_) for a_ in aidx].index(best)}
+                self.win_feats = {}
+            self._log(t, aidx, mem_slot, mem_conf, true_slot, None, None, fire)
+            return out
+        x, anc = self.stats(feats, aidx, mem_slot, lang)
+        g = self.increment(x)
+        fire = False
+        # Multi-hypothesis CUSUM: evidence accumulates only for the SPECIFIC identity the anchor prefers over M.
+        # Noise-driven disagreements scatter over different look-alikes and decay; a true drift concentrates
+        # on one identity (the real target) → that hypothesis crosses h.
+        ca = int(aidx[anc]) if anc != mem_slot else None
+        for k in list(self.S):
+            if k != ca:
+                self.S[k] = max(0.0, self.S[k] - self.kappa)
+        if ca is not None:
+            self.S[ca] = max(0.0, self.S.get(ca, 0.0) + g)
+        if self.cool > 0:
+            self.cool -= 1
+        elif self.mode != "observe" and ca is not None and self.S[ca] > self.h:
+            fire = True
+            self.S, self.cool, self.fires = {}, self.refractory, self.fires + 1
+            out = {"fire": True, "slot": anc}
+        self.tick += 1
+        self._log(t, aidx, mem_slot, mem_conf, true_slot, x, anc, fire)
+        return out
+
+    def _filter_step(self, aidx, mem_slot, mem_conf, true_slot, t):
+        ids = [int(a) for a in aidx]; act = ids[mem_slot]; b = self.belief
+        if self.filter_kind in ("resid", "tempered"):
+            # TEMPERED evidence accumulator (PGIF main): L_k <- lam*L_k + w_t*1[k = memory pick]. Self-update makes
+            # the memory's errors autocorrelated, so per-tick evidence must be tempered (lam ~ 1 - 1/tau_corr)
+            # instead of multiplied as if independent (the untempered 'bayes' ablation flips in 1-2 ticks).
+            # w_t = 0.5 + rank(conf) (scale-free) for 'tempered'; w_t = 1 for the 'resid' ablation.
+            c = 0.0 if mem_conf is None else float(mem_conf); h = self.conf_hist
+            pct = float(np.searchsorted(np.sort(h), c)) / len(h) if len(h) >= 5 else 0.5
+            self.conf_hist = (h + [c])[-self.conf_window:]
+            w = 1.0 if self.filter_kind == "resid" else 0.5 + pct
+            for k in b:
+                b[k] *= self.resid_decay
+            b[act] = b.get(act, 0.0) + w
+            map_slot = max(range(len(ids)), key=lambda s_: b.get(ids[s_], 0.0))
+            fire = map_slot != mem_slot
+            self.fires += int(fire); self.tick += 1
+            self._log(t, aidx, mem_slot, mem_conf, true_slot, None, map_slot, fire)
+            return {"fire": fire, "slot": map_slot, "kind": "gate", "gate_memory": self.gate_memory}
+        for a in ids:                                            # new tracklets enter with a tiny prior
+            b.setdefault(a, 1e-3 if b else 1.0)
+        tot = sum(b.values()); m = len(b)
+        for k in b:                                              # sticky identity transition
+            b[k] = (1 - self.eps_switch) * b[k] / tot + self.eps_switch / m
+        c = 0.0 if mem_conf is None else float(mem_conf)
+        h = self.conf_hist
+        pct = float(np.searchsorted(np.sort(h), c)) / len(h) if len(h) >= 5 else 0.5
+        self.conf_hist = (h + [c])[-self.conf_window:]
+        q = self.q_hi - (self.q_hi - self.q_lo) * pct           # confident pick → lower error rate
+        nv = len(ids)
+        for k in b:
+            b[k] *= (1 - q) if k == act else q / max(nv - 1, 1)
+        tot = sum(b.values())
+        for k in b:
+            b[k] /= tot
+        map_slot = max(range(nv), key=lambda s_: b[ids[s_]])
+        fire = map_slot != mem_slot
+        if fire:
+            self.fires += 1
+        self.tick += 1
+        self._log(t, aidx, mem_slot, mem_conf, true_slot, None, map_slot, fire)
+        return {"fire": fire, "slot": map_slot, "kind": "gate", "post": round(b[ids[map_slot]], 4),
+                "gate_memory": self.gate_memory}
+
+    def _log(self, t, aidx, mem_slot, mem_conf, true_slot, x, anc, fire):
+        if not self.log_path:
+            return
+        rec = {"ep": self.ep, "t": t, "n": len(aidx), "mem": int(mem_slot),
+               "true": None if true_slot is None else int(true_slot),
+               "conf": None if mem_conf is None else float(mem_conf),
+               "anc": anc, "S": round(max(self.S.values(), default=0.0), 4), "fire": fire,
+               "x": None if x is None else [round(float(v), 5) for v in x],
+               "aidx": [int(a) for a in aidx]}
+        if x is not None and getattr(self, "_last", None) is not None:
+            rec["cosA"] = [round(float(v), 4) for v in self._last[0]]
+            rec["zl"] = [round(float(v), 4) for v in self._last[1]]
+        with open(self.log_path, "a") as f:
+            f.write(json.dumps(rec) + "\n")
+
+ succeeded in 1325ms:
+"""Load the 4-module Stage-2 policy and run it online, one tick at a time.
+
+Assembles EAR + IAR + DiT + TargetIDHead from a `stage2_best.pt` (dims block +
+training cfg["model"]) — there is no existing loader (guide §4). Per tick:
+
+  S2 (slow, ~1 Hz): VLM encode → EAR z_ex (flow sample) → IAR z_im → tid logits.
+  S1 (fast, 10 Hz): DiT flow-sample the action chunk on fresh proprio; take step 0.
+
+`s2_period` controls the split. DEFAULT 1 = run the full pipeline every tick
+(correct-first; CARLA is sync so wall-clock, not realtime, is the only cost). Set
+>1 for true async — the DiT was trained with staleness noise on z_ex to tolerate a
+stale slow-stream (guide §4). The target-id choice is NOT used for control (the
+action is conditioned on z_ex/z_im/vlm_ctx/proprio, not tid); it is returned raw
+for the scorer, which applies the K-frame hysteresis (guide §6, metrics.py).
+
+Import root: repo root on sys.path (train.*, acot_probe.*).
+"""
+
+from __future__ import annotations
+
+import os
+from dataclasses import dataclass
+
+import numpy as np
+import torch
+
+from train.ear import EAR
+from train.iar import IAR
+from train.dit import DiT, TargetIDHead
+from train import flow_matching
+from train.stage2 import action_sample
+from train.grounding_train import AttrBindHead, build_attr_vocab
+
+from rollout.candidates import build_candidates, CandidateSet
+from rollout.target_state import TargetStateEstimator
+
+# --ex-source: what fills DiT's z_ex slot. 'ear' = the trained EAR (default). The
+# rest inject a training-free memory+CV prior (rollout.target_state); '*_gated' only
+# during a loss (EAR when visible), bare 'cv'/'zerovel' always (diagnostic).
+# 'track' (Plan A): grounding-in-the-loop — z_ex is seeded from the tid-COMMITTED
+# candidate (K-frame hysteresis), so tid QUALITY drives control (a wrong pick tracks
+# the wrong car). The others seed from the GT target (tid stays scorer-only).
+# 'road' (P2a-1): the road-graph WM prior — z_ex during a loss is the env-side
+# lane-traversal prediction (gt_candidates[3], WORLD (K,3)) projected into cam frame,
+# vs cv_gated's straight-line dead-reckon. Same last-seen anchor+speed → isolates
+# follow-the-lane vs go-straight (offline M2 gate: road << cv_frame on turns/junctions).
+_EX_MODES = {"ear": (None, None), "cv": ("cv", False), "cv_gated": ("cv", True),
+             "zerovel": ("zerovel", False), "zerovel_gated": ("zerovel", True),
+             "road": ("road", True), "track": ("cv", False)}
+
+
+@dataclass
+class Observation:
+    rgb: np.ndarray          # (H,W,3) uint8 — sole perceptual input
+    language: str            # fixed per episode (raw; vlm applies the language mode)
+    proprio: np.ndarray      # (5,)
+    step: int
+    target_color: str = ""   # GT target identity (color+blueprint) — for the attrbind tid head
+    target_bp: str = ""      # (privileged, same level as GT candidate boxes; = offline attr upper bound)
+
+
+@dataclass
+class ActInfo:
+    tid_logits: np.ndarray   # (N,) target-id scores over candidates
+    pred_slot: int           # argmax candidate slot
+    cand_set: CandidateSet | None   # carries true_idx + per-slot identity for the scorer
+    z_ex: np.ndarray         # (K,3) EAR waypoint sample (diagnostic)
+
+
+def load_policy_modules(ckpt_path: str, cfg: dict, device: str = "cuda:0"):
+    """Reconstruct EAR/IAR/DiT/TargetIDHead from a stage2 ckpt (guide §4).
+
+    Returns (ear, iar, dit, tid, dims, meta), all on `device` in eval mode. Hidden
+    dims come from cfg["model"]; tensor dims from the ckpt's `dims` block.
+    """
+    ck = torch.load(ckpt_path, map_location=device, weights_only=False)
+    d, m = ck["dims"], cfg["model"]
+    ear = EAR(d["cond_dim"], k=d["K"], d_model=m["ear"]["d_model"],
+              n_layers=m["ear"]["n_layers"], n_heads=m["ear"]["n_heads"],
+              proprio_dim=d["pdim"])
+    iar = IAR(d["cond_dim"], d["n_layers_in"], d=m["iar"]["d"],
+              n_im=m["iar"]["n_im"], n_heads=m["iar"]["n_heads"])
+    dit = DiT(d["A"], d["H"], d["cond_dim"], d_ex=3, d_im=m["iar"]["d"],
+              proprio_dim=d["pdim"], d=m["dit"]["d_model"],
+              n_layers=m["dit"]["n_layers"], n_heads=m["dit"]["n_heads"])
+    tid = TargetIDHead(d["cand_dim"], d["cond_dim"], d=m.get("tid_d", 256))
+    ear.load_state_dict(ck["ear"]); iar.load_state_dict(ck["iar"])
+    dit.load_state_dict(ck["dit"]); tid.load_state_dict(ck["tid"])
+    mods = tuple(mod.to(device).eval() for mod in (ear, iar, dit, tid))
+    meta = {k: ck.get(k) for k in ("epoch", "metrics")}
+    return (*mods, d, meta)
+
+
+class Policy:
+    def __init__(self, ckpt_path: str, cfg: dict, vlm, *, device: str = "cuda:0",
+                 s2_period: int = 1, shuffle_seed: int = 0, ablate: str | None = None,
+                 ex_source: str = "ear", commit_k: int = 5,
+                 tid_head: str = "xattn", tid_ckpt: str | None = None,
+                 reid_feature: str = "vlmpool", reid_bank: int = 1, reid_topm: int = 1,
+                 conf_tau: float = 0.0, conf_consensus: float = 0.0, frame_gain: float = 0.0, warmup_oracle_s: float = 0.0,
+                 reid_tavg: float = 0.0, reid_motion: float = 0.0, reid_motion_gate_px: float = 160.0,
+                 gallery_seed: str = "gt", reanchor: str = "off",
+                 reanchor_patience: int = 5, reanchor_tavg: float = 0.0, assoc_mode: str = "deepsort",
+                 assoc_gate_px: float = 160.0, assoc_lambda: float = 1.0,
+                 dam4sam_host: str = "dam4sam-svc", dam4sam_port: int = 5601,
+                 tah_ckpt: str = "runs/tah_rel.pt", asd: str = "off", asd_cfg: str = ""):
+        self.device = device
+        self.cfg = cfg
+        self.vlm = vlm                              # OnlineVLM (owns the frozen backbone + language mode)
+        self.image_cfg = cfg["image"]
+        self.a_scale = float(cfg["action"]["scale"])
+        self.steps = int(cfg["flow"]["sample_steps"])
+        self.s2_period = int(s2_period)
+        self._shuffle_seed = int(shuffle_seed)
+        # H1/H2 module ablation: zero the EAR/IAR stream into the DiT, matching a ckpt
+        # trained with the same ablation (train/config_v5_no{ear,iar}.yaml). None = full.
+        self.ablate = ablate                        # None | "ear" | "iar"
+        # memory+CV target-state prior for z_ex during a loss (rollout.target_state).
+        if ex_source not in _EX_MODES:
+            raise ValueError(f"ex_source must be one of {list(_EX_MODES)}, got {ex_source!r}")
+        self.ex_source = ex_source
+        self._ex_mode, self._ex_gated = _EX_MODES[ex_source]   # (None,None) for 'ear'
+        self._track = (ex_source == "track")                   # Plan A: grounding drives control
+        self.commit_k = int(commit_k)                          # hysteresis frames to switch target
+        self.conf_tau = float(conf_tau)                        # ①: min pick-margin to commit-fly (track)
+        self.conf_consensus = float(conf_consensus)            # borrow#2: also require the pick's motion-consistency
+                                                               # (dist < conf_consensus·gate) to commit-fly (0=off)
+        self.frame_gain = float(frame_gain)                    # ②: yaw-centering gain on committed target
+        self.warmup_oracle_s = float(warmup_oracle_s)          # diag: first N s use oracle id (est. tracking)
+        self.reid_tavg = float(reid_tavg)                      # temporal re-ID: per-actor EMA of match score
+        self.reid_motion = float(reid_motion)                  # borrow#1: motion-consensus weight fused into reid score (0=off)
+        self.reid_motion_gate_px = float(reid_motion_gate_px)  # borrow#1: motion soft-gate radius (px)
+        # deployable identity (paper2): gallery_seed 'gt'=legacy oracle-seeded template |
+        # 'committed'=GT-free (store the believed-target crop). reanchor 'off'|'lang'=language re-anchor
+        # on sustained collapse |'oracle'=GT re-anchor (headroom bound). See memory acot-uav-reid-reframe.
+        self.gallery_seed = gallery_seed
+        self.reanchor = reanchor
+        self.reanchor_patience = int(reanchor_patience)        # consecutive low-margin S2 ticks before re-anchor fires
+        self.reanchor_tavg = float(reanchor_tavg)              # temporal language re-anchor: per-actor EMA of language logit (0=single-frame)
+        self.fps = int(cfg.get("fps", 10))
+        wp = cfg["waypoint"]
+        self.estimator = TargetStateEstimator(wp["offsets_s"], wp["scale"], cfg.get("fps", 10))
+
+        # DAgger collection: if DAGGER_DIR is set, log per-frame (cand_feats, true_idx,
+        # target color/make) from the closed-loop distribution → retrain the tid on the
+        # frames the policy actually visits (oracle label = GT true_idx, free).
+        self._dagger_dir = os.environ.get("DAGGER_DIR")
+        # path-B DAgger: log DEPLOYMENT-distribution TAH inputs (crop-DINOv2 feat + pos + GT id) to retrain
+        # TAHRel on-policy (fixes the offline→online distribution shift). Set TAH_DAGGER_DIR to collect.
+        self._tahdag_dir = os.environ.get("TAH_DAGGER_DIR"); self._tahdag_buf = []; self._tahdag_ep = 0
+        self._dagger_ep = 0
+        self._dagger_buf = []
+
+        self.ear, self.iar, self.dit, self.tid, d, self.ckpt_meta = \
+            load_policy_modules(ckpt_path, cfg, device)
+        self.K, self.H, self.A = int(d["K"]), int(d["H"]), int(d["A"])
+        # Optional: swap the (decoupled) tid head for the standalone-trained attrbind head
+        # (CLIP-style identity match). No Stage-2 retrain — tid grads touch nothing else.
+        # Vocab is rebuilt deterministically (build_attr_vocab = sorted attrs) so ids match.
+        self.tid_head = tid_head
+        # reid appearance feature + K-view gallery (offline milestone: dinov2+K2 breaks 0.5).
+        self.reid_feature = reid_feature; self.reid_bank = int(reid_bank); self.reid_topm = int(reid_topm)
+        self._dino = None
+        _need_dino = (tid_head == "reid" and reid_feature == "dinov2") or \
+                     (tid_head == "assoc" and assoc_mode == "deepsort") or (tid_head == "tah") or (asd != "off")
+        if _need_dino:
+            from train.reid_resolution_probe import _load_dino
+            self._dino = _load_dino("vit_small_patch14_dinov2.lvd142m", device)
+            print(f"[policy] DINOv2 crop features loaded (tid_head={tid_head})", flush=True)
+        # external-baseline: DeepSORT/OC-SORT-style tracking-by-detection association
+        self.assoc_mode = assoc_mode; self.assoc_gate_px = float(assoc_gate_px); self.assoc_lambda = float(assoc_lambda)
+        # path-B: TAHRel learned association head (replaces the heuristic WHICH stack)
+        self._tah = None
+        if tid_head == "tah":
+            from train.tah import TAHRel, TAHRelM
+            tck = torch.load(tah_ckpt, map_location=device, weights_only=False)
+            _cls = TAHRelM if tck.get("arch") == "relm" else TAHRel   # path-A motion-augmented vs base
+            self._tah = _cls(d_feat=tck.get("d_feat", 384)).to(device).eval()
+            self._tah.load_state_dict(tck["model"])
+            print(f"[policy] {_cls.__name__} loaded ({sum(p.numel() for p in self._tah.parameters())} params) from {tah_ckpt}", flush=True)
+        self._tah_mem = None
+        # ASD (Anchored Sequential Drift-correction): memory-agnostic confident-drift detector wrapped around
+        # whichever identity memory is active (tah / reid). asd_cfg = JSON kwargs for rollout.asd.ASD.
+        self._asd = None
+        if asd != "off":
+            import json as _json
+            from rollout.asd import ASD
+            self._asd = ASD(mode=asd, log_path=os.environ.get("ASD_LOG") or None,
+                            **(_json.loads(asd_cfg or os.environ.get("ASD_CFG") or "{}")))
+            print(f"[policy] ASD mode={asd} cfg={asd_cfg or os.environ.get('ASD_CFG') or '{}'} log={os.environ.get('ASD_LOG')}", flush=True)
+        # external-baseline: DAM4SAM (SOTA distractor-aware SAM2 memory), served over a socket bridge
+        self._dam4sam_sock = None
+        if tid_head == "dam4sam":
+            import socket as _sk
+            self._dam4sam_sock = _sk.socket(_sk.AF_INET, _sk.SOCK_STREAM)
+            self._dam4sam_sock.connect((dam4sam_host, int(dam4sam_port)))
+            print(f"[policy] connected to DAM4SAM service {dam4sam_host}:{dam4sam_port}", flush=True)
+        self._cvoc = self._mvoc = None
+        if tid_head == "attrbind":
+            assert tid_ckpt, "tid_head=attrbind requires --tid-ckpt (the standalone attrbind head)"
+            self._cvoc, self._mvoc = build_attr_vocab(cfg)
+            m = cfg["model"]
+            self.tid = AttrBindHead(d["cand_dim"], len(self._cvoc), len(self._mvoc),
+                                    d=m.get("tid_d", 256)).to(device)
+            tck = torch.load(tid_ckpt, map_location=device, weights_only=False)
+            self.tid.load_state_dict(tck["tid"]); self.tid.eval()
+            print(f"[policy] attrbind tid loaded from {tid_ckpt} "
+                  f"(mis_follow={tck.get('mis_follow')}, n_color={len(self._cvoc)}, n_make={len(self._mvoc)})",
+                  flush=True)
+        self.reset()
+
+    def reset(self):
+        """Clear slow-stream caches + reseed the candidate shuffle for a new episode."""
+        if getattr(self, "reanchor", "off") != "off" and getattr(self, "_reanchor_events", 0):
+            print(f"[reanchor] episode fired {self._reanchor_events} re-anchors", flush=True)
+        self._rng = np.random.default_rng(self._shuffle_seed)
+        self._z_ex = self._z_im = self._vlm_ctx = self._ctx_mask = None
+        self._tid_logits = np.zeros(0, np.float32)
+        self._pred_slot = -1
+        self._cand_set = None
+        self._committed_idx = None      # Plan A: committed target identity (-1=target, d=distractor)
+        self._chal = None; self._chal_n = 0
+        self._reid_bank = []            # reid: K-view diversity gallery of the tracked target
+        self._reid_score = {}           # temporal re-ID: actor_idx -> EMA of gallery-match score
+        self._reid_mvu = None           # borrow#1: last target image pos (2,) for motion consensus
+        self._reid_mvel = None          # borrow#1: target image-space velocity (2,)
+        self._reid_mscore = None        # borrow#2: stashed per-candidate motion score for the consensus gate
+        self._tah_mem = self._tah.reset(self.device) if getattr(self, "_tah", None) is not None else None  # path-B TAHRel memory
+        self._tah_anchor = None         # confident-drift: FROZEN initial target appearance (drift-immune anchor)
+        self._lang_score = {}           # temporal language re-anchor: actor_idx -> EMA of language logit
+        self._assoc_uv = None           # assoc baseline: last GT-target image pos (2,)
+        self._assoc_vel = None          # assoc baseline: image-space velocity (2,)
+        self._assoc_feat = None         # assoc baseline: appearance template (EMA, C,)
+        self._dam4sam_inited = False     # dam4sam baseline: has the tracker been init'd this episode
+        self._pred_conf = 0.0           # ①: current pick top1−top2 margin
+        self._frame_cw = None           # ②: committed target world pos to keep centered
+        self._reid_fn = None            # deployable: stashed normalized crop feats (for re-anchor re-seed)
+        self._lowconf_run = 0           # deployable re-anchor: consecutive low-margin S2 ticks
+        self._reanchor_events = 0       # deployable re-anchor: fired-count this episode (diagnostic)
+        if getattr(self, "_asd", None) is not None:
+            if self._asd.tick:
+                print(f"[asd] episode fired {self._asd.fires} drift corrections over {self._asd.tick} ticks", flush=True)
+            self._asd.reset()
+        self._asd_fe = None             # ASD: this tick's L2-normed candidate appearance feats
+        self._tah_last = None           # ASD: (feat, pos) tensors of this tick (tah memory reset hook)
+        self.estimator.reset()
+        self._dagger_flush()            # DAgger: flush the finished episode's frames, start fresh
+        self._dagger_buf = []
+        self._tahdag_flush()            # path-B DAgger: flush deployment-distribution TAH frames
+
+    def _dagger_flush(self):
+        """Write the finished episode's collected frames to DAGGER_DIR (one .npz/episode)."""
+        if not self._dagger_dir or not getattr(self, "_dagger_buf", None):
+            return
+        os.makedirs(self._dagger_dir, exist_ok=True)
+        feats = [b[0] for b in self._dagger_buf]           # list of (N_i, C) — ragged
+        tgt = np.array([b[1] for b in self._dagger_buf], np.int64)
+        col = np.array([b[2] for b in self._dagger_buf])
+        mk = np.array([b[3] for b in self._dagger_buf])
+        n = np.array([f.shape[0] for f in feats], np.int64)
+
+codex
+我已经看到设计文档的核心假设与既有证据：V1 是把 PGIF 的“后验门控”外接到 DAM4SAM，V2 是把冷启动语言选择改为短窗序贯承诺。接下来我只定位实现里的门控/冷启动路径，确认设计是否和代码机制一致。
+exec
+/bin/sh -lc 'rg -n "V1|V2|cold|PGIF|DAM4SAM|DRM|n_init|TLD|confirm|confirmation|rank|cool" acot_note/1003_v1_v2_design.md acot_note/1001_innovation-design.md acot_note/1003_iteration_workflow.md' in /nvidia/hque/code/cyhe/uav-acot-track
+exec
+/bin/sh -lc 'rg -n "dam4sam|_asd|ASD|cold|commit|gallery_seed|_dam4sam|_tah_mem|_pred_slot|_committed|init" carla_uav_tracking/rollout/policy.py' in /nvidia/hque/code/cyhe/uav-acot-track
+ succeeded in 9ms:
+acot_note/1003_iteration_workflow.md:4:> 出发点:`1001_innovation-design.md`(v4,TAHRelM + PGIF)与 `figs/fig_architecture.png`。
+acot_note/1003_iteration_workflow.md:13:| P1 | **正确锁定比例不是 SOTA** | DAM4SAM 0.786 vs PGIF 0.583(PGIF − DAM4SAM = −0.20 [−0.39, −0.03]) | TAHRelM(4,740 参数)的单帧关联能力弱于 SAM2-L 记忆 |
+acot_note/1003_iteration_workflow.md:14:| P2 | **最长锁错没有改善** | PGIF 15.4s(中位 0.9s);l4 7.9s、borrow#1 8.8s;对各方法差异都不显著 | 长尾来自少数 episode |
+acot_note/1003_iteration_workflow.md:15:| P3 | **冷启动锁错主导长尾** | 初始锁对:PGIF 正确比例 0.96/0.90/0.80;初始锁错:0.017/0.094/0.008(Town05 / Town10HD / reid),锁错开局占 7/19、11/20、7/19 | PGIF 会坚持错误的初始身份 |
+acot_note/1003_iteration_workflow.md:16:| P4 | **DAM4SAM 粘滞错锁** | 最长锁错 26.7s(中位 21.6s),全场最长 | SAM2 记忆同样是"自更新确认偏差",恰好是 PGIF 的目标问题 |
+acot_note/1003_iteration_workflow.md:26:- **C2(方法,升级)**:PGIF 从"包 TAHRelM"推广为**异构记忆融合层**——每个记忆(TAHRelM、DAM4SAM、语言 grounding)给出"选择 + 置信度",按各自的置信度秩加权、按误差相关时间回火,融合成一个 tracklet 级后验;后验再门控**每个**记忆的更新/重置。
+acot_note/1003_iteration_workflow.md:36:| **V0** | 冻结当前基线(TAHRelM + PGIF;所有臂 deployable 结果已有) | — | — | 无 |
+acot_note/1003_iteration_workflow.md:37:| **V1** | **PGIF ∘ DAM4SAM**:把 PGIF 包在 DAM4SAM 外层;重置钩子 = 用 ŝ 的框重新 `init` SAM2 | P1、P4,并检验 C2 的跨记忆泛化 | 正确比例不低于 DAM4SAM(非劣,Δ 下界 > −0.05),最长锁错显著低于 DAM4SAM | `dam4sam_service.py` 返回 SAM2 预测 IoU 作置信度;`policy.py` 加 dam4sam 的 PGIF 门控(重新 init) |
+acot_note/1003_iteration_workflow.md:38:| **V2** | **延迟承诺冷启动**:前 k 个决策步只积累语言证据(回火)、不承诺;可选:把阶段 0 的 LoRA r16 grounding 头作为语言打分器 | P3、P2 | 冷启动锁错比例下降;最长锁错均值显著下降 | `asd.py` 增加冷启动窗口;`policy.py` 冷启动路径 |
+acot_note/1003_iteration_workflow.md:39:| **V3** | **异构证据融合**:TAHRelM + DAM4SAM + 语言 三路观测进入同一个回火后验,门控两个记忆 | P1、P2、C2/C4 | 正确比例显著高于 DAM4SAM,最长锁错显著低于 DAM4SAM 与 PGIF(V0) | 两个记忆同时运行(DAM4SAM 服务 + TAHRelM),`asd.py` 多观测融合 |
+acot_note/1003_iteration_workflow.md:48:      → codex 审核 R_k^a:只审创新点与逻辑(是否足够 SCI 一区 / CCF-A;与 DAM4SAM、MHT、自训练确认偏差、TLD 等的区别)
+acot_note/1003_iteration_workflow.md:53:(e) 泛化实验(仅通过 G_k 的版本):Town10HD + Town03(训练集外地图)各 20 ep,与 DAM4SAM、V0 配对
+acot_note/1003_iteration_workflow.md:62:## 4. 12 小时时间表(3 台健康 CARLA:2000 / 2010 / 2040;policy 放 GPU 1/3/4/7;DAM4SAM 服务 GPU 6)
+acot_note/1003_iteration_workflow.md:66:| 0:00–0:45 | 预检:Town03 加入场景配置并冒烟;DAM4SAM 服务返回置信度;V1/V2 设计文档 + R1^a、R2^a | Town03 冒烟(2 ep) | DAM4SAM · Town10HD(泛化对照所需) | TAHRelM 无纠偏 · Town03 |
+acot_note/1003_iteration_workflow.md:67:| 0:45–2:15 | 实现 V1、V2;R3^a(V3 设计) | **V1** · Town05 | **V2** · Town05 | DAM4SAM · Town03 |
+acot_note/1003_iteration_workflow.md:68:| 2:15–3:45 | G1/G2 判定;实现 V3 | V1 · Town10HD(若过 G1) | V2 · Town10HD(若过 G2) | PGIF(V0)· Town03 |
+acot_note/1003_iteration_workflow.md:69:| 3:45–5:15 | R1^b、R2^b | **V3** · Town05 | V1 · Town03 | V2 · Town03 |
+acot_note/1003_iteration_workflow.md:71:| 6:45–8:15 | R3^b | 最优版本 reid 记忆(跨记忆) | DAM4SAM 扩种子 91020–39 | V0 扩种子 91020–39 |
+acot_note/1003_iteration_workflow.md:91:| DAM4SAM 重新 init 开销大、闭环变慢 | 限制重置频率(冷却 r 步);记录每 ep 耗时 |
+acot_note/1003_iteration_workflow.md:92:| V3 两个记忆同时运行显存/时间翻倍 | DAM4SAM 服务单独占 GPU 6;必要时 V3 只跑 Town05 + Town03 |
+acot_note/1003_iteration_workflow.md:93:| 只有 3 台 CARLA 健康,槽位不足 | 优先级:V1 > V2 > V3 主实验 > 泛化 > 扩种子 > V4 |
+acot_note/1003_iteration_workflow.md:98:- **性能**:存在一个版本在 Town05 上正确锁定比例 **不低于** DAM4SAM(非劣)且最长锁错 **显著低于** DAM4SAM;最好同时在 Town03(训练集外)上方向一致。
+acot_note/1001_innovation-design.md:1:# 1001 · 创新点设计报告(终版 v4):PGIF — 后验门控身份滤波
+acot_note/1001_innovation-design.md:12:**闭环指代跟踪中,自更新的身份记忆用自己的逐帧选择作伪标签更新自己——这是闭环版的确认偏差:单帧误选被写进记忆、下一帧再被自己确认,放大为持续错锁。PGIF 在任意身份记忆外层,对持久 tracklet 维护"按误差相关时间回火、以置信度秩加权"的身份证据,并让记忆更新与控制承诺都以证据 argmax 为门。无训练参数;只需记忆暴露"选择 + 置信度 + 更新钩子",并假设环境提供持久 tracklet 关联。**
+acot_note/1001_innovation-design.md:14:![PGIF architecture](figs/fig_pgif_architecture.png)
+acot_note/1001_innovation-design.md:16:*图 1 · (a) PGIF 位于身份记忆与(i)记忆自身更新、(ii)控制承诺之间,切断"原始自更新"这条确认偏差回路;(b) 一个真实闭环 episode(TAHRelM + PGIF,seed 91009):记忆原始选择 44% 的 tick 指向 look-alike(阴影),回火证据始终保持真目标领先,门控改写 47 次(▲),PGIF 输出 100% 正确;(c) 组成部分消融。源 `figs/fig_pgif_architecture.py`(b 面板由 `runs/asd/tah_tempered_91000.jsonl` 重放生成)。*
+acot_note/1001_innovation-design.md:46:## 3. 方法:PGIF
+acot_note/1001_innovation-design.md:53:  ① ρ_t ← rank(c_t ; H) ∈ [0,1],  w_t ← 0.5 + ρ_t        # 尺度无关:不同记忆无需标定
+acot_note/1001_innovation-design.md:64:**PGIF 本身没有任何可训练参数(0 个)**:它是一个纯推理期的递推规则,只有两个**人工设定、冻结**的超参(λ=0.98、W=30),既不训练也没有在评测种子上调。下表是 PGIF 包裹的整个 deployable 系统的参数构成(由 ckpt 实测计数):
+acot_note/1001_innovation-design.md:68:| **PGIF**(`asd.py::_filter_step`) | 回火证据累积 + 后验门控 | **0**(超参 λ、W 各 1 个,冻结) | 无可训练参数 |
+acot_note/1001_innovation-design.md:76:→ 整个系统中**唯一经过训练的身份相关参数是 TAHRelM 的 4,740 个**,PGIF 在其外层**不新增任何参数、不需要任何训练数据**;换成启发式 reid gallery(本身 0 参数)时,整条身份链路完全无训练参数。
+acot_note/1001_innovation-design.md:95:| **离线** | 已采集数据(`runs/tah_cache.pt` 64 ep + DAgger 23 ep) | 训练时用 GT 身份(teacher forcing) | 否(逐帧打分,不飞行) | 训练/验证 TAHRelM(val 0.990);PGIF 开环回放分析(§5.4) |
+acot_note/1001_innovation-design.md:99:实现:`policy.py --gallery-seed {gt, committed}`。TAHRelM 记忆更新源 `us = true_idx if gallery_seed != "committed" else _pred_slot`(`policy.py:636`);reid gallery 同理(`policy.py:299`);committed 模式冷启动用语言 grounding(`policy.py:594` 起)。两种在线设定的闭环、因果性(只用过去信息)与打分完全相同,GT 只在环境侧用于打分;区别仅在于 gt-seeded 额外把 GT 喂给身份记忆。gt-seeded 下 PGIF 只门控控制承诺(记忆按定义仍由 GT 更新,`policy.py:709`)。
+acot_note/1001_innovation-design.md:115:| **PGIF** | **0.613** | **30.3s / 21.0s** | 10.8s / **0.8s** |
+acot_note/1001_innovation-design.md:119:- 正确锁定比例与最长连续正确锁定均**显著**提升;PGIF 收回 GT 漂移检测上界在正确锁定比例上增益的 **76%**(0.341/0.449),且完全 GT-free **[M]**。
+acot_note/1001_innovation-design.md:125:| 设定 | 初始锁定正确:正确锁定比例(无纠偏→PGIF,Δ [CI]) | 初始锁定错误:正确锁定比例(Δ [CI]) |
+acot_note/1001_innovation-design.md:131:→ **初始锁定正确时,PGIF 几乎消除了后续漂移**(三个设定均显著);**初始锁定错误时,PGIF 会忠实地坚持错误身份**,略有恶化——这正是持续性机制的反面。PGIF 的整体增益上限由冷启动(语言初锁)正确率决定,这是下一步最重要的改进方向 **[M]**。
+acot_note/1001_innovation-design.md:135:| 变体 | 正确锁定比例 | 最长连续正确锁定(均值) | 最长锁错(均值) | **PGIF − 变体**:正确比例 / 最长正确 / 最长锁错 [CI] | 预测 |
+acot_note/1001_innovation-design.md:139:| PGIF 去门控 | 0.396 | 14.7s | 20.0s | +0.217 [+0.034,+0.401] / +15.6s [−0.9,+31.9] / −9.3s [−17.8,−1.3] | (c) ✅ |
+acot_note/1001_innovation-design.md:140:| **PGIF** | **0.613** | **30.3s** | **10.8s** | — | — |
+acot_note/1001_innovation-design.md:142:→ PGIF 对三个变体在正确锁定比例与最长锁错上均显著更好;最长连续正确锁定对等权驻留与去门控的差为正但 CI 略含 0。未回火贝叶斯在三项指标上都比不纠偏更差(正确比例 Δ−0.198 [−0.338,−0.076],最长锁错 +11.1s [+2.6,+20.5]),直接印证"自更新使误差自相关" **[M]**。
+acot_note/1001_innovation-design.md:146:| 设定 | n | 正确锁定比例(基线→PGIF,Δ [CI]) | 最长连续正确锁定(均值,Δ [CI]) | 最长锁错(均值,Δ [CI]) |
+acot_note/1001_innovation-design.md:162:| PGIF(开环,无门控反馈) | 0.402 | 0.391 | 0.385 | 0.384 | 0.354 | 0.339 |
+acot_note/1001_innovation-design.md:165:→ p≤0.02/tick(每目标约每 30s 至多一次关联错误)保留约 3/4 增益;p=0.1 时基本消失。PGIF 需要中等质量的持久关联层 **[M][L]**。开环回放中回火与等权驻留持平(0.402 vs 0.407),二者闭环差异(§5.2)来自门控对后续观测的反馈,开环无法体现。
+acot_note/1001_innovation-design.md:170:> **为什么重跑**:旧版对比(`907_baseline_compare_906.md` 图 1,2026-09-06)中的 8 个方法都运行在 **gt-seeded** 设定——身份记忆/轨迹状态每一步用真值目标刷新,等于给模型一条作弊通道,不能作为方法比较。本节所有臂(含外部 baseline)均为 **deployable**:冷启动用语言选车,之后只用模型自己的承诺身份更新记忆;CARLA 在线闭环,同种子 91000–19(19 个计分 episode),三项指标由新版 scorer 逐帧记录(`max_correct_run_s` 与 `max_wrong_run_s` 均以承诺身份为准,目标出画即断开)。外部方法的可部署化:OC-SORT/DeepSORT 轨迹状态改为用自己关联到的车更新,DAM4SAM 改为用语言选中车辆的框初始化(`policy.py` `_assoc_select` / `_dam4sam_select` 的 `init_slot`)。批量脚本 `runs/asd/deploy_all/chains.sh`;统计 `rollout/deploy_compare.py` → `eval_out/deploy_compare.json`。
+acot_note/1001_innovation-design.md:174:*图 2 · 全部模块在可部署设定下的三项指标(误差线 = 种子 bootstrap 95% CI;橙色虚线 = PGIF 均值)。源 `figs/fig_deploy_compare.py`。*
+acot_note/1001_innovation-design.md:176:| 方法 | 类别 | 正确锁定比例 ↑ [95% CI] | 最长连续正确锁定 ↑(均值 / 中位,s) | 最长锁错 ↓(均值 / 中位,s) | **PGIF − 该方法**(配对 Δ [95% CI]):正确比例 / 最长正确 / 最长锁错 |
+acot_note/1001_innovation-design.md:186:| DAM4SAM | 外部 | 0.786 [0.65, 0.90] | 13.3 / 6.4 | 26.7 / 21.6 | -0.20 [-0.38, -0.03] / +7.97 [-2.40, +18.63] / -11.26 [-23.27, +0.45] |
+acot_note/1001_innovation-design.md:187:| **TAHRelM+PGIF(ours)** | **ours** | 0.583 [0.37, 0.79] | 21.3 / 11.5 | 15.4 / 0.9 | — |
+acot_note/1001_innovation-design.md:190:- **PGIF vs 我们的其他模块与 OC-SORT/DeepSORT**:正确锁定比例与最长连续正确锁定上,PGIF 对 l5、borrow#1、TAH+DAgger、TAHRelM 无纠偏、OC-SORT、DeepSORT 均**显著更好**(CI 不含 0;对此前最强的启发式 borrow#1:正确比例 +0.13 [+0.01, +0.28],最长正确 +10.2s [+3.5, +18.0]);对 l4 的正确比例差 +0.15 [−0.01, +0.32] 刚好不显著,最长正确显著更好。**最长锁错上 PGIF 与它们都无显著差异**,且 l4(7.9s)、borrow#1(8.8s)的均值低于 PGIF(15.4s)——PGIF 的中位数仅 0.9s,均值被少数冷启动锁错的长尾拉高。
+acot_note/1001_innovation-design.md:191:- **DAM4SAM(外部 SOTA,SAM2-L 记忆)**:正确锁定比例 **显著高于 PGIF**(PGIF − DAM4SAM = −0.20 [−0.39, −0.03]);但它的最长锁错均值 26.7s、中位 21.6s,是所有方法中最长的——典型的"粘滞记忆":锁对就一直对,锁错就一直错。最长连续正确锁定上 PGIF 高 8.0s,但不显著。两者形成取舍,**不能声称 PGIF 全面优于 DAM4SAM**。
+acot_note/1001_innovation-design.md:195:**下一步**:DAM4SAM 的长时间锁错正是命题 1 的自更新确认偏差;为其增加"用 ŝ 的框重新初始化"的重置钩子后,PGIF 可直接包在 DAM4SAM 外层——这是检验 PGIF 跨记忆泛化、同时攻 DAM4SAM 粘滞错锁的最直接实验。
+acot_note/1001_innovation-design.md:202:2. **方法 PGIF**:尺度无关秩置信加权 + 按误差相关时间回火的 tracklet 证据累积 + 后验门控更新/承诺;无训练参数(两个冻结超参 λ、W);对记忆只需三个钩子,对环境需一个持久关联层。
+acot_note/1001_innovation-design.md:209:- **MHT(Reid 1979)/ identity management(Schumitsch et al., RSS 2006)/ JPDA**:多目标身份推断经典。PGIF 只跟踪单一指代身份的证据,观测来自另一个学习模块的选择与置信度,并把证据**反馈去门控该模块的自更新**——关注闭环确认偏差,而非多目标关联本身。
+acot_note/1001_innovation-design.md:210:- **自训练确认偏差(Arazo et al., IJCNN 2020;Mean Teacher, Tarvainen & Valpola 2017)**:离线半监督里用阈值/教师平滑伪标签。PGIF 是闭环、在线、时序版本,伪标签由带持续性先验的回火证据产生;§5.2(a) 表明在闭环自相关误差下,不回火的概率平滑反而有害。
+acot_note/1001_innovation-design.md:211:- **TLD P-N learning(Kalal et al., TPAMI 2012)/ SiamFC 固定模板**:靠外观参考抑制漂移。D2 实测外观参考在 look-alike 漂移时刻≈随机,本设定下这类方案失效(锚重锚臂为直接证据)。
+acot_note/1001_innovation-design.md:212:- **DAM4SAM(CVPR'25)**:更强记忆 → 16.3s 粘滞错窗 **[M]** `paper_ext_dam4sam`,与命题 1 一致。
+acot_note/1001_innovation-design.md:219:- **[L2] 冷启动锁错**:语言初锁即错时没有正确历史可回退,PGIF 反而会坚持错误身份(分层见 §5.1);这是最长锁错未显著改善的主因,也是最主要的改进方向。
+acot_note/1001_innovation-design.md:227:3. 直接估计误差相关时间 τ(observe vs PGIF 日志的误选自相关函数),把预测 (c) 从间接变为直接。
+acot_note/1001_innovation-design.md:228:4. 外部记忆(DAM4SAM)加 reset 钩子后接 PGIF,扩展跨记忆证据。
+acot_note/1001_innovation-design.md:237:| v3 PGIF-bayes | 粘滞 HMM:逐 tick 似然相乘,秩置信定错误率 | 闭环被漂移记忆俘获,correct 0.074(< 无纠偏 0.272) | 揭示误差自相关 → 引出回火(命题 2a),降为消融 |
+acot_note/1001_innovation-design.md:238:| **v4 PGIF-tempered** | 回火的置信加权 tracklet 证据 + 后验门控 | — | 主方法;三条预测闭环成立 |
+acot_note/1001_innovation-design.md:251:| Town05·TAHRelM | **+ PGIF** | 19 | **0.158 (3)** | **0.613** | **32.3s / 43.1s** | **0.599** | **30.3s / 21.0s** | 10.8s / **0.8s** | **0.58** | **0.58** | 1.00 | **0.42** |
+acot_note/1001_innovation-design.md:255:| Town10HD·TAHRelM | **+ PGIF** | 20 | **0.150 (3)** | 0.456 | 23.4s / 39.4s | 0.447 | 21.4s / 0.3s | 16.1s / 3.1s | 0.40 | 0.60 | 0.60 | **0.17 ↓** |
+acot_note/1001_innovation-design.md:257:| Town05·reid | **+ PGIF** | 19 | 0.105 (2) | 0.510 | 20.4s / 34.0s | 0.506 | 19.1s / 5.4s | 12.1s / 4.9s | 0.42 | 0.53 | 1.26 | **0.15 ↓** |
+acot_note/1001_innovation-design.md:262:- **负面发现(须如实报告)**:PGIF 在 Town10HD 与 reid 上**重捕获成功率下降**(0.31→0.17、0.55→0.15)。机理推测:目标出画期间旧 tracklet 证据仍在衰减中、而回火使新出现的正确身份需要累积一段证据才能胜出;在 reid(本身重捕获较强)上代价最明显。Town05·TAHRelM 上反而提升(0.22→0.42)。这是下一步改进点(例如目标重新入画时对证据做"重捕获窗口"内的快速放大)。
+acot_note/1003_v1_v2_design.md:1:# 1003 · V1 / V2 设计文档(预注册;闭环前冻结)
+acot_note/1003_v1_v2_design.md:3:> 2026-10-02 · 属于 `1003_iteration_workflow.md` 的 V1、V2。所有实验:deployable(身份决策不用真值;候选框与车辆定位为仿真理想输入),CARLA 在线闭环,Town05 seeds 91000–19(19 计分),三项客观指标(正确锁定比例、最长连续正确锁定、最长锁错),配对 bootstrap 95% CI。基线 V0 = TAHRelM + PGIF(`1001_innovation-design.md` v4)。
+acot_note/1003_v1_v2_design.md:8:| DAM4SAM(SAM2.1-L + 干扰物感知记忆,CVPR'25) | 0.786 | 13.3 / 6.4 s | **26.7 / 21.6 s** |
+acot_note/1003_v1_v2_design.md:9:| V0:TAHRelM + PGIF | 0.583 | 21.3 / 11.5 s | 15.4 / 0.9 s |
+acot_note/1003_v1_v2_design.md:15:## V1 · PGIF ∘ DAM4SAM:把后验门控推广到强外观记忆
+acot_note/1003_v1_v2_design.md:17:**动机**:DAM4SAM 的长时间错锁(26.7 s)是 SAM2 记忆"用自己的预测掩码更新自己"造成的确认偏差,与 PGIF 在 TAHRelM 上处理的是同一机制(命题 1)。若 PGIF 的门控能在不同类型的记忆上起作用,则 C2"记忆无关的闭环身份门控"得到直接验证,同时有望保留 DAM4SAM 的高正确比例并压缩其错锁。
+acot_note/1003_v1_v2_design.md:19:**方法(与 V0 的 PGIF 完全相同的规则与超参)**:
+acot_note/1003_v1_v2_design.md:20:- 观测:DAM4SAM 每个决策步的选择 s^M = 与 SAM2 预测框中心最近的候选(160 px 门限内);置信度 c = SAM2 对所选掩码的**预测 IoU**(服务新增返回字段)。无匹配时该步不更新证据。
+acot_note/1003_v1_v2_design.md:21:- 回火证据:L_k ← 0.98·L_k;L_{s^M} += 0.5 + rank(c; 最近 30 步)。
+acot_note/1003_v1_v2_design.md:22:- 门控:ŝ = argmax_{可见 k} L_k;若 ŝ ≠ s^M → **重置钩子 = 用 ŝ 的候选框重新 init SAM2**(丢弃 RAM/DRM 记忆),控制承诺 ŝ。
+acot_note/1003_v1_v2_design.md:23:- 预注册附加参数:重置冷却 3 个决策步(避免频繁 re-init 抹掉 DRM);只在 committed 模式启用。
+acot_note/1003_v1_v2_design.md:25:**预注册假设(Town05,n=19 配对,V1 vs DAM4SAM)**:
+acot_note/1003_v1_v2_design.md:29:- 失败解释预案:若 H1b 失败且冷启动锁错占主导 → 说明长尾来自初始身份错误而非漂移,转由 V2/V3 处理。
+acot_note/1003_v1_v2_design.md:31:**与相关工作的差异**:DAM4SAM 自身的 DRM 用"备选掩码与所选掩码分歧"来**选择写入哪些帧**,仍以 SAM2 的当前预测作为身份;V1 在 tracklet 层引入独立于该记忆的、按误差相关时间回火的身份后验,并在后验与记忆冲突时**重置**记忆——处理的是"记忆已经锁到错误实例"之后的纠错,而非写入策略。
+acot_note/1003_v1_v2_design.md:35:## V2 · 延迟承诺冷启动(sequential language commitment)
+acot_note/1003_v1_v2_design.md:37:**动机**:长尾错锁主要来自开局锁错(P3);单帧语言选车准确率约 0.42(离线 xattn,mis 0.579),而 PGIF 会忠实维持初始身份。把"开局选谁"也变成一个带回火的序贯证据决策。
+acot_note/1003_v1_v2_design.md:40:- 冷启动窗口:前 K = 5 个决策步(≈3 s)**不写入身份记忆**;每步对可见 tracklet 累积语言证据 G_k ← 0.9·G_k + (0.5 + rank(语言 margin; 窗口内)) · 1[k = 语言 argmax](与 PGIF 同形式的回火投票,λ_lang = 0.9 预注册)。
+acot_note/1003_v1_v2_design.md:42:- 窗口结束:承诺 k* = argmax_k G_k,用其当前截图初始化 TAHRelM 记忆;PGIF 证据以 L_{k*} = G_{k*} 初始化(保留开局的语言支持度)。
+acot_note/1003_v1_v2_design.md:43:- 语言来源:沿用部署中的 Stage-2 grounding 头(冻结);LoRA r16 打分器作为可选 V2b(阶段 0 未显著,暂不预注册)。
+acot_note/1003_v1_v2_design.md:45:**预注册假设(Town05,n=19 配对,V2 vs V0)**:
+acot_note/1003_v1_v2_design.md:50:**与相关工作的差异**:多目标跟踪中的"轨迹确认"(tentative → confirmed,如 DeepSORT 的 n_init)按检测连续性确认轨迹,不涉及"哪条轨迹是语言所指";指代多目标跟踪(RMOT/iKUN)逐帧做语言匹配。V2 把"语言指代"本身作为带回火的序贯证据决策,并把开局证据作为后续 PGIF 后验的先验。
+acot_note/1003_v1_v2_design.md:55:- `external/DAM4SAM/dam4sam_tracker.py`:输出所选掩码的预测 IoU(已改);`rollout/dam4sam_service.py` 返回 `iou`(已改)。
+acot_note/1003_v1_v2_design.md:56:- `rollout/policy.py`:dam4sam 分支接入 ASD/PGIF(观测 = s^M、c = IoU;门控 = 重新 init);tah 分支冷启动窗口(V2)。
+acot_note/1003_v1_v2_design.md:57:- `rollout/asd.py`:PGIF 证据初始化接口(V2)。
+
+ succeeded in 10ms:
+95:    def __init__(self, ckpt_path: str, cfg: dict, vlm, *, device: str = "cuda:0",
+97:                 ex_source: str = "ear", commit_k: int = 5,
+102:                 gallery_seed: str = "gt", reanchor: str = "off",
+105:                 dam4sam_host: str = "dam4sam-svc", dam4sam_port: int = 5601,
+124:        self.commit_k = int(commit_k)                          # hysteresis frames to switch target
+125:        self.conf_tau = float(conf_tau)                        # ①: min pick-margin to commit-fly (track)
+127:                                                               # (dist < conf_consensus·gate) to commit-fly (0=off)
+128:        self.frame_gain = float(frame_gain)                    # ②: yaw-centering gain on committed target
+133:        # deployable identity (paper2): gallery_seed 'gt'=legacy oracle-seeded template |
+134:        # 'committed'=GT-free (store the believed-target crop). reanchor 'off'|'lang'=language re-anchor
+136:        self.gallery_seed = gallery_seed
+181:        self._tah_mem = None
+182:        # ASD (Anchored Sequential Drift-correction): memory-agnostic confident-drift detector wrapped around
+183:        # whichever identity memory is active (tah / reid). asd_cfg = JSON kwargs for rollout.asd.ASD.
+184:        self._asd = None
+187:            from rollout.asd import ASD
+188:            self._asd = ASD(mode=asd, log_path=os.environ.get("ASD_LOG") or None,
+189:                            **(_json.loads(asd_cfg or os.environ.get("ASD_CFG") or "{}")))
+190:            print(f"[policy] ASD mode={asd} cfg={asd_cfg or os.environ.get('ASD_CFG') or '{}'} log={os.environ.get('ASD_LOG')}", flush=True)
+192:        self._dam4sam_sock = None
+193:        if tid_head == "dam4sam":
+195:            self._dam4sam_sock = _sk.socket(_sk.AF_INET, _sk.SOCK_STREAM)
+196:            self._dam4sam_sock.connect((dam4sam_host, int(dam4sam_port)))
+197:            print(f"[policy] connected to DAM4SAM service {dam4sam_host}:{dam4sam_port}", flush=True)
+219:        self._pred_slot = -1
+221:        self._committed_idx = None      # Plan A: committed target identity (-1=target, d=distractor)
+228:        self._tah_mem = self._tah.reset(self.device) if getattr(self, "_tah", None) is not None else None  # path-B TAHRel memory
+229:        self._tah_anchor = None         # confident-drift: FROZEN initial target appearance (drift-immune anchor)
+234:        self._dam4sam_inited = False     # dam4sam baseline: has the tracker been init'd this episode
+236:        self._frame_cw = None           # ②: committed target world pos to keep centered
+240:        if getattr(self, "_asd", None) is not None:
+241:            if self._asd.tick:
+242:                print(f"[asd] episode fired {self._asd.fires} drift corrections over {self._asd.tick} ticks", flush=True)
+243:            self._asd.reset()
+244:        self._asd_fe = None             # ASD: this tick's L2-normed candidate appearance feats
+245:        self._tah_last = None           # ASD: (feat, pos) tensors of this tick (tah memory reset hook)
+297:        # gallery update source: 'committed'=deployable (store the believed-target crop passed as store_slot;
+299:        ss = store_slot if self.gallery_seed == "committed" else \
+305:    def _asd_feats(self, cset, rgb):
+306:        """ASD appearance view of the candidates: reuse the active memory's frozen crop-DINOv2 feats when it
+308:        if self.tid_head == "tah" and self._asd_fe is not None:
+309:            return self._asd_fe
+318:    def _asd_gate_memory(self, slot):
+323:            prev = getattr(self, "_tah_mem_prev", None)
+325:            self._tah_mem = self._tah.update(prev, feat[slot], pos[slot])
+327:    def _asd_reset_memory(self, slot):
+328:        """The ONE hook ASD needs from a memory: reset it to the anchor's pick (drop the drifted state)."""
+331:            self._tah_mem = self._tah.update(self._tah.reset(self.device), feat[slot], pos[slot])
+354:        GT/committed privilege as the gallery). None/loss → hold + keep predicting with velocity."""
+361:    def _assoc_select(self, cset, rgb, init_slot=None):
+388:        # UPDATE track state. gallery_seed='gt' (oracle, legacy): from the GT target. 'committed' (DEPLOYABLE, GT-free):
+389:        # from the tracker's OWN association this tick (language pick at cold start, before any track state exists).
+391:        if self.gallery_seed == "committed":
+393:                ti = init_slot
+407:    def _dam4sam_select(self, cset, rgb, init_slot=None):
+410:        init the tracker with the GT target box (same oracle-seed privilege as reid/assoc); each S2
+416:        # init box: gallery_seed='gt' (oracle, legacy) = GT target box; 'committed' (DEPLOYABLE) = the language pick's box
+417:        ti = init_slot if self.gallery_seed == "committed" else cset.true_idx
+419:        if not self._dam4sam_inited:
+420:            if ti is not None and ti >= 0:                              # init from the chosen target box
+423:                send_msg(self._dam4sam_sock, {"cmd": "init", "rgb": np.asarray(rgb, np.uint8), "box": box})
+424:                bbox = recv_msg(self._dam4sam_sock).get("bbox")
+425:                self._dam4sam_inited = True
+429:            send_msg(self._dam4sam_sock, {"cmd": "track", "rgb": np.asarray(rgb, np.uint8)})
+430:            bbox = recv_msg(self._dam4sam_sock).get("bbox")
+440:    def _update_commit(self, cset):
+442:        A challenger identity must win commit_k consecutive S2 ticks to take over; during
+443:        a loss (no valid pick) the current commitment is held."""
+445:        if cset is not None and 0 <= self._pred_slot < len(cset.cands):
+446:            sel = int(cset.cands[self._pred_slot].idx)          # -1 = target, else distractor idx
+448:            return                                              # loss -> hold commitment
+449:        if self._committed_idx is None or sel == self._committed_idx:
+450:            self._committed_idx = sel; self._chal = None; self._chal_n = 0
+454:            if self._chal_n >= self.commit_k:
+455:                self._committed_idx = sel; self._chal = None; self._chal_n = 0
+457:    def _committed_slot(self, cset):
+458:        """Candidate slot of the currently committed identity this frame (None if not visible / uncommitted).
+460:        if self._committed_idx is None or cset is None:
+463:            if int(c.idx) == int(self._committed_idx):
+467:    def _committed_world(self, tpos, dstates):
+468:        """World position of the committed identity (GT position; the IDENTITY is tid's)."""
+469:        if self._committed_idx is None:
+471:        if self._committed_idx < 0:
+474:        return np.asarray(ds[self._committed_idx][:3], np.float64) if self._committed_idx < ds.shape[0] else None
+523:                self._pred_slot = int(logits.argmax().item())
+524:                lang_slot = self._pred_slot   # language grounding pick — saved before any reid override
+528:                # accumulate per-actor EMA of the language logit so the re-anchor commits the temporally-integrated
+539:                # exists (cold start). See memory acot-uav-reid-reframe.
+542:                    # target (prior-frame commitment; language pick at cold-start), never GT (GT-free WHICH).
+544:                    if self.gallery_seed == "committed":
+545:                        store_slot = lang_slot if self._committed_idx is None \
+546:                                     else self._committed_slot(cset)
+551:                            self._reid_mscore = ms                    # borrow#2: stash for the consensus commit-fly gate
+553:                            mslot = store_slot if self.gallery_seed == "committed" else \
+557:                        self._pred_slot = int(rl.argmax())
+559:                        # (argmax) → an off-center/far frame lets a look-alike fluke-win → mis-commit →
+568:                            best_s, best_v = self._pred_slot, -1e9
+573:                            self._pred_slot = int(best_s)
+580:                    al = self._assoc_select(cset, obs.rgb, init_slot=lang_slot)
+582:                    self._pred_slot = int(al.argmax())
+583:                if self.tid_head == "dam4sam":
+584:                    dl = self._dam4sam_select(cset, obs.rgb, init_slot=lang_slot)
+586:                    self._pred_slot = int(dl.argmax()) if float(dl.max()) > -1e8 else -1
+593:                    self._asd_fe = fe
+599:                        logits, conf, _ = self._tah.step(feat, pos, self._tah_mem)
+601:                    self._pred_slot = int(logits.argmax())
+603:                    if self.gallery_seed == "committed":
+604:                        # DEPLOYABLE (GT-free): the tah memory is empty at cold-start → its logits are
+605:                        # meaningless (mlp of zeros → const) → LANGUAGE grounds the initial lock. Then a
+608:                        # gt-seeded skips both (oracle memory every frame). See eval_out/paper_ext_tahrelm_committed.
+609:                        cold = (self._tah_mem is None) or (self._tah_mem.get("app") is None)
+610:                        if cold:
+611:                            self._pred_slot = lang_slot                       # language cold-start
+613:                                self._tah_anchor = feat[lang_slot].clone()    # freeze initial target appearance
+616:                            # the FROZEN initial anchor can't. Detect drift when the anchor's best-match
+621:                                self._lowconf_run = self._lowconf_run + 1 if apick != self._pred_slot else 0
+623:                                    self._tah_mem = self._tah.reset(self.device)
+624:                                    self._pred_slot = apick
+629:                                self._tah_mem = self._tah.reset(self.device)  # drop the drifted memory
+630:                                self._pred_slot = lang_slot                   # re-anchor via language
+639:                                self._lowconf_run = self._lowconf_run + 1 if self._pred_slot != gt else 0
+641:                                    self._tah_mem = self._tah.reset(self.device)
+642:                                    self._pred_slot = gt                      # re-anchor to the true target
+644:                    # memory update source: gt=oracle GT every frame | committed=believed target (lang at cold-start)
+645:                    us = (cset.true_idx if self.gallery_seed != "committed" else self._pred_slot)
+646:                    self._tah_mem_prev = self._tah_mem                    # ASD-IF: snapshot for posterior-gated update
+649:                            self._tah_mem = self._tah.update(self._tah_mem, feat[us], pos[us])
+661:                        self._pred_slot = int(cset.true_idx)
+663:                        self._pred_slot = -1                              # target off-screen this frame
+667:                # isn't initiated early" → is the deployable gap cascade-INITIATION or reid-intrinsic.
+672:                        self._pred_slot = int(cset.true_idx)
+673:                # pick confidence = top1−top2 margin (used to gate commit-fly in track mode).
+680:                # from that crop, force-commit. Language earns its keep here (not per-frame). 'oracle'=GT bound.
+699:                            self._pred_slot = int(ra)
+703:                            self._committed_idx = int(cset.cands[ra].idx)        # force commit to re-anchored id
+704:                            self._pred_conf = 1.0                                # high-confidence assertion → control commits
+707:                # ★ ASD: memory-agnostic confident-drift correction (wraps whichever memory picked _pred_slot).
+708:                if self._asd is not None and len(cset.cands) > 0 and 0 <= self._pred_slot < len(cset.cands):
+709:                    fe_ = self._asd_feats(cset, obs.rgb)
+710:                    o = self._asd.step(fe_, [int(c.idx) for c in cset.cands], self._pred_slot,
+714:                        # ASD-IF posterior gating: the memory learns from (and control commits to) the filter's MAP
+716:                        # gt-seeded (oracle memory) runs keep the oracle update by definition → PGIF gates the
+717:                        # control commitment only; deployable (committed) runs also gate the memory update.
+718:                        if o.get("gate_memory", True) and self.gallery_seed == "committed":
+719:                            self._asd_gate_memory(int(o["slot"]))
+720:                        self._pred_slot = int(o["slot"])
+721:                        self._committed_idx = int(cset.cands[self._pred_slot].idx)
+725:                        self._asd_reset_memory(int(o["slot"]))
+726:                        self._pred_slot = int(o["slot"])
+727:                        self._committed_idx = int(cset.cands[self._pred_slot].idx)   # force commit (as reanchor)
+731:                self._tid_logits, self._pred_slot = np.zeros(0, np.float32), -1
+743:                    # Plan A: commit the tid-selected candidate (K-frame hysteresis), then
+747:                    # commitment and DON'T re-anchor control to it — keep dead-reckoning the last
+750:                    # borrow#2: CONSENSUS gate — commit-fly only if the pick is ALSO motion-consistent
+754:                       and 0 <= self._pred_slot < len(self._reid_mscore):
+755:                        confident = float(self._reid_mscore[self._pred_slot]) > -self.conf_consensus
+757:                        self._update_commit(cset)
+758:                    cw = self._committed_world(tpos, dstates)
+792:        # ②: yaw-centering correction on the committed target (breaks the framing→reid cascade —
+794:        # the camera toward the committed target's projected horizontal offset; gated by confidence.
+802:        info = ActInfo(tid_logits=self._tid_logits, pred_slot=self._pred_slot,
+
+exec
+/bin/sh -lc 'file figs/fig_architecture.png && ls -lh figs/fig_architecture.png' in /nvidia/hque/code/cyhe/uav-acot-track
+ exited 2 in 0ms:
+figs/fig_architecture.png: cannot open `figs/fig_architecture.png' (No such file or directory)
+ls: cannot access 'figs/fig_architecture.png': No such file or directory
+
+codex
+一个小发现：用户提到的 `figs/fig_architecture.png` 在当前工作区不存在，我先不把这当作设计缺陷，只按文档与实现审逻辑；实现里已有 DAM4SAM 与 ASD/PGIF 钩子入口，但还要看细节是否真的覆盖“重置”和“冷启动窗口”。
+exec
+/bin/sh -lc "sed -n '280,335p' carla_uav_tracking/rollout/policy.py" in /nvidia/hque/code/cyhe/uav-acot-track
+ succeeded in 9ms:
+        """Temporal appearance-memory re-ID (reframe → offline milestone: crop-DINOv2 feature +
+        K-view gallery breaks the 0.5 wall without resolution). Returns (N,) match scores to the
+        stored target gallery, or None if empty.
+
+        Fair-by-construction (no GT leak): SELECT with the PAST gallery, THEN store this view from
+        the GT-identified target (future only). Feature = crop-DINOv2 (instance-discriminative,
+        `reid_feature=dinov2`) or the coarse VLM pool (`vlmpool`). Matching = top-m mean over a
+        K-view diversity gallery (viewpoint-robust). Ported from train.reid_resolution_probe."""
+        from train.reid_resolution_probe import _dino_feats, bank_update, bank_score
+        if self.reid_feature == "dinov2":
+            W, H = self.image_cfg["width"], self.image_cfg["height"]
+            feats = _dino_feats(self._dino, rgb, cset.cands, W, H, 224, 1.3, self.device).astype(np.float64)
+        else:
+            feats = cset.feats.astype(np.float64)
+        fn = feats / (np.linalg.norm(feats, axis=1, keepdims=True) + 1e-8)
+        logits = bank_score(self._reid_bank, fn, self.reid_topm) if self._reid_bank else None
+        self._reid_fn = fn                                                    # stash for deployable re-anchor re-seed
+        # gallery update source: 'committed'=deployable (store the believed-target crop passed as store_slot;
+        # GT never touches the template) | 'gt'=legacy oracle-seeded (store the GT target view, future only).
+        ss = store_slot if self.gallery_seed == "committed" else \
+             (cset.true_idx if (cset.true_idx is not None and cset.true_idx >= 0) else None)
+        if ss is not None and 0 <= ss < len(fn):
+            bank_update(self._reid_bank, fn[ss], self.reid_bank, 0.9)
+        return logits
+
+    def _asd_feats(self, cset, rgb):
+        """ASD appearance view of the candidates: reuse the active memory's frozen crop-DINOv2 feats when it
+        computed them this tick (tah / reid-dinov2), else compute them (memory-agnostic)."""
+        if self.tid_head == "tah" and self._asd_fe is not None:
+            return self._asd_fe
+        if self.tid_head == "reid" and self.reid_feature == "dinov2" and self._reid_fn is not None \
+           and len(self._reid_fn) == len(cset.cands):
+            return self._reid_fn
+        from train.reid_resolution_probe import _dino_feats
+        W, H = self.image_cfg["width"], self.image_cfg["height"]
+        fe = _dino_feats(self._dino, rgb, cset.cands, W, H, 224, 1.3, self.device).astype(np.float64)
+        return fe / (np.linalg.norm(fe, axis=1, keepdims=True) + 1e-8)
+
+    def _asd_gate_memory(self, slot):
+        """Posterior-gated memory update: redo this tick's update with the filter's MAP crop (tah); reid's gallery
+        already stores the COMMITTED identity, which is overridden by the caller."""
+        if self.tid_head == "tah" and self._tah_last is not None:
+            feat, pos = self._tah_last
+            prev = getattr(self, "_tah_mem_prev", None)
+            prev = prev if prev is not None else self._tah.reset(self.device)
+            self._tah_mem = self._tah.update(prev, feat[slot], pos[slot])
+
+    def _asd_reset_memory(self, slot):
+        """The ONE hook ASD needs from a memory: reset it to the anchor's pick (drop the drifted state)."""
+        if self.tid_head == "tah" and self._tah_last is not None:
+            feat, pos = self._tah_last
+            self._tah_mem = self._tah.update(self._tah.reset(self.device), feat[slot], pos[slot])
+        elif self.tid_head == "reid" and self._reid_fn is not None:
+            from train.reid_resolution_probe import bank_update
+            self._reid_bank = []
+            bank_update(self._reid_bank, self._reid_fn[slot], self.reid_bank, 0.9)
+
+exec
+/bin/sh -lc "sed -n '407,435p' carla_uav_tracking/rollout/policy.py" in /nvidia/hque/code/cyhe/uav-acot-track
+ succeeded in 0ms:
+    def _dam4sam_select(self, cset, rgb, init_slot=None):
+        """EXTERNAL BASELINE: DAM4SAM (CVPR'25 SOTA distractor-aware SAM2 memory) as the WHICH module,
+        served over a socket bridge (separate torch2.1/SAM2 env). On the first target-visible frame,
+        init the tracker with the GT target box (same oracle-seed privilege as reid/assoc); each S2
+        tick, track → predicted target box → assign the candidate whose center is nearest (within a
+        gate) → pred_slot. Returns (N,) scores (higher=nearer the DAM4SAM box); -1e9 gate for far."""
+        from rollout.bridge import send_msg, recv_msg
+        cands = cset.cands
+        n = len(cands)
+        # init box: gallery_seed='gt' (oracle, legacy) = GT target box; 'committed' (DEPLOYABLE) = the language pick's box
+        ti = init_slot if self.gallery_seed == "committed" else cset.true_idx
+        bbox = None
+        if not self._dam4sam_inited:
+            if ti is not None and ti >= 0:                              # init from the chosen target box
+                c = cands[ti]
+                box = (c.u - c.w / 2.0, c.v - c.h / 2.0, c.w, c.h)
+                send_msg(self._dam4sam_sock, {"cmd": "init", "rgb": np.asarray(rgb, np.uint8), "box": box})
+                bbox = recv_msg(self._dam4sam_sock).get("bbox")
+                self._dam4sam_inited = True
+            else:
+                return np.full(n, -1e9, np.float32)                     # target never seen yet → no pick
+        else:
+            send_msg(self._dam4sam_sock, {"cmd": "track", "rgb": np.asarray(rgb, np.uint8)})
+            bbox = recv_msg(self._dam4sam_sock).get("bbox")
+        if bbox is None:
+            return np.full(n, -1e9, np.float32)                         # lost (empty mask) → hold
+        bx, by, bw, bh = bbox
+        pc = np.array([bx + bw / 2.0, by + bh / 2.0])                   # DAM4SAM predicted center
+        uv = np.array([[c.u, c.v] for c in cands], np.float64)
+
+exec
+/bin/sh -lc "sed -n '515,730p' carla_uav_tracking/rollout/policy.py" in /nvidia/hque/code/cyhe/uav-acot-track
+ succeeded in 0ms:
+                    if obs.target_color not in self._cvoc or obs.target_bp not in self._mvoc:
+                        print(f"[attrbind-attr] <UNK> color='{obs.target_color}' make='{obs.target_bp}'", flush=True)
+                    ci = torch.tensor([self._cvoc.get(obs.target_color, self._cvoc["<unk>"])], device=self.device)
+                    mi = torch.tensor([self._mvoc.get(obs.target_bp, self._mvoc["<unk>"])], device=self.device)
+                    logits = self.tid(cf, ci, mi, cmask)[0]                                # (N,)
+                else:
+                    logits = self.tid(cf, self._vlm_ctx, self._ctx_mask, cmask)[0]         # (N,)
+                self._tid_logits = logits.float().cpu().numpy()
+                self._pred_slot = int(logits.argmax().item())
+                lang_slot = self._pred_slot   # language grounding pick — saved before any reid override
+                lang_logits = self._tid_logits.copy()   # full language logits — for TEMPORAL language re-anchor
+                rl = None                     # reid match scores (None = no gallery yet / non-reid head)
+                # TEMPORAL language re-anchor: single-frame language picks wrong at re-appearance (H0 ceiling) →
+                # accumulate per-actor EMA of the language logit so the re-anchor commits the temporally-integrated
+                # language vote, not one noisy frame (mirrors reid_tavg, which fixed single-frame reid).
+                if self.reanchor == "lang" and self.reanchor_tavg > 0:
+                    a = self.reanchor_tavg
+                    for s, c in enumerate(cset.cands):
+                        prev = self._lang_score.get(c.idx, float(lang_logits[s]))
+                        self._lang_score[c.idx] = a * prev + (1 - a) * float(lang_logits[s])
+                # reid override (reframe test): temporal appearance-memory re-ID instead of
+                # per-frame language grounding — select the candidate matching the STORED target
+                # appearance (built while tracking), not the language description. Tests whether
+                # the WHICH wall is the single-frame paradigm. Falls back to tid before a template
+                # exists (cold start). See memory acot-uav-reid-reframe.
+                if self.tid_head == "reid":
+                    # deployable gallery: store the crop of the identity we currently BELIEVE is the
+                    # target (prior-frame commitment; language pick at cold-start), never GT (GT-free WHICH).
+                    store_slot = None
+                    if self.gallery_seed == "committed":
+                        store_slot = lang_slot if self._committed_idx is None \
+                                     else self._committed_slot(cset)
+                    rl = self._reid_select(cset, obs.rgb, store_slot)
+                    if rl is not None:
+                        if self.reid_motion > 0:                      # borrow#1: fuse motion consensus into rl (pre-EMA)
+                            ms = self._reid_motion_score(cset)
+                            self._reid_mscore = ms                    # borrow#2: stash for the consensus commit-fly gate
+                            rl = rl + self.reid_motion * ms
+                            mslot = store_slot if self.gallery_seed == "committed" else \
+                                    (cset.true_idx if (cset.true_idx is not None and cset.true_idx >= 0) else None)
+                            self._reid_motion_update(cset, mslot)
+                        self._tid_logits = rl
+                        self._pred_slot = int(rl.argmax())
+                        # TEMPORAL re-ID: the gallery template is temporal but the QUERY is single-frame
+                        # (argmax) → an off-center/far frame lets a look-alike fluke-win → mis-commit →
+                        # cascade. Accumulate per-ACTOR (stable cand.idx) EMA of the match score and pick
+                        # the TEMPORALLY-INTEGRATED best visible candidate → robust to single bad frames,
+                        # persists evidence across brief losses. reid_tavg=decay (0=off=single-frame).
+                        if self.reid_tavg > 0:
+                            a = self.reid_tavg
+                            for s, c in enumerate(cset.cands):
+                                prev = self._reid_score.get(c.idx, float(rl[s]))
+                                self._reid_score[c.idx] = a * prev + (1 - a) * float(rl[s])
+                            best_s, best_v = self._pred_slot, -1e9
+                            for s, c in enumerate(cset.cands):
+                                v = self._reid_score.get(c.idx, -1e9)
+                                if v > best_v:
+                                    best_v, best_s = v, s
+                            self._pred_slot = int(best_s)
+                            self._tid_logits = np.array([self._reid_score.get(c.idx, -1e9)
+                                                         for c in cset.cands], np.float32)
+                # external baseline: DeepSORT/OC-SORT-style association (motion + appearance),
+                # a common tracking-by-detection identity mechanism — the natural comparison for
+                # our temporal appearance-memory re-ID. Same z_ex/control path; only WHICH differs.
+                if self.tid_head == "assoc":
+                    al = self._assoc_select(cset, obs.rgb, init_slot=lang_slot)
+                    self._tid_logits = al
+                    self._pred_slot = int(al.argmax())
+                if self.tid_head == "dam4sam":
+                    dl = self._dam4sam_select(cset, obs.rgb, init_slot=lang_slot)
+                    self._tid_logits = dl
+                    self._pred_slot = int(dl.argmax()) if float(dl.max()) > -1e8 else -1
+                if self.tid_head == "tah":                            # path-B: learned TAHRel association
+                    from train.reid_resolution_probe import _dino_feats
+                    Wi, Hi = self.image_cfg["width"], self.image_cfg["height"]
+                    fe = _dino_feats(self._tah_dino if hasattr(self, "_tah_dino") else self._dino,
+                                     obs.rgb, cset.cands, Wi, Hi, 224, 1.3, self.device).astype(np.float64)
+                    fe = fe / (np.linalg.norm(fe, axis=1, keepdims=True) + 1e-8)
+                    self._asd_fe = fe
+                    feat = torch.tensor(fe, dtype=torch.float32, device=self.device)
+                    pos = torch.tensor(np.array([[c.u / Wi, c.v / Hi, c.depth / 100.0] for c in cset.cands], np.float32),
+                                       device=self.device)
+                    self._tah_last = (feat, pos)
+                    with torch.no_grad():
+                        logits, conf, _ = self._tah.step(feat, pos, self._tah_mem)
+                    self._tid_logits = logits.float().cpu().numpy()
+                    self._pred_slot = int(logits.argmax())
+                    self._pred_conf = float(conf)
+                    if self.gallery_seed == "committed":
+                        # DEPLOYABLE (GT-free): the tah memory is empty at cold-start → its logits are
+                        # meaningless (mlp of zeros → const) → LANGUAGE grounds the initial lock. Then a
+                        # language RE-ANCHOR on a sustained low-margin (ambiguous / drifting) streak: reset
+                        # the drifted memory + re-pick via language (mirrors the reid deployable path).
+                        # gt-seeded skips both (oracle memory every frame). See eval_out/paper_ext_tahrelm_committed.
+                        cold = (self._tah_mem is None) or (self._tah_mem.get("app") is None)
+                        if cold:
+                            self._pred_slot = lang_slot                       # language cold-start
+                            if self.reanchor == "anchor" and self._tah_anchor is None:
+                                self._tah_anchor = feat[lang_slot].clone()    # freeze initial target appearance
+                        elif self.reanchor == "anchor":
+                            # GT-FREE confident-drift detector: the running memory can drift to a look-alike;
+                            # the FROZEN initial anchor can't. Detect drift when the anchor's best-match
+                            # candidate persistently disagrees with the running-memory pick → reset memory +
+                            # re-anchor to the anchor's match. Approximates the GT-drift upper bound w/o labels.
+                            if self._tah_anchor is not None:
+                                apick = int((feat @ self._tah_anchor).argmax())
+                                self._lowconf_run = self._lowconf_run + 1 if apick != self._pred_slot else 0
+                                if self._lowconf_run >= self.reanchor_patience:
+                                    self._tah_mem = self._tah.reset(self.device)
+                                    self._pred_slot = apick
+                                    self._lowconf_run = 0; self._reanchor_events += 1
+                        elif self.reanchor == "lang":
+                            self._lowconf_run = self._lowconf_run + 1 if float(conf) < 0.60 else 0
+                            if self._lowconf_run >= self.reanchor_patience:
+                                self._tah_mem = self._tah.reset(self.device)  # drop the drifted memory
+                                self._pred_slot = lang_slot                   # re-anchor via language
+                                self._lowconf_run = 0; self._reanchor_events += 1
+                        elif self.reanchor == "oracle":
+                            # ★confident-drift UPPER BOUND: perfect (GT) drift detection. conf-gate reanchor
+                            # can't catch a CONFIDENTLY-wrong lock (high margin) → detect drift by GT instead
+                            # (pred != true target for a sustained streak) → reset the drifted memory + re-anchor
+                            # to the true target. Measures whether drift-detection is the deployable lever at all.
+                            gt = cset.true_idx
+                            if gt is not None and gt >= 0:
+                                self._lowconf_run = self._lowconf_run + 1 if self._pred_slot != gt else 0
+                                if self._lowconf_run >= self.reanchor_patience:
+                                    self._tah_mem = self._tah.reset(self.device)
+                                    self._pred_slot = gt                      # re-anchor to the true target
+                                    self._lowconf_run = 0; self._reanchor_events += 1
+                    # memory update source: gt=oracle GT every frame | committed=believed target (lang at cold-start)
+                    us = (cset.true_idx if self.gallery_seed != "committed" else self._pred_slot)
+                    self._tah_mem_prev = self._tah_mem                    # ASD-IF: snapshot for posterior-gated update
+                    if us is not None and 0 <= us < feat.shape[0]:
+                        with torch.no_grad():
+                            self._tah_mem = self._tah.update(self._tah_mem, feat[us], pos[us])
+                    if self._tahdag_dir:                             # path-B DAgger: log deployment-dist frame
+                        self._tahdag_buf.append({"feat": fe.astype(np.float16),
+                                                 "pos": pos.cpu().numpy(),
+                                                 "aidx": np.array([c.idx for c in cset.cands], np.int16),
+                                                 "tidx": int(cset.true_idx)})
+                # oracle-identity diagnostic: always pick the TRUE target (isolates the control/WHERE
+                # ceiling — if identity were perfect, can deployable control keep the target in frame?).
+                if self.tid_head == "oracle":
+                    if cset.true_idx is not None and cset.true_idx >= 0:
+                        self._tid_logits = np.zeros(len(cset.cands), np.float32)
+                        self._tid_logits[cset.true_idx] = 1.0
+                        self._pred_slot = int(cset.true_idx)
+                    else:
+                        self._pred_slot = -1                              # target off-screen this frame
+                # WARM-START diagnostic: first N seconds use ORACLE identity (establish good tracking/
+                # framing before handing off to reid) — the gallery still builds from the GT target
+                # during warmup (reid_select ran above). Tests "does reid sustain if the cascade
+                # isn't initiated early" → is the deployable gap cascade-INITIATION or reid-intrinsic.
+                if self.warmup_oracle_s > 0 and obs.step < self.warmup_oracle_s * self.fps:
+                    if cset.true_idx is not None and cset.true_idx >= 0:
+                        self._tid_logits = np.zeros(len(cset.cands), np.float32)
+                        self._tid_logits[cset.true_idx] = 1.0
+                        self._pred_slot = int(cset.true_idx)
+                # pick confidence = top1−top2 margin (used to gate commit-fly in track mode).
+                tl = self._tid_logits
+                self._pred_conf = float(np.sort(tl)[-1] - np.sort(tl)[-2]) if tl.size >= 2 else 1.0
+                # ★ DEPLOYABLE LANGUAGE RE-ANCHOR (paper2 甲): appearance re-ID drifts onto a look-alike and
+                # cannot recover on its own (its own drifted gallery keeps confirming the wrong car). When the
+                # pick collapses for `reanchor_patience` consecutive ticks (or there is no gallery match), fall
+                # back to the drift-free LANGUAGE description for ONE shot: re-pick, reset+re-seed the gallery
+                # from that crop, force-commit. Language earns its keep here (not per-frame). 'oracle'=GT bound.
+                if self.reanchor != "off" and self.tid_head == "reid" and len(cset.cands) > 0:
+                    low = self._pred_conf < self.conf_tau
+                    self._lowconf_run = (self._lowconf_run + 1) if low else 0
+                    fire = (rl is None) or (self._lowconf_run >= self.reanchor_patience)
+                    if fire and self._reid_fn is not None:
+                        if self.reanchor == "lang":
+                            if self.reanchor_tavg > 0:          # temporally-integrated language pick (visible cands)
+                                ra, bv = lang_slot, -1e9
+                                for s, c in enumerate(cset.cands):
+                                    v = self._lang_score.get(c.idx, -1e9)
+                                    if v > bv:
+                                        bv, ra = v, int(s)
+                            else:
+                                ra = lang_slot                  # single-frame language pick
+                        else:
+                            ra = int(cset.true_idx) if (cset.true_idx is not None and cset.true_idx >= 0) else -1
+                        if ra is not None and 0 <= ra < len(cset.cands):
+                            from train.reid_resolution_probe import bank_update
+                            self._pred_slot = int(ra)
+                            self._reid_bank = []                                 # drop the drifted gallery
+                            bank_update(self._reid_bank, self._reid_fn[ra], self.reid_bank, 0.9)  # re-seed from re-anchor pick
+                            self._reid_score = {}                                # clear stale temporal EMA
+                            self._committed_idx = int(cset.cands[ra].idx)        # force commit to re-anchored id
+                            self._pred_conf = 1.0                                # high-confidence assertion → control commits
+                            self._lowconf_run = 0
+                            self._reanchor_events += 1
+                # ★ ASD: memory-agnostic confident-drift correction (wraps whichever memory picked _pred_slot).
+                if self._asd is not None and len(cset.cands) > 0 and 0 <= self._pred_slot < len(cset.cands):
+                    fe_ = self._asd_feats(cset, obs.rgb)
+                    o = self._asd.step(fe_, [int(c.idx) for c in cset.cands], self._pred_slot,
+                                       mem_conf=self._pred_conf, lang=lang_logits,
+                                       true_slot=cset.true_idx, t=int(obs.step))
+                    if o["fire"] and o.get("kind") == "gate":
+                        # ASD-IF posterior gating: the memory learns from (and control commits to) the filter's MAP
+                        # tracklet, not its own raw pick → breaks the self-confirming update loop.
+                        # gt-seeded (oracle memory) runs keep the oracle update by definition → PGIF gates the
+                        # control commitment only; deployable (committed) runs also gate the memory update.
+                        if o.get("gate_memory", True) and self.gallery_seed == "committed":
+                            self._asd_gate_memory(int(o["slot"]))
+                        self._pred_slot = int(o["slot"])
+                        self._committed_idx = int(cset.cands[self._pred_slot].idx)
+                        self._pred_conf = 1.0
+                        self._reanchor_events += 1
+                    elif o["fire"]:
+                        self._asd_reset_memory(int(o["slot"]))
+                        self._pred_slot = int(o["slot"])
+                        self._committed_idx = int(cset.cands[self._pred_slot].idx)   # force commit (as reanchor)
+                        self._pred_conf = 1.0
+                        self._reanchor_events += 1
+            else:
+
+exec
+/bin/sh -lc "sed -n '435,445p' carla_uav_tracking/rollout/policy.py" in /nvidia/hque/code/cyhe/uav-acot-track
+ succeeded in 19ms:
+        uv = np.array([[c.u, c.v] for c in cands], np.float64)
+        dist = np.linalg.norm(uv - pc[None], axis=1)
+        gate = float(self.assoc_gate_px)
+        return np.where(dist < gate, -dist / gate, -1e9).astype(np.float32)
+
+    def _update_commit(self, cset):
+        """Commit the tid-selected candidate IDENTITY with K-frame hysteresis (Plan A).
+        A challenger identity must win commit_k consecutive S2 ticks to take over; during
+        a loss (no valid pick) the current commitment is held."""
+        sel = None
+        if cset is not None and 0 <= self._pred_slot < len(cset.cands):
+
+codex
+**V1 Verdict: MAJOR**
+
+**MAJOR**
+1. 创新性可成立但目前不足以单独支撑 T-RO/CCF-A。相对 DAM4SAM 的 DRM，V1 的差异是“记忆外后验 + 冲突时重置”，方向清楚；但必须证明收益不是“频繁 re-init/丢弃 DRM”本身。建议预注册对照：PGIF commit-only、随机/低置信重置、固定间隔重置、DAM4SAM 无 DRM 或不丢 DRM 的轻量重锚。
+2. 证据信号来源有逻辑弱点：PGIF 只从 DAM4SAM 自身选择 `s^M` 累积证据，若冷启动错或 DAM 持续错，后验会巩固错误。需强制做“初始锁对/锁错”分层，并把 H1b 限定为“初始锁对后的漂移错锁”或另设主假设。
+3. `SAM2 predicted IoU` 未必是身份置信度，可能对错误实例也高。建议报告 IoU 对“选中真目标”的 AUROC/校准，或预注册 rank-IoU 失效时的等权 PGIF 对照。
+
+**MINOR**
+- H1a/H1b 可证伪，门控原则合理；但 H1c“探索性不下降”应明确不作为通过门槛。
+- 重置冷却 3 步需报告重置次数、耗时、丢帧率，否则闭环控制速度是混杂因素。
+
+**V2 Verdict: MAJOR**
+
+**MAJOR**
+1. 新颖性偏弱。相对 MOT `n_init`、RMOT 时序语言匹配、TLD/自训练偏差，V2更像“短窗语言投票 + 延迟初始化”。可作为 PGIF 冷启动补丁，但不足以单独作为一区/CCF-A贡献。建议定位为组件，并与 V1/V3组合验证整体贡献。
+2. 最大混杂是冷启动窗口内仍“临时承诺用于飞行”。控制会改变后续视角、遮挡和候选集合，因此 K 步语言证据不是同分布观测；V2 vs V0 的差异可能来自早期飞行轨迹而非序贯承诺。建议加对照：窗口内保持 V0 控制但不写记忆、窗口内 hold/居中控制、单帧 t=K 承诺。
+3. H2a 只是描述性，不够门控。应预注册配对的开局错误率检验或至少 bootstrap CI；并定义窗口内临时错选是否计入“最长锁错”。
+
+**MINOR**
+- K=5、λ=0.9缺少依据；建议做非评测种子或离线日志敏感性。
+- 需处理 tracklet 消失/ID switch：窗口结束时 `k*` 不可见怎么办。
+- `L_{k*}=G_{k*}` 可能给错误冷启动过强先验；建议对先验上限截断或设消融。
+tokens used
+50,217
+**V1 Verdict: MAJOR**
+
+**MAJOR**
+1. 创新性可成立但目前不足以单独支撑 T-RO/CCF-A。相对 DAM4SAM 的 DRM，V1 的差异是“记忆外后验 + 冲突时重置”，方向清楚；但必须证明收益不是“频繁 re-init/丢弃 DRM”本身。建议预注册对照：PGIF commit-only、随机/低置信重置、固定间隔重置、DAM4SAM 无 DRM 或不丢 DRM 的轻量重锚。
+2. 证据信号来源有逻辑弱点：PGIF 只从 DAM4SAM 自身选择 `s^M` 累积证据，若冷启动错或 DAM 持续错，后验会巩固错误。需强制做“初始锁对/锁错”分层，并把 H1b 限定为“初始锁对后的漂移错锁”或另设主假设。
+3. `SAM2 predicted IoU` 未必是身份置信度，可能对错误实例也高。建议报告 IoU 对“选中真目标”的 AUROC/校准，或预注册 rank-IoU 失效时的等权 PGIF 对照。
+
+**MINOR**
+- H1a/H1b 可证伪，门控原则合理；但 H1c“探索性不下降”应明确不作为通过门槛。
+- 重置冷却 3 步需报告重置次数、耗时、丢帧率，否则闭环控制速度是混杂因素。
+
+**V2 Verdict: MAJOR**
+
+**MAJOR**
+1. 新颖性偏弱。相对 MOT `n_init`、RMOT 时序语言匹配、TLD/自训练偏差，V2更像“短窗语言投票 + 延迟初始化”。可作为 PGIF 冷启动补丁，但不足以单独作为一区/CCF-A贡献。建议定位为组件，并与 V1/V3组合验证整体贡献。
+2. 最大混杂是冷启动窗口内仍“临时承诺用于飞行”。控制会改变后续视角、遮挡和候选集合，因此 K 步语言证据不是同分布观测；V2 vs V0 的差异可能来自早期飞行轨迹而非序贯承诺。建议加对照：窗口内保持 V0 控制但不写记忆、窗口内 hold/居中控制、单帧 t=K 承诺。
+3. H2a 只是描述性，不够门控。应预注册配对的开局错误率检验或至少 bootstrap CI；并定义窗口内临时错选是否计入“最长锁错”。
+
+**MINOR**
+- K=5、λ=0.9缺少依据；建议做非评测种子或离线日志敏感性。
+- 需处理 tracklet 消失/ID switch：窗口结束时 `k*` 不可见怎么办。
+- `L_{k*}=G_{k*}` 可能给错误冷启动过强先验；建议对先验上限截断或设消融。

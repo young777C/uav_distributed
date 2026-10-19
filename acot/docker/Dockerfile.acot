@@ -1,0 +1,9 @@
+# Policy image of the acot runtime (framework §14 P2): the training image + timm pinned IN the image (the legacy
+# launchers pip-install timm==1.0.29 at every container start). scipy is deliberately NOT added: every legacy deploy-v2
+# run had no scipy, so rollout/tracklets.py used its greedy assignment (the acot perception pins greedy explicitly).
+# Built without network from a wheel downloaded on the host:  bash acot/docker/build_acot_image.sh
+FROM acot-uav-train:cu118
+COPY timm-1.0.29-py3-none-any.whl /tmp/wheels/
+RUN pip install --no-deps --no-index /tmp/wheels/timm-1.0.29-py3-none-any.whl \
+ && python -c "import timm, torch, torchvision, huggingface_hub, safetensors, yaml; assert timm.__version__ == '1.0.29'" \
+ && rm -rf /tmp/wheels

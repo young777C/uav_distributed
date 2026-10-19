@@ -1,0 +1,14 @@
+# P0-2 control (2026-10-12): the OLD 90° data (mvp_full_v5_fov90, slow targets) with exactly the cache options of
+# tah_seq_v5_fov90_fast (tick_stride 6, frame_mask train — no unjam events in this data, so only the camera-inside-
+# building frames are dropped). Separates "new data" from "new recipe" in the P0-2 retrain.
+kind: tah_seq
+name: tah_seq_v5_fov90_t6
+dataset: artefact:mvp_full_v5_fov90
+split: artefact:split_v5_fov90_naive
+model_config: train/config_v5_fov90.yaml
+stride: 2
+tick_stride: 6
+frame_mask: train
+feature_id: dino_s14_lvd142m_cls384_c224_p1.3
+depth_scale: 100.0
+shards: 4

@@ -1,0 +1,16 @@
+# Final model (1004): TAHRelM association memory + PGIF (tempered tracklet evidence, posterior-gated memory update,
+# absent-hold), committed (GT-free) memory. The opening (attribute classifier v1) is the protocol's shared frontend.
+name: ours_final
+extends: _base
+identity:
+  head: tah
+  tah: {ckpt: runs/tah_relm_dag.pt}
+  conf_tau: 0.5
+filter:
+  mode: filter
+  filter_kind: tempered
+  absent_hold: true
+  absent_max: 8
+accept_provenance_gaps:
+  identity.tah.ckpt: "no recipe/manifest; trained on 64 offline eps (70° images / 90° projection, 0.2 s stride) + 23
+    DAgger eps (deploy_v1, 0.6 s) — see acot_note/1004_tahrelm_retrain_diag.md"

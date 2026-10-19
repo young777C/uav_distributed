@@ -1,0 +1,5 @@
+# External baseline: OC-SORT-like motion-only association (constant-velocity image-space gate), deployable.
+name: ext_assoc_motion
+extends: ext_assoc_deepsort
+identity:
+  assoc: {mode: motion}

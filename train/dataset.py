@@ -39,6 +39,20 @@ def _select_episodes(cfg, split):
     return all_eps[n_val:] if split == "train" else all_eps[:n_val]
 
 
+def _frame_keep(cfg, f):
+    """Opt-in training-frame mask (cfg data.frame_mask: "train"; 2026-10-11, default off → legacy behaviour unchanged):
+    drop frames near an in-view unjam relocation or with the camera (near) inside a building
+    (carla_uav_tracking/recording/building_mask.py: train_keep_mask). Returns None when disabled."""
+    if cfg["data"].get("frame_mask") != "train":
+        return None
+    import sys
+    root = str(Path(__file__).resolve().parents[1] / "carla_uav_tracking")
+    if root not in sys.path:
+        sys.path.insert(0, root)
+    from recording.building_mask import train_keep_mask
+    return train_keep_mask(f)
+
+
 class RealEARDataset(Dataset):
     def __init__(self, cfg, split="train"):
         self.cfg = cfg
@@ -70,10 +84,12 @@ class RealEARDataset(Dataset):
                 continue
             with h5py.File(ep, "r") as f:
                 n = f["rgb"].shape[0]
+                keep = _frame_keep(cfg, f)
             valid_n = n - horizon
             if valid_n <= 0:
                 continue
-            for i in list(range(0, valid_n, stride))[:cap]:
+            # cap FIRST, then mask: the context cache (backbone_kv) holds exactly range(0, n, stride)[:cap]
+            for i in [i for i in list(range(0, valid_n, stride))[:cap] if keep is None or keep[i]]:
                 idx.append((ep, str(ctx), i))
         return idx
 

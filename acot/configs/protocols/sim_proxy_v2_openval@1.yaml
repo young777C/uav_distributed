@@ -1,0 +1,9 @@
+# Opening-validation variant of sim_proxy_v2@1: short episodes (19 steps → S2 ticks 0/6/12/18), used only to measure the
+# closed-loop opening lock (runs/opening_dump/run_openval.sh).
+extends: sim_proxy_v2@1
+name: sim_proxy_v2_openval
+version: 1
+aliases: []
+description: sim_proxy_v2@1 with 19-step episodes (opening lock only)
+sim:
+  episode_steps: 19

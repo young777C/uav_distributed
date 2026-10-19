@@ -1,0 +1,748 @@
+Reading additional input from stdin...
+OpenAI Codex v0.159.3
+--------
+workdir: /nvidia/hque/code/cyhe/uav-acot-track
+model: gpt-5.5
+provider: openai
+approval: never
+sandbox: read-only
+reasoning effort: high
+reasoning summaries: none
+session id: 01a0fcc3-00b2-7bf2-828d-52b8b9d7c2fd
+--------
+user
+你是机器人领域 SCI 一区期刊(T-RO/RA-L 级)审稿人兼 CCF-A AC。第二轮审核:acot_note/1003_v1_v2_design.md 末尾新增『R1 审核后的修订』,针对你上一轮意见(acot_note/codex/1003_R1a_R2a.md)。实现见 carla_uav_tracking/rollout/policy.py(搜索 v1_selfreset、cold_single、_cold_vote、_asd_gate_memory 的 dam4sam 分支)。请逐条标注上一轮 MAJOR 是否 resolved/partially/unresolved,并对 V1、V2 分别给 verdict(NO MAJOR / MAJOR)。注意 V2 已定位为组件而非独立贡献,判断其作为组件的设计是否合格。中文,≤800 字。不要修改文件,不要运行超过 2 分钟的命令。
+codex
+我会先只读检查设计文档和实现里指定分支，按你给的“第二轮审核”口径对上一轮 MAJOR 逐条复核。不会改文件，也会把命令控制在轻量读取范围内。
+exec
+/bin/sh -lc 'tail -n 220 acot_note/1003_v1_v2_design.md' in /nvidia/hque/code/cyhe/uav-acot-track
+exec
+/bin/sh -lc "sed -n '1,240p' acot_note/codex/1003_R1a_R2a.md" in /nvidia/hque/code/cyhe/uav-acot-track
+ succeeded in 50ms:
+**V1 Verdict: MAJOR**
+
+**MAJOR**
+1. 创新性可成立但目前不足以单独支撑 T-RO/CCF-A。相对 DAM4SAM 的 DRM，V1 的差异是“记忆外后验 + 冲突时重置”，方向清楚；但必须证明收益不是“频繁 re-init/丢弃 DRM”本身。建议预注册对照：PGIF commit-only、随机/低置信重置、固定间隔重置、DAM4SAM 无 DRM 或不丢 DRM 的轻量重锚。
+2. 证据信号来源有逻辑弱点：PGIF 只从 DAM4SAM 自身选择 `s^M` 累积证据，若冷启动错或 DAM 持续错，后验会巩固错误。需强制做“初始锁对/锁错”分层，并把 H1b 限定为“初始锁对后的漂移错锁”或另设主假设。
+3. `SAM2 predicted IoU` 未必是身份置信度，可能对错误实例也高。建议报告 IoU 对“选中真目标”的 AUROC/校准，或预注册 rank-IoU 失效时的等权 PGIF 对照。
+
+**MINOR**
+- H1a/H1b 可证伪，门控原则合理；但 H1c“探索性不下降”应明确不作为通过门槛。
+- 重置冷却 3 步需报告重置次数、耗时、丢帧率，否则闭环控制速度是混杂因素。
+
+**V2 Verdict: MAJOR**
+
+**MAJOR**
+1. 新颖性偏弱。相对 MOT `n_init`、RMOT 时序语言匹配、TLD/自训练偏差，V2更像“短窗语言投票 + 延迟初始化”。可作为 PGIF 冷启动补丁，但不足以单独作为一区/CCF-A贡献。建议定位为组件，并与 V1/V3组合验证整体贡献。
+2. 最大混杂是冷启动窗口内仍“临时承诺用于飞行”。控制会改变后续视角、遮挡和候选集合，因此 K 步语言证据不是同分布观测；V2 vs V0 的差异可能来自早期飞行轨迹而非序贯承诺。建议加对照：窗口内保持 V0 控制但不写记忆、窗口内 hold/居中控制、单帧 t=K 承诺。
+3. H2a 只是描述性，不够门控。应预注册配对的开局错误率检验或至少 bootstrap CI；并定义窗口内临时错选是否计入“最长锁错”。
+
+**MINOR**
+- K=5、λ=0.9缺少依据；建议做非评测种子或离线日志敏感性。
+- 需处理 tracklet 消失/ID switch：窗口结束时 `k*` 不可见怎么办。
+- `L_{k*}=G_{k*}` 可能给错误冷启动过强先验；建议对先验上限截断或设消融。
+ succeeded in 62ms:
+# 1003 · V1 / V2 设计文档(预注册;闭环前冻结)
+
+> 2026-10-02 · 属于 `1003_iteration_workflow.md` 的 V1、V2。所有实验:deployable(身份决策不用真值;候选框与车辆定位为仿真理想输入),CARLA 在线闭环,Town05 seeds 91000–19(19 计分),三项客观指标(正确锁定比例、最长连续正确锁定、最长锁错),配对 bootstrap 95% CI。基线 V0 = TAHRelM + PGIF(`1001_innovation-design.md` v4)。
+
+## 背景数据(deployable,`eval_out/deploy_compare.json`)
+| | 正确锁定比例 | 最长连续正确(均值/中位) | 最长锁错(均值/中位) |
+|---|---|---|---|
+| DAM4SAM(SAM2.1-L + 干扰物感知记忆,CVPR'25) | 0.786 | 13.3 / 6.4 s | **26.7 / 21.6 s** |
+| V0:TAHRelM + PGIF | 0.583 | 21.3 / 11.5 s | 15.4 / 0.9 s |
+
+冷启动分层(V0):初始锁对时正确比例 0.96/0.90/0.80,初始锁错时接近 0(Town05 / Town10HD / reid),锁错开局占 7/19、11/20、7/19。TAHRelM 的冷启动目前是**单帧**语言选车(第 1 个决策步的 grounding argmax 直接写入记忆)。
+
+---
+
+## V1 · PGIF ∘ DAM4SAM:把后验门控推广到强外观记忆
+
+**动机**:DAM4SAM 的长时间错锁(26.7 s)是 SAM2 记忆"用自己的预测掩码更新自己"造成的确认偏差,与 PGIF 在 TAHRelM 上处理的是同一机制(命题 1)。若 PGIF 的门控能在不同类型的记忆上起作用,则 C2"记忆无关的闭环身份门控"得到直接验证,同时有望保留 DAM4SAM 的高正确比例并压缩其错锁。
+
+**方法(与 V0 的 PGIF 完全相同的规则与超参)**:
+- 观测:DAM4SAM 每个决策步的选择 s^M = 与 SAM2 预测框中心最近的候选(160 px 门限内);置信度 c = SAM2 对所选掩码的**预测 IoU**(服务新增返回字段)。无匹配时该步不更新证据。
+- 回火证据:L_k ← 0.98·L_k;L_{s^M} += 0.5 + rank(c; 最近 30 步)。
+- 门控:ŝ = argmax_{可见 k} L_k;若 ŝ ≠ s^M → **重置钩子 = 用 ŝ 的候选框重新 init SAM2**(丢弃 RAM/DRM 记忆),控制承诺 ŝ。
+- 预注册附加参数:重置冷却 3 个决策步(避免频繁 re-init 抹掉 DRM);只在 committed 模式启用。
+
+**预注册假设(Town05,n=19 配对,V1 vs DAM4SAM)**:
+- H1a:正确锁定比例**非劣**——Δ 的 95% CI 下界 > −0.05;
+- H1b:最长锁错**显著降低**——Δ 的 95% CI 上界 < 0;
+- H1c(探索性):最长连续正确锁定不下降。
+- 失败解释预案:若 H1b 失败且冷启动锁错占主导 → 说明长尾来自初始身份错误而非漂移,转由 V2/V3 处理。
+
+**与相关工作的差异**:DAM4SAM 自身的 DRM 用"备选掩码与所选掩码分歧"来**选择写入哪些帧**,仍以 SAM2 的当前预测作为身份;V1 在 tracklet 层引入独立于该记忆的、按误差相关时间回火的身份后验,并在后验与记忆冲突时**重置**记忆——处理的是"记忆已经锁到错误实例"之后的纠错,而非写入策略。
+
+---
+
+## V2 · 延迟承诺冷启动(sequential language commitment)
+
+**动机**:长尾错锁主要来自开局锁错(P3);单帧语言选车准确率约 0.42(离线 xattn,mis 0.579),而 PGIF 会忠实维持初始身份。把"开局选谁"也变成一个带回火的序贯证据决策。
+
+**方法**:
+- 冷启动窗口:前 K = 5 个决策步(≈3 s)**不写入身份记忆**;每步对可见 tracklet 累积语言证据 G_k ← 0.9·G_k + (0.5 + rank(语言 margin; 窗口内)) · 1[k = 语言 argmax](与 PGIF 同形式的回火投票,λ_lang = 0.9 预注册)。
+- 窗口内控制:承诺当前 argmax_k G_k(临时承诺,仅用于飞行;记忆不更新)。
+- 窗口结束:承诺 k* = argmax_k G_k,用其当前截图初始化 TAHRelM 记忆;PGIF 证据以 L_{k*} = G_{k*} 初始化(保留开局的语言支持度)。
+- 语言来源:沿用部署中的 Stage-2 grounding 头(冻结);LoRA r16 打分器作为可选 V2b(阶段 0 未显著,暂不预注册)。
+
+**预注册假设(Town05,n=19 配对,V2 vs V0)**:
+- H2a:开局锁错的 episode 数下降(描述性,配对比较各种子的开局是否锁对);
+- H2b:最长锁错均值显著下降(Δ 的 95% CI 上界 < 0);
+- H2c:正确锁定比例不下降(Δ 下界 > −0.05)。
+
+**与相关工作的差异**:多目标跟踪中的"轨迹确认"(tentative → confirmed,如 DeepSORT 的 n_init)按检测连续性确认轨迹,不涉及"哪条轨迹是语言所指";指代多目标跟踪(RMOT/iKUN)逐帧做语言匹配。V2 把"语言指代"本身作为带回火的序贯证据决策,并把开局证据作为后续 PGIF 后验的先验。
+
+---
+
+## 统一实现清单
+- `external/DAM4SAM/dam4sam_tracker.py`:输出所选掩码的预测 IoU(已改);`rollout/dam4sam_service.py` 返回 `iou`(已改)。
+- `rollout/policy.py`:dam4sam 分支接入 ASD/PGIF(观测 = s^M、c = IoU;门控 = 重新 init);tah 分支冷启动窗口(V2)。
+- `rollout/asd.py`:PGIF 证据初始化接口(V2)。
+- 单测:合成序列上冷启动窗口选出语言证据最多的 tracklet;dam4sam 门控在冷却期内不重复 re-init。
+
+---
+
+## R1 审核后的修订(2026-10-02,第二轮预注册;codex 意见见 `codex/1003_R1a_R2a.md`)
+
+### V1 修订
+1. **机制对照(预注册,与 V1 同种子同时跑)**:
+   - **V1-commit-only**:PGIF 只改写控制承诺,不重置 SAM2(`gate_memory=false`)→ 检验"重置记忆"是否必要;
+   - **V1-selfreset**:在 V1 会触发的同一时刻,用 DAM4SAM **自己的选择**重新 init SAM2、不改变身份(`V1_SELFRESET=1`)→ 检验收益是否只是"re-init / 丢弃 DRM"本身。
+   - 判定:V1 优于 V1-selfreset(最长锁错或正确比例,配对 CI)才说明收益来自"改到后验所指的身份",而非重置本身。
+2. **冷启动分层(预注册)**:H1b 拆为 H1b-all(全部 episode)与 **H1b-drift(仅开局锁对的 episode)**;开局锁对与否由各臂 tick 日志首个可标注 tick 判定(`tick_align.py`)。V1 的主张限定为"抑制开局正确之后的漂移错锁";开局锁错交给 V2/V3。
+3. **置信度有效性**:报告 SAM2 预测 IoU 对"所选为真目标"的 AUROC(episode bootstrap CI,observe 日志 = DAM4SAM 基线臂的 tick 日志)。若 AUROC < 0.55,则在 roadmap 中注明 PGIF 在 DAM4SAM 上退化为等权驻留,并以此解释结果。
+4. 报告每 episode 重置次数、单 episode 耗时(`duration_seconds`);H1c 不作为通过门槛。
+
+### V2 修订
+1. **定位**:V2 是 PGIF 的**冷启动组件**,不单独作为贡献;整体贡献在 V3(融合)中评估。
+2. **去除飞行混杂**:窗口内飞行改为与 V0 相同——每步跟随**单帧语言选择**(不再飞向临时 argmax);窗口内不写记忆;窗口结束时承诺 argmax_k G_k。
+3. **对照(预注册)**:**V2-single@K**——窗口与飞行完全相同,但在第 K 步承诺**该步单帧语言选择**(不积累证据、无先验)→ V2 与它的差异只来自"序贯证据积累"。
+4. **H2a 改为可检验**:开局正确率(第 K 步承诺是否为真目标)V2 vs V2-single@K,配对 bootstrap 95% CI;窗口内的临时承诺计入最长锁错(scorer 按承诺身份逐帧计)。
+5. **先验截断**:PGIF 初始证据 L_k = min(G_k, 3.0)(≈ 3 票),防止错误开局获得过强先验;k* 只在可见 tracklet 中选(不可见则取可见中证据最多者)。
+6. K = 5、λ_lang = 0.9 为先验设定(未在评测种子上调);敏感性列为后续。
+
+### 闭环臂(Town05,seeds 91000–19,n=19)
+| 臂 | 设定 |
+|---|---|
+| V1 | DAM4SAM + PGIF(重置 = 后验身份 re-init,冷却 3 步) |
+| V1-commit-only | DAM4SAM + PGIF,只改承诺 |
+| V1-selfreset | DAM4SAM,同时刻自身 re-init |
+| V2 | TAHRelM + PGIF + 延迟承诺(K=5,λ=0.9,先验截断 3) |
+| V2-single@K | 同 V2 窗口与飞行,第 K 步单帧承诺 |
+| 对照(已有/在跑) | DAM4SAM、V0(TAHRelM+PGIF)、TAHRelM 无纠偏(`eval_out/paper_dep_*.json`) |
+
+exec
+/bin/sh -lc 'rg -n "v1_selfreset|cold_single|_cold_vote|_asd_gate_memory|dam4sam" carla_uav_tracking/rollout/policy.py' in /nvidia/hque/code/cyhe/uav-acot-track
+ succeeded in 26ms:
+105:                 dam4sam_host: str = "dam4sam-svc", dam4sam_port: int = 5601,
+185:        self.cold_single = os.environ.get("COLD_SINGLE", "0") == "1"         # V2 control: commit single-frame pick at K
+186:        self.v1_selfreset = os.environ.get("V1_SELFRESET", "0") == "1"       # V1 control: re-init on own pick, no identity change
+197:        self._dam4sam_sock = None
+198:        if tid_head == "dam4sam":
+200:            self._dam4sam_sock = _sk.socket(_sk.AF_INET, _sk.SOCK_STREAM)
+201:            self._dam4sam_sock.connect((dam4sam_host, int(dam4sam_port)))
+202:            print(f"[policy] connected to DAM4SAM service {dam4sam_host}:{dam4sam_port}", flush=True)
+239:        self._dam4sam_inited = False     # dam4sam baseline: has the tracker been init'd this episode
+240:        self._dam4sam_iou = 0.0; self._dam4sam_cool = 0; self._dam4sam_rgb = None   # V1: PGIF∘DAM4SAM state
+325:    def _asd_gate_memory(self, slot):
+327:        already stores the COMMITTED identity, which is overridden by the caller; dam4sam (V1): re-init SAM2 on the
+329:        if self.tid_head == "dam4sam" and self._dam4sam_rgb is not None and self._cand_set_cur is not None \
+330:           and self._dam4sam_cool == 0:
+333:            send_msg(self._dam4sam_sock, {"cmd": "init", "rgb": np.asarray(self._dam4sam_rgb, np.uint8),
+335:            recv_msg(self._dam4sam_sock)
+336:            self._dam4sam_cool = 3
+344:    def _cold_vote(self, aidx, lang_logits, lang_slot):
+435:    def _dam4sam_select(self, cset, rgb, init_slot=None):
+447:        if not self._dam4sam_inited:
+451:                send_msg(self._dam4sam_sock, {"cmd": "init", "rgb": np.asarray(rgb, np.uint8), "box": box})
+452:                bbox = recv_msg(self._dam4sam_sock).get("bbox")
+453:                self._dam4sam_inited = True
+454:                self._dam4sam_iou = 0.5                                 # init frame: no predicted IoU yet
+458:            send_msg(self._dam4sam_sock, {"cmd": "track", "rgb": np.asarray(rgb, np.uint8)})
+459:            resp = recv_msg(self._dam4sam_sock); bbox = resp.get("bbox")
+461:            self._dam4sam_iou = float(iou) if iou is not None and iou == iou else 0.0   # SAM2 predicted IoU = confidence
+462:        self._dam4sam_rgb = rgb                                         # for the PGIF reset hook (re-init on ŝ)
+463:        self._dam4sam_cool = max(0, getattr(self, "_dam4sam_cool", 0) - 1)
+616:                if self.tid_head == "dam4sam":
+617:                    dl = self._dam4sam_select(cset, obs.rgb, init_slot=lang_slot)
+647:                            k_best = self._cold_vote([int(c.idx) for c in cset.cands], lang_logits, lang_slot)
+651:                                k_c = lang_slot if self.cold_single else k_best   # control: single-frame pick at tick K
+655:                                if self._asd is not None and getattr(self._asd, "mode", "") == "filter" and not self.cold_single:
+764:                    mconf = self._dam4sam_iou if self.tid_head == "dam4sam" else self._pred_conf
+773:                        if self.v1_selfreset and self.tid_head == "dam4sam":
+775:                            self._asd_gate_memory(int(self._pred_slot)); self._reanchor_events += 1
+779:                            self._asd_gate_memory(int(o["slot"]))
+
+codex
+我已经看到 R1 修订把两个主要质疑都转成了预注册对照/分层。接下来核实现代码是否真的对应这些控制臂，尤其是 V1-selfreset 的“同一时刻自身 re-init”和 V2-single@K 的“同窗口同飞行”。
+exec
+/bin/sh -lc "sed -n '315,365p' carla_uav_tracking/rollout/policy.py" in /nvidia/hque/code/cyhe/uav-acot-track
+exec
+/bin/sh -lc "sed -n '160,210p' carla_uav_tracking/rollout/policy.py" in /nvidia/hque/code/cyhe/uav-acot-track
+ succeeded in 26ms:
+        self.tid_head = tid_head
+        # reid appearance feature + K-view gallery (offline milestone: dinov2+K2 breaks 0.5).
+        self.reid_feature = reid_feature; self.reid_bank = int(reid_bank); self.reid_topm = int(reid_topm)
+        self._dino = None
+        _need_dino = (tid_head == "reid" and reid_feature == "dinov2") or \
+                     (tid_head == "assoc" and assoc_mode == "deepsort") or (tid_head == "tah") or (asd != "off")
+        if _need_dino:
+            from train.reid_resolution_probe import _load_dino
+            self._dino = _load_dino("vit_small_patch14_dinov2.lvd142m", device)
+            print(f"[policy] DINOv2 crop features loaded (tid_head={tid_head})", flush=True)
+        # external-baseline: DeepSORT/OC-SORT-style tracking-by-detection association
+        self.assoc_mode = assoc_mode; self.assoc_gate_px = float(assoc_gate_px); self.assoc_lambda = float(assoc_lambda)
+        # path-B: TAHRel learned association head (replaces the heuristic WHICH stack)
+        self._tah = None
+        if tid_head == "tah":
+            from train.tah import TAHRel, TAHRelM
+            tck = torch.load(tah_ckpt, map_location=device, weights_only=False)
+            _cls = TAHRelM if tck.get("arch") == "relm" else TAHRel   # path-A motion-augmented vs base
+            self._tah = _cls(d_feat=tck.get("d_feat", 384)).to(device).eval()
+            self._tah.load_state_dict(tck["model"])
+            print(f"[policy] {_cls.__name__} loaded ({sum(p.numel() for p in self._tah.parameters())} params) from {tah_ckpt}", flush=True)
+        self._tah_mem = None
+        self._cand_set_cur = None
+        self.cold_window = int(os.environ.get("COLD_WINDOW", "0"))           # V2: deferred-commitment ticks (0 = off)
+        self.cold_lambda = float(os.environ.get("COLD_LAMBDA", "0.9"))       # V2: tempering of the language votes
+        self.cold_single = os.environ.get("COLD_SINGLE", "0") == "1"         # V2 control: commit single-frame pick at K
+        self.v1_selfreset = os.environ.get("V1_SELFRESET", "0") == "1"       # V1 control: re-init on own pick, no identity change
+        # ASD (Anchored Sequential Drift-correction): memory-agnostic confident-drift detector wrapped around
+        # whichever identity memory is active (tah / reid). asd_cfg = JSON kwargs for rollout.asd.ASD.
+        self._asd = None
+        if asd != "off":
+            import json as _json
+            from rollout.asd import ASD
+            self._asd = ASD(mode=asd, log_path=os.environ.get("ASD_LOG") or None,
+                            **(_json.loads(asd_cfg or os.environ.get("ASD_CFG") or "{}")))
+            print(f"[policy] ASD mode={asd} cfg={asd_cfg or os.environ.get('ASD_CFG') or '{}'} log={os.environ.get('ASD_LOG')}", flush=True)
+        # external-baseline: DAM4SAM (SOTA distractor-aware SAM2 memory), served over a socket bridge
+        self._dam4sam_sock = None
+        if tid_head == "dam4sam":
+            import socket as _sk
+            self._dam4sam_sock = _sk.socket(_sk.AF_INET, _sk.SOCK_STREAM)
+            self._dam4sam_sock.connect((dam4sam_host, int(dam4sam_port)))
+            print(f"[policy] connected to DAM4SAM service {dam4sam_host}:{dam4sam_port}", flush=True)
+        self._cvoc = self._mvoc = None
+        if tid_head == "attrbind":
+            assert tid_ckpt, "tid_head=attrbind requires --tid-ckpt (the standalone attrbind head)"
+            self._cvoc, self._mvoc = build_attr_vocab(cfg)
+            m = cfg["model"]
+            self.tid = AttrBindHead(d["cand_dim"], len(self._cvoc), len(self._mvoc),
+                                    d=m.get("tid_d", 256)).to(device)
+            tck = torch.load(tid_ckpt, map_location=device, weights_only=False)
+
+ succeeded in 67ms:
+        if self.tid_head == "tah" and self._asd_fe is not None:
+            return self._asd_fe
+        if self.tid_head == "reid" and self.reid_feature == "dinov2" and self._reid_fn is not None \
+           and len(self._reid_fn) == len(cset.cands):
+            return self._reid_fn
+        from train.reid_resolution_probe import _dino_feats
+        W, H = self.image_cfg["width"], self.image_cfg["height"]
+        fe = _dino_feats(self._dino, rgb, cset.cands, W, H, 224, 1.3, self.device).astype(np.float64)
+        return fe / (np.linalg.norm(fe, axis=1, keepdims=True) + 1e-8)
+
+    def _asd_gate_memory(self, slot):
+        """Posterior-gated memory update: redo this tick's update with the filter's MAP crop (tah); reid's gallery
+        already stores the COMMITTED identity, which is overridden by the caller; dam4sam (V1): re-init SAM2 on the
+        filter's MAP candidate box (drops its RAM/DRM), with a pre-registered 3-tick cooldown."""
+        if self.tid_head == "dam4sam" and self._dam4sam_rgb is not None and self._cand_set_cur is not None \
+           and self._dam4sam_cool == 0:
+            from rollout.bridge import send_msg, recv_msg
+            c = self._cand_set_cur.cands[slot]
+            send_msg(self._dam4sam_sock, {"cmd": "init", "rgb": np.asarray(self._dam4sam_rgb, np.uint8),
+                                          "box": (c.u - c.w / 2.0, c.v - c.h / 2.0, c.w, c.h)})
+            recv_msg(self._dam4sam_sock)
+            self._dam4sam_cool = 3
+            return
+        if self.tid_head == "tah" and self._tah_last is not None:
+            feat, pos = self._tah_last
+            prev = getattr(self, "_tah_mem_prev", None)
+            prev = prev if prev is not None else self._tah.reset(self.device)
+            self._tah_mem = self._tah.update(prev, feat[slot], pos[slot])
+
+    def _cold_vote(self, aidx, lang_logits, lang_slot):
+        """V2: one tempered, rank-weighted language vote per tick; returns the slot of argmax_k G_k (visible)."""
+        l = np.asarray(lang_logits, np.float64); srt = np.sort(l)
+        m = float(srt[-1] - srt[-2]) if l.size >= 2 else 0.0
+        h = self._cold_hist; rho = float(np.searchsorted(np.sort(h), m)) / len(h) if len(h) >= 2 else 0.5
+        self._cold_hist = h + [m]
+        for k in self._cold_G:
+            self._cold_G[k] *= self.cold_lambda
+        a = int(aidx[lang_slot]); self._cold_G[a] = self._cold_G.get(a, 0.0) + 0.5 + rho
+        return max(range(len(aidx)), key=lambda s_: self._cold_G.get(int(aidx[s_]), 0.0))
+
+    def _asd_reset_memory(self, slot):
+        """The ONE hook ASD needs from a memory: reset it to the anchor's pick (drop the drifted state)."""
+        if self.tid_head == "tah" and self._tah_last is not None:
+            feat, pos = self._tah_last
+            self._tah_mem = self._tah.update(self._tah.reset(self.device), feat[slot], pos[slot])
+        elif self.tid_head == "reid" and self._reid_fn is not None:
+            from train.reid_resolution_probe import bank_update
+            self._reid_bank = []
+            bank_update(self._reid_bank, self._reid_fn[slot], self.reid_bank, 0.9)
+            self._reid_score = {}
+            self._reid_mvu = self._reid_mvel = None
+
+exec
+/bin/sh -lc "sed -n '430,468p' carla_uav_tracking/rollout/policy.py" in /nvidia/hque/code/cyhe/uav-acot-track
+exec
+/bin/sh -lc "sed -n '750,785p' carla_uav_tracking/rollout/policy.py" in /nvidia/hque/code/cyhe/uav-acot-track
+exec
+/bin/sh -lc "sed -n '600,665p' carla_uav_tracking/rollout/policy.py" in /nvidia/hque/code/cyhe/uav-acot-track
+ succeeded in 36ms:
+                            from train.reid_resolution_probe import bank_update
+                            self._pred_slot = int(ra)
+                            self._reid_bank = []                                 # drop the drifted gallery
+                            bank_update(self._reid_bank, self._reid_fn[ra], self.reid_bank, 0.9)  # re-seed from re-anchor pick
+                            self._reid_score = {}                                # clear stale temporal EMA
+                            self._committed_idx = int(cset.cands[ra].idx)        # force commit to re-anchored id
+                            self._pred_conf = 1.0                                # high-confidence assertion → control commits
+                            self._lowconf_run = 0
+                            self._reanchor_events += 1
+                # ★ ASD: memory-agnostic confident-drift correction (wraps whichever memory picked _pred_slot).
+                if self._asd is not None and len(cset.cands) > 0 and 0 <= self._pred_slot < len(cset.cands) \
+                   and not self._cold_active:
+                    self._cand_set_cur = cset
+                    fe_ = self._asd_feats(cset, obs.rgb) if self._asd.mode != "filter" else None
+                    mconf = self._dam4sam_iou if self.tid_head == "dam4sam" else self._pred_conf
+                    o = self._asd.step(fe_, [int(c.idx) for c in cset.cands], self._pred_slot,
+                                       mem_conf=mconf, lang=lang_logits,
+                                       true_slot=cset.true_idx, t=int(obs.step))
+                    if o["fire"] and o.get("kind") == "gate":
+                        # ASD-IF posterior gating: the memory learns from (and control commits to) the filter's MAP
+                        # tracklet, not its own raw pick → breaks the self-confirming update loop.
+                        # gt-seeded (oracle memory) runs keep the oracle update by definition → PGIF gates the
+                        # control commitment only; deployable (committed) runs also gate the memory update.
+                        if self.v1_selfreset and self.tid_head == "dam4sam":
+                            # CONTROL: re-init SAM2 at the same moments but on its OWN pick (no identity change)
+                            self._asd_gate_memory(int(self._pred_slot)); self._reanchor_events += 1
+                            o = {"fire": False}
+                    if o["fire"] and o.get("kind") == "gate":
+                        if o.get("gate_memory", True) and self.gallery_seed == "committed":
+                            self._asd_gate_memory(int(o["slot"]))
+                        self._pred_slot = int(o["slot"])
+                        self._committed_idx = int(cset.cands[self._pred_slot].idx)
+                        self._pred_conf = 1.0
+                        self._reanchor_events += 1
+                    elif o["fire"]:
+                        self._asd_reset_memory(int(o["slot"]))
+
+ succeeded in 68ms:
+                t = fn[ti]
+                self._assoc_feat = t if self._assoc_feat is None else \
+                    (0.9 * self._assoc_feat + 0.1 * t) / (np.linalg.norm(0.9 * self._assoc_feat + 0.1 * t) + 1e-8)
+        return score.astype(np.float32)
+
+    def _dam4sam_select(self, cset, rgb, init_slot=None):
+        """EXTERNAL BASELINE: DAM4SAM (CVPR'25 SOTA distractor-aware SAM2 memory) as the WHICH module,
+        served over a socket bridge (separate torch2.1/SAM2 env). On the first target-visible frame,
+        init the tracker with the GT target box (same oracle-seed privilege as reid/assoc); each S2
+        tick, track → predicted target box → assign the candidate whose center is nearest (within a
+        gate) → pred_slot. Returns (N,) scores (higher=nearer the DAM4SAM box); -1e9 gate for far."""
+        from rollout.bridge import send_msg, recv_msg
+        cands = cset.cands
+        n = len(cands)
+        # init box: gallery_seed='gt' (oracle, legacy) = GT target box; 'committed' (DEPLOYABLE) = the language pick's box
+        ti = init_slot if self.gallery_seed == "committed" else cset.true_idx
+        bbox = None
+        if not self._dam4sam_inited:
+            if ti is not None and ti >= 0:                              # init from the chosen target box
+                c = cands[ti]
+                box = (c.u - c.w / 2.0, c.v - c.h / 2.0, c.w, c.h)
+                send_msg(self._dam4sam_sock, {"cmd": "init", "rgb": np.asarray(rgb, np.uint8), "box": box})
+                bbox = recv_msg(self._dam4sam_sock).get("bbox")
+                self._dam4sam_inited = True
+                self._dam4sam_iou = 0.5                                 # init frame: no predicted IoU yet
+            else:
+                return np.full(n, -1e9, np.float32)                     # target never seen yet → no pick
+        else:
+            send_msg(self._dam4sam_sock, {"cmd": "track", "rgb": np.asarray(rgb, np.uint8)})
+            resp = recv_msg(self._dam4sam_sock); bbox = resp.get("bbox")
+            iou = resp.get("iou")
+            self._dam4sam_iou = float(iou) if iou is not None and iou == iou else 0.0   # SAM2 predicted IoU = confidence
+        self._dam4sam_rgb = rgb                                         # for the PGIF reset hook (re-init on ŝ)
+        self._dam4sam_cool = max(0, getattr(self, "_dam4sam_cool", 0) - 1)
+        if bbox is None:
+            return np.full(n, -1e9, np.float32)                         # lost (empty mask) → hold
+        bx, by, bw, bh = bbox
+        pc = np.array([bx + bw / 2.0, by + bh / 2.0])                   # DAM4SAM predicted center
+        uv = np.array([[c.u, c.v] for c in cands], np.float64)
+
+ succeeded in 82ms:
+                                self._reid_score[c.idx] = a * prev + (1 - a) * float(rl[s])
+                            best_s, best_v = self._pred_slot, -1e9
+                            for s, c in enumerate(cset.cands):
+                                v = self._reid_score.get(c.idx, -1e9)
+                                if v > best_v:
+                                    best_v, best_s = v, s
+                            self._pred_slot = int(best_s)
+                            self._tid_logits = np.array([self._reid_score.get(c.idx, -1e9)
+                                                         for c in cset.cands], np.float32)
+                # external baseline: DeepSORT/OC-SORT-style association (motion + appearance),
+                # a common tracking-by-detection identity mechanism — the natural comparison for
+                # our temporal appearance-memory re-ID. Same z_ex/control path; only WHICH differs.
+                if self.tid_head == "assoc":
+                    al = self._assoc_select(cset, obs.rgb, init_slot=lang_slot)
+                    self._tid_logits = al
+                    self._pred_slot = int(al.argmax())
+                if self.tid_head == "dam4sam":
+                    dl = self._dam4sam_select(cset, obs.rgb, init_slot=lang_slot)
+                    self._tid_logits = dl
+                    self._pred_slot = int(dl.argmax()) if float(dl.max()) > -1e8 else -1
+                if self.tid_head == "tah":                            # path-B: learned TAHRel association
+                    from train.reid_resolution_probe import _dino_feats
+                    Wi, Hi = self.image_cfg["width"], self.image_cfg["height"]
+                    fe = _dino_feats(self._tah_dino if hasattr(self, "_tah_dino") else self._dino,
+                                     obs.rgb, cset.cands, Wi, Hi, 224, 1.3, self.device).astype(np.float64)
+                    fe = fe / (np.linalg.norm(fe, axis=1, keepdims=True) + 1e-8)
+                    self._asd_fe = fe
+                    feat = torch.tensor(fe, dtype=torch.float32, device=self.device)
+                    pos = torch.tensor(np.array([[c.u / Wi, c.v / Hi, c.depth / 100.0] for c in cset.cands], np.float32),
+                                       device=self.device)
+                    self._tah_last = (feat, pos)
+                    with torch.no_grad():
+                        logits, conf, _ = self._tah.step(feat, pos, self._tah_mem)
+                    self._tid_logits = logits.float().cpu().numpy()
+                    self._pred_slot = int(logits.argmax())
+                    self._pred_conf = float(conf)
+                    if self.gallery_seed == "committed":
+                        # DEPLOYABLE (GT-free): the tah memory is empty at cold-start → its logits are
+                        # meaningless (mlp of zeros → const) → LANGUAGE grounds the initial lock. Then a
+                        # language RE-ANCHOR on a sustained low-margin (ambiguous / drifting) streak: reset
+                        # the drifted memory + re-pick via language (mirrors the reid deployable path).
+                        # gt-seeded skips both (oracle memory every frame). See eval_out/paper_ext_tahrelm_committed.
+                        cold = (self._tah_mem is None) or (self._tah_mem.get("app") is None)
+                        self._cold_active = cold and self.cold_window > 0 and self._cold_n < self.cold_window
+                        if self._cold_active:
+                            # V2 DEFERRED COMMITMENT: integrate tempered, rank-weighted LANGUAGE votes per tracklet for
+                            # cold_window ticks; fly toward the provisional argmax but do NOT write identity memory.
+                            k_best = self._cold_vote([int(c.idx) for c in cset.cands], lang_logits, lang_slot)
+                            self._pred_slot = lang_slot               # window flight = per-tick language pick (as V0)
+                            self._cold_n += 1
+                            if self._cold_n >= self.cold_window:      # commit: seed memory + PGIF evidence
+                                k_c = lang_slot if self.cold_single else k_best   # control: single-frame pick at tick K
+                                self._pred_slot = k_c
+                                self._committed_idx = int(cset.cands[k_c].idx)
+                                self._tah_mem = self._tah.update(self._tah.reset(self.device), feat[k_c], pos[k_c])
+                                if self._asd is not None and getattr(self._asd, "mode", "") == "filter" and not self.cold_single:
+                                    self._asd.belief = {k: min(v, 3.0) for k, v in self._cold_G.items()}   # capped prior
+                                self._cold_active = False
+                                self._cold_done_now = True
+                        elif cold:
+                            self._pred_slot = lang_slot                       # language cold-start
+                            if self.reanchor == "anchor" and self._tah_anchor is None:
+                                self._tah_anchor = feat[lang_slot].clone()    # freeze initial target appearance
+                        elif self.reanchor == "anchor":
+                            # GT-FREE confident-drift detector: the running memory can drift to a look-alike;
+                            # the FROZEN initial anchor can't. Detect drift when the anchor's best-match
+
+codex
+代码和修订基本同向：V2 窗口内已经改成每 tick 单帧语言飞行，`COLD_SINGLE` 只影响第 K tick 是否积累承诺；V1-selfreset 也挂在 ASD gate fire 的同一触发点。再补一眼 ASD 配置/日志接口，避免误判 commit-only 是否只是文档臂而非可运行臂。
+exec
+/bin/sh -lc 'rg -n "gate_memory|belief|mem_conf|fire|kind" carla_uav_tracking/rollout/asd.py carla_uav_tracking/rollout/policy.py' in /nvidia/hque/code/cyhe/uav-acot-track
+exec
+/bin/sh -lc "sed -n '1,230p' carla_uav_tracking/rollout/asd.py" in /nvidia/hque/code/cyhe/uav-acot-track
+ succeeded in 51ms:
+carla_uav_tracking/rollout/policy.py:138:        self.reanchor_patience = int(reanchor_patience)        # consecutive low-margin S2 ticks before re-anchor fires
+carla_uav_tracking/rollout/policy.py:220:            print(f"[reanchor] episode fired {self._reanchor_events} re-anchors", flush=True)
+carla_uav_tracking/rollout/policy.py:246:        self._reanchor_events = 0       # deployable re-anchor: fired-count this episode (diagnostic)
+carla_uav_tracking/rollout/policy.py:249:                print(f"[asd] episode fired {self._asd.fires} drift corrections over {self._asd.tick} ticks", flush=True)
+carla_uav_tracking/rollout/policy.py:325:    def _asd_gate_memory(self, slot):
+carla_uav_tracking/rollout/policy.py:656:                                    self._asd.belief = {k: min(v, 3.0) for k, v in self._cold_G.items()}   # capped prior
+carla_uav_tracking/rollout/policy.py:736:                    fire = (rl is None) or (self._lowconf_run >= self.reanchor_patience)
+carla_uav_tracking/rollout/policy.py:737:                    if fire and self._reid_fn is not None:
+carla_uav_tracking/rollout/policy.py:766:                                       mem_conf=mconf, lang=lang_logits,
+carla_uav_tracking/rollout/policy.py:768:                    if o["fire"] and o.get("kind") == "gate":
+carla_uav_tracking/rollout/policy.py:775:                            self._asd_gate_memory(int(self._pred_slot)); self._reanchor_events += 1
+carla_uav_tracking/rollout/policy.py:776:                            o = {"fire": False}
+carla_uav_tracking/rollout/policy.py:777:                    if o["fire"] and o.get("kind") == "gate":
+carla_uav_tracking/rollout/policy.py:778:                        if o.get("gate_memory", True) and self.gallery_seed == "committed":
+carla_uav_tracking/rollout/policy.py:779:                            self._asd_gate_memory(int(o["slot"]))
+carla_uav_tracking/rollout/policy.py:784:                    elif o["fire"]:
+carla_uav_tracking/rollout/asd.py:3:MAIN METHOD (mode="filter", filter_kind="tempered") = PGIF, Posterior-Gated Identity Filtering:
+carla_uav_tracking/rollout/asd.py:10:ABLATIONS: filter_kind="resid" (equal weights), "bayes" (untempered sticky HMM), gate_memory=False (commit-only).
+carla_uav_tracking/rollout/asd.py:28:                 gate_memory: bool = True, filter_kind: str = "bayes", resid_decay: float = 0.98):
+carla_uav_tracking/rollout/asd.py:50:        self.gate_memory = bool(gate_memory)          # ablation: False = override commitment only, memory still self-updates
+carla_uav_tracking/rollout/asd.py:51:        assert filter_kind in ("bayes", "resid", "tempered"), filter_kind
+carla_uav_tracking/rollout/asd.py:52:        self.filter_kind, self.resid_decay = filter_kind, float(resid_decay)   # 'resid' = longest-residence heuristic
+carla_uav_tracking/rollout/asd.py:61:        self.belief: dict[int, float] = {}      # filter: posterior over tracklet ids
+carla_uav_tracking/rollout/asd.py:67:        self.fires = 0
+carla_uav_tracking/rollout/asd.py:99:    def step(self, feats, aidx, mem_slot, mem_conf=None, lang=None, true_slot=None, t=None):
+carla_uav_tracking/rollout/asd.py:100:        out = {"fire": False, "slot": mem_slot}
+carla_uav_tracking/rollout/asd.py:104:            return self._filter_step(aidx, mem_slot, mem_conf, true_slot, t)
+carla_uav_tracking/rollout/asd.py:110:            self._log(t, aidx, mem_slot, mem_conf, true_slot, None, None, False)
+carla_uav_tracking/rollout/asd.py:118:            fire = False
+carla_uav_tracking/rollout/asd.py:124:                    fire = True; self.fires += 1; self.cool = self.refractory
+carla_uav_tracking/rollout/asd.py:125:                    out = {"fire": True, "slot": [int(a_) for a_ in aidx].index(best)}
+carla_uav_tracking/rollout/asd.py:127:            self._log(t, aidx, mem_slot, mem_conf, true_slot, None, None, fire)
+carla_uav_tracking/rollout/asd.py:131:        fire = False
+carla_uav_tracking/rollout/asd.py:144:            fire = True
+carla_uav_tracking/rollout/asd.py:145:            self.S, self.cool, self.fires = {}, self.refractory, self.fires + 1
+carla_uav_tracking/rollout/asd.py:146:            out = {"fire": True, "slot": anc}
+carla_uav_tracking/rollout/asd.py:148:        self._log(t, aidx, mem_slot, mem_conf, true_slot, x, anc, fire)
+carla_uav_tracking/rollout/asd.py:151:    def _filter_step(self, aidx, mem_slot, mem_conf, true_slot, t):
+carla_uav_tracking/rollout/asd.py:152:        ids = [int(a) for a in aidx]; act = ids[mem_slot]; b = self.belief
+carla_uav_tracking/rollout/asd.py:153:        if self.filter_kind in ("resid", "tempered"):
+carla_uav_tracking/rollout/asd.py:158:            c = 0.0 if mem_conf is None else float(mem_conf); h = self.conf_hist
+carla_uav_tracking/rollout/asd.py:161:            w = 1.0 if self.filter_kind == "resid" else 0.5 + pct
+carla_uav_tracking/rollout/asd.py:166:            fire = map_slot != mem_slot
+carla_uav_tracking/rollout/asd.py:167:            self.fires += int(fire); self.tick += 1
+carla_uav_tracking/rollout/asd.py:168:            self._log(t, aidx, mem_slot, mem_conf, true_slot, None, map_slot, fire)
+carla_uav_tracking/rollout/asd.py:169:            return {"fire": fire, "slot": map_slot, "kind": "gate", "gate_memory": self.gate_memory}
+carla_uav_tracking/rollout/asd.py:175:        c = 0.0 if mem_conf is None else float(mem_conf)
+carla_uav_tracking/rollout/asd.py:187:        fire = map_slot != mem_slot
+carla_uav_tracking/rollout/asd.py:188:        if fire:
+carla_uav_tracking/rollout/asd.py:189:            self.fires += 1
+carla_uav_tracking/rollout/asd.py:191:        self._log(t, aidx, mem_slot, mem_conf, true_slot, None, map_slot, fire)
+carla_uav_tracking/rollout/asd.py:192:        return {"fire": fire, "slot": map_slot, "kind": "gate", "post": round(b[ids[map_slot]], 4),
+carla_uav_tracking/rollout/asd.py:193:                "gate_memory": self.gate_memory}
+carla_uav_tracking/rollout/asd.py:195:    def _log(self, t, aidx, mem_slot, mem_conf, true_slot, x, anc, fire):
+carla_uav_tracking/rollout/asd.py:200:               "conf": None if mem_conf is None else float(mem_conf),
+carla_uav_tracking/rollout/asd.py:201:               "anc": anc, "S": round(max(self.S.values(), default=0.0), 4), "fire": fire,
+
+ succeeded in 39ms:
+"""ASD module — drift correction for closed-loop self-updating identity memories.
+
+MAIN METHOD (mode="filter", filter_kind="tempered") = PGIF, Posterior-Gated Identity Filtering:
+  a memory-agnostic wrapper around ANY identity memory that (i) picks a candidate, (ii) reports a confidence on any
+  scale, (iii) exposes an update hook. Per decision tick it keeps a tempered, confidence-weighted evidence count per
+  persistent tracklet  L_k <- lam*L_k + (0.5 + rank(conf))*1[k = memory pick]  and, when argmax_k L_k disagrees with
+  the memory's pick, re-does the memory update with the argmax crop and commits control to it (posterior gating).
+  Rationale (acot_note/1001_innovation-design.md): self-update makes the memory's errors autocorrelated, so evidence
+  must be tempered (untempered Bayes = ablation, gets captured); gating stops wrong picks being written into memory.
+ABLATIONS: filter_kind="resid" (equal weights), "bayes" (untempered sticky HMM), gate_memory=False (commit-only).
+LEGACY (negative results, kept for reproducibility): modes "rule"/"learned" = frozen appearance+language anchor with
+  multi-hypothesis CUSUM; "observe" = log statistics only (no intervention).
+GT is never used at decision time; `true_slot` is only written to the log for offline scoring."""
+from __future__ import annotations
+
+import json
+
+import numpy as np
+
+STAT_NAMES = ["disagree", "margin", "anc_dissim", "lang_disfavor", "disagree_x_margin"]
+
+
+class ASD:
+    def __init__(self, mode: str = "rule", k_anchor: int = 3, beta_lang: float = 0.25, lang_ema: float = 0.7,
+                 tau: float = 0.1, kappa: float = 0.25, h: float = 2.0, refractory: int = 3,
+                 learned_ckpt: str | None = None, log_path: str | None = None, anchor_mode: str = "first",
+                 eps_switch: float = 0.01, q_lo: float = 0.2, q_hi: float = 0.7, conf_window: int = 30,
+                 gate_memory: bool = True, filter_kind: str = "bayes", resid_decay: float = 0.98):
+        assert mode in ("observe", "rule", "learned", "filter"), mode
+        self.mode, self.k_anchor, self.beta, self.lema = mode, int(k_anchor), float(beta_lang), float(lang_ema)
+        self.tau, self.kappa, self.h, self.refractory = float(tau), float(kappa), float(h), int(refractory)
+        self.w = self.b = None
+        if mode == "learned":
+            assert learned_ckpt, "mode=learned needs learned_ckpt"
+            ck = json.load(open(learned_ckpt))
+            self.w, self.b = np.asarray(ck["w"], np.float64), float(ck["b"])
+            self.prior_logit = float(ck.get("prior_logit", 0.0))
+            self.h = float(ck.get("h", self.h))
+            self.mu, self.sd = np.asarray(ck["mu"]), np.asarray(ck["sd"])
+        self.log_path = log_path
+        # anchor_mode: 'first' = anchor = M's picks during the window (inherits cold-start errors) |
+        # 'spec' = sequential SPEC identification: integrate language evidence per actor over the window, anchor
+        # to the argmax actor's crops and correct M if it disagrees (also fixes wrong cold-start locks).
+        assert anchor_mode in ("first", "spec"), anchor_mode
+        self.anchor_mode = anchor_mode
+        # filter mode (ASD-IF): sticky Bayes filter over persistent tracklets; the memory's pick is a noisy
+        # observation whose error rate q is set by the rank of its confidence within a sliding window
+        # (scale-free → memory-agnostic, no per-memory calibration). Output = MAP tracklet (posterior gating).
+        self.eps_switch, self.q_lo, self.q_hi, self.conf_window = float(eps_switch), float(q_lo), float(q_hi), int(conf_window)
+        self.gate_memory = bool(gate_memory)          # ablation: False = override commitment only, memory still self-updates
+        assert filter_kind in ("bayes", "resid", "tempered"), filter_kind
+        self.filter_kind, self.resid_decay = filter_kind, float(resid_decay)   # 'resid' = longest-residence heuristic
+        self.ep = -1
+        self.reset()
+
+    # ------------------------------------------------------------------ state
+    def reset(self):
+        self.anchor: list[np.ndarray] = []      # frozen early-track appearance bank (drift-immune reference)
+        self.win_feats: dict[int, list] = {}    # spec-anchor window: actor id -> crops seen
+        self.win_ticks = 0
+        self.belief: dict[int, float] = {}      # filter: posterior over tracklet ids
+        self.conf_hist: list[float] = []
+        self.lang_score: dict[int, float] = {}  # per-actor EMA of z-scored language logit (spec integration)
+        self.S: dict[int, float] = {}           # multi-hypothesis CUSUM: per challenger identity (actor id)
+        self.cool = 0                           # refractory ticks after an alarm
+        self.tick = 0
+        self.fires = 0
+        self.ep += 1
+
+    # ------------------------------------------------------------------ stats
+    def _lang_z(self, aidx, lang):
+        if lang is None or len(lang) == 0:
+            return np.zeros(len(aidx))
+        l = np.asarray(lang, np.float64)
+        z = (l - l.mean()) / (l.std() + 1e-6) if len(l) > 1 else np.zeros_like(l)
+        for a, v in zip(aidx, z):
+            p = self.lang_score.get(int(a), float(v))
+            self.lang_score[int(a)] = self.lema * p + (1 - self.lema) * float(v)
+        return np.array([self.lang_score[int(a)] for a in aidx])
+
+    def stats(self, feats, aidx, mem_slot, lang):
+        zl = self._lang_z(aidx, lang)
+        cosA = (feats @ np.stack(self.anchor).T).max(axis=1) if self.anchor else np.zeros(len(aidx))
+        a = cosA + self.beta * zl                                    # anchor (spec-side) score
+        anc = int(a.argmax())
+        dis = float(anc != mem_slot)
+        margin = float(a[anc] - a[mem_slot])
+        x = np.array([dis, margin, 1.0 - float(cosA[mem_slot]), float(zl.max() - zl[mem_slot]), dis * margin])
+        self._last = (cosA, zl)                                      # per-candidate view (offline ablations)
+        return x, anc
+
+    def increment(self, x):
+        if self.mode == "learned":
+            z = (x - self.mu) / self.sd
+            return float(z @ self.w + self.b - self.prior_logit)      # log-likelihood ratio (wrong vs right)
+        return float(x[0] * min(x[1] / self.tau, 2.0) - self.kappa)  # rule: disagreement weighted by margin
+
+    # ------------------------------------------------------------------ main
+    def step(self, feats, aidx, mem_slot, mem_conf=None, lang=None, true_slot=None, t=None):
+        out = {"fire": False, "slot": mem_slot}
+        if mem_slot is None or mem_slot < 0 or len(aidx) == 0:
+            return out
+        if self.mode == "filter":
+            return self._filter_step(aidx, mem_slot, mem_conf, true_slot, t)
+        feats = np.asarray(feats, np.float64)
+        if self.anchor_mode == "first" and len(self.anchor) < self.k_anchor:   # window: anchor = M's early picks
+            self._lang_z(aidx, lang)
+            self.anchor.append(feats[mem_slot].copy())
+            self.tick += 1
+            self._log(t, aidx, mem_slot, mem_conf, true_slot, None, None, False)
+            return out
+        if self.anchor_mode == "spec" and not self.anchor:                  # window: integrate spec evidence
+            self._lang_z(aidx, lang)
+            for s_, a_ in enumerate(aidx):
+                self.win_feats.setdefault(int(a_), []).append(feats[s_].copy())
+            self.win_ticks += 1
+            self.tick += 1
+            fire = False
+            if self.win_ticks >= self.k_anchor:
+                seen = [a_ for a_ in self.lang_score if len(self.win_feats.get(a_, [])) >= max(1, self.win_ticks // 2)]
+                best = max(seen or list(self.lang_score), key=lambda a_: self.lang_score[a_])
+                self.anchor = self.win_feats[best][-self.k_anchor:]
+                if best in [int(a_) for a_ in aidx] and int(aidx[mem_slot]) != best and self.mode != "observe":
+                    fire = True; self.fires += 1; self.cool = self.refractory
+                    out = {"fire": True, "slot": [int(a_) for a_ in aidx].index(best)}
+                self.win_feats = {}
+            self._log(t, aidx, mem_slot, mem_conf, true_slot, None, None, fire)
+            return out
+        x, anc = self.stats(feats, aidx, mem_slot, lang)
+        g = self.increment(x)
+        fire = False
+        # Multi-hypothesis CUSUM: evidence accumulates only for the SPECIFIC identity the anchor prefers over M.
+        # Noise-driven disagreements scatter over different look-alikes and decay; a true drift concentrates
+        # on one identity (the real target) → that hypothesis crosses h.
+        ca = int(aidx[anc]) if anc != mem_slot else None
+        for k in list(self.S):
+            if k != ca:
+                self.S[k] = max(0.0, self.S[k] - self.kappa)
+        if ca is not None:
+            self.S[ca] = max(0.0, self.S.get(ca, 0.0) + g)
+        if self.cool > 0:
+            self.cool -= 1
+        elif self.mode != "observe" and ca is not None and self.S[ca] > self.h:
+            fire = True
+            self.S, self.cool, self.fires = {}, self.refractory, self.fires + 1
+            out = {"fire": True, "slot": anc}
+        self.tick += 1
+        self._log(t, aidx, mem_slot, mem_conf, true_slot, x, anc, fire)
+        return out
+
+    def _filter_step(self, aidx, mem_slot, mem_conf, true_slot, t):
+        ids = [int(a) for a in aidx]; act = ids[mem_slot]; b = self.belief
+        if self.filter_kind in ("resid", "tempered"):
+            # TEMPERED evidence accumulator (PGIF main): L_k <- lam*L_k + w_t*1[k = memory pick]. Self-update makes
+            # the memory's errors autocorrelated, so per-tick evidence must be tempered (lam ~ 1 - 1/tau_corr)
+            # instead of multiplied as if independent (the untempered 'bayes' ablation flips in 1-2 ticks).
+            # w_t = 0.5 + rank(conf) (scale-free) for 'tempered'; w_t = 1 for the 'resid' ablation.
+            c = 0.0 if mem_conf is None else float(mem_conf); h = self.conf_hist
+            pct = float(np.searchsorted(np.sort(h), c)) / len(h) if len(h) >= 5 else 0.5
+            self.conf_hist = (h + [c])[-self.conf_window:]
+            w = 1.0 if self.filter_kind == "resid" else 0.5 + pct
+            for k in b:
+                b[k] *= self.resid_decay
+            b[act] = b.get(act, 0.0) + w
+            map_slot = max(range(len(ids)), key=lambda s_: b.get(ids[s_], 0.0))
+            fire = map_slot != mem_slot
+            self.fires += int(fire); self.tick += 1
+            self._log(t, aidx, mem_slot, mem_conf, true_slot, None, map_slot, fire)
+            return {"fire": fire, "slot": map_slot, "kind": "gate", "gate_memory": self.gate_memory}
+        for a in ids:                                            # new tracklets enter with a tiny prior
+            b.setdefault(a, 1e-3 if b else 1.0)
+        tot = sum(b.values()); m = len(b)
+        for k in b:                                              # sticky identity transition
+            b[k] = (1 - self.eps_switch) * b[k] / tot + self.eps_switch / m
+        c = 0.0 if mem_conf is None else float(mem_conf)
+        h = self.conf_hist
+        pct = float(np.searchsorted(np.sort(h), c)) / len(h) if len(h) >= 5 else 0.5
+        self.conf_hist = (h + [c])[-self.conf_window:]
+        q = self.q_hi - (self.q_hi - self.q_lo) * pct           # confident pick → lower error rate
+        nv = len(ids)
+        for k in b:
+            b[k] *= (1 - q) if k == act else q / max(nv - 1, 1)
+        tot = sum(b.values())
+        for k in b:
+            b[k] /= tot
+        map_slot = max(range(nv), key=lambda s_: b[ids[s_]])
+        fire = map_slot != mem_slot
+        if fire:
+            self.fires += 1
+        self.tick += 1
+        self._log(t, aidx, mem_slot, mem_conf, true_slot, None, map_slot, fire)
+        return {"fire": fire, "slot": map_slot, "kind": "gate", "post": round(b[ids[map_slot]], 4),
+                "gate_memory": self.gate_memory}
+
+    def _log(self, t, aidx, mem_slot, mem_conf, true_slot, x, anc, fire):
+        if not self.log_path:
+            return
+        rec = {"ep": self.ep, "t": t, "n": len(aidx), "mem": int(mem_slot),
+               "true": None if true_slot is None else int(true_slot),
+               "conf": None if mem_conf is None else float(mem_conf),
+               "anc": anc, "S": round(max(self.S.values(), default=0.0), 4), "fire": fire,
+               "x": None if x is None else [round(float(v), 5) for v in x],
+               "aidx": [int(a) for a in aidx]}
+        if x is not None and getattr(self, "_last", None) is not None:
+            rec["cosA"] = [round(float(v), 4) for v in self._last[0]]
+            rec["zl"] = [round(float(v), 4) for v in self._last[1]]
+        with open(self.log_path, "a") as f:
+            f.write(json.dumps(rec) + "\n")
+
+codex
+第二轮审核结论：
+
+**V1 MAJOR 复核**
+1. **Resolved**：已加入 V1-commit-only 与 V1-selfreset，对“PGIF 后验改身份”vs“单纯 re-init/丢 DRM”做机制拆分；代码中 `V1_SELFRESET` 在同一 gate fire 时用 `_pred_slot` 重 init。
+2. **Resolved**：已把 H1b 拆成 all 与 drift，并限定 V1 主张为“开局锁对后的漂移纠错”，避免把冷启动错锁归因给 DAM4SAM 漂移。
+3. **Partially resolved**：加入 SAM2 predicted-IoU 的 AUROC 报告，能检验置信度是否有身份信息；但若 AUROC 低，仅解释为退化等权驻留，未把等权 PGIF 闭环对照列入主判据。降为 minor 风险。
+
+**V1 verdict：NO MAJOR**。作为 DAM4SAM 上的 PGIF 泛化设计，目前对照与分层足以支撑第二轮继续实验。
+
+**V2 MAJOR 复核**
+1. **Resolved**：已明确 V2 是 PGIF 冷启动组件，不再作为独立一区贡献。
+2. **Resolved**：飞行混杂已处理。文档要求窗口内按 V0 单帧语言飞行；代码中冷窗口 `_pred_slot = lang_slot`，`COLD_SINGLE` 只控制第 K 步承诺方式。
+3. **Resolved**：H2a 改成可检验开局正确率；新增 V2-single@K；窗口内临时承诺仍按逐帧承诺身份计分；先验 `min(G,3.0)` 截断也已实现。
+
+**V2 verdict：NO MAJOR**。作为组件设计合格，剩余 K/λ 敏感性属于 minor/后续实验问题。
+tokens used
+30,614
+第二轮审核结论：
+
+**V1 MAJOR 复核**
+1. **Resolved**：已加入 V1-commit-only 与 V1-selfreset，对“PGIF 后验改身份”vs“单纯 re-init/丢 DRM”做机制拆分；代码中 `V1_SELFRESET` 在同一 gate fire 时用 `_pred_slot` 重 init。
+2. **Resolved**：已把 H1b 拆成 all 与 drift，并限定 V1 主张为“开局锁对后的漂移纠错”，避免把冷启动错锁归因给 DAM4SAM 漂移。
+3. **Partially resolved**：加入 SAM2 predicted-IoU 的 AUROC 报告，能检验置信度是否有身份信息；但若 AUROC 低，仅解释为退化等权驻留，未把等权 PGIF 闭环对照列入主判据。降为 minor 风险。
+
+**V1 verdict：NO MAJOR**。作为 DAM4SAM 上的 PGIF 泛化设计，目前对照与分层足以支撑第二轮继续实验。
+
+**V2 MAJOR 复核**
+1. **Resolved**：已明确 V2 是 PGIF 冷启动组件，不再作为独立一区贡献。
+2. **Resolved**：飞行混杂已处理。文档要求窗口内按 V0 单帧语言飞行；代码中冷窗口 `_pred_slot = lang_slot`，`COLD_SINGLE` 只控制第 K 步承诺方式。
+3. **Resolved**：H2a 改成可检验开局正确率；新增 V2-single@K；窗口内临时承诺仍按逐帧承诺身份计分；先验 `min(G,3.0)` 截断也已实现。
+
+**V2 verdict：NO MAJOR**。作为组件设计合格，剩余 K/λ 敏感性属于 minor/后续实验问题。

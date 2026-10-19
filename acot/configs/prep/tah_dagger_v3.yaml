@@ -1,0 +1,4 @@
+# P0-2 stage B (1012 §6.2): merge the @3 on-policy DAgger of ours_fast_a (training seeds) → dagger artefact.
+kind: dagger
+name: tah_dagger_v3
+source: {experiment: acot/configs/experiments/p02b_dagger_train.yaml, arm: dag_fa}

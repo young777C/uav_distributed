@@ -1,0 +1,14 @@
+# 1006 DINOv3 stage 2 (two-stage rule fixed 2026-10-06 23:17, 1006_t0_log.md): the DINOv3 full-recipe model
+# (ours_v3full = TAHRelM s0 on 64 offline + t0_dinov3_dagger episodes, DINOv3 crop features) on dev-B, protocol @3,
+# r = 2. Compared seed-paired with the existing weights = t0_pilot_deploy_devB3 aa_r0a (repeat 0) / aa_r1a (repeat 1),
+# same protocol, seeds and repeat ids: python -m acot.analysis.dinov3_decision --stage 2
+name: t0_dinov3_stage2_devB3
+protocol: sim_proxy_v2@3
+seeds: {set: dev2, subset: [[93060, 93099]], expect: 40}
+completeness: {require: allow_skipped, allow_skipped_reasons: ["target stationary"], pairing: intersection}
+schedule: {block: 5, seed: 10082, max_infra_attempts: 3}
+arms:
+  v3full_r0: {method: ours_v3full, role: ablation}
+  v3full_r1: {method: ours_v3full, role: ablation, repeat: 1}
+collect: [ticks, gt_access, scenario]
+infra: {runtime: acot}

@@ -1,0 +1,39 @@
+{"event": "plan", "seed": 10068, "block": 5, "n_units": 16, "order": [["ours_v3off_r1", [93075, 93076, 93077, 93078, 93079]], ["ours_v3off_r1", [93070, 93071, 93072, 93073, 93074]], ["ours_v2off_r1", [93070, 93071, 93072, 93073, 93074]], ["ours_v3off_r1", [93060, 93061, 93062, 93063, 93064]], ["ours_v2off_r1", [93095, 93096, 93097, 93098, 93099]], ["ours_v2off_r1", [93090, 93091, 93092, 93093, 93094]], ["ours_v3off_r1", [93085, 93086, 93087, 93088, 93089]], ["ours_v3off_r1", [93080, 93081, 93082, 93083, 93084]], ["ours_v3off_r1", [93090, 93091, 93092, 93093, 93094]], ["ours_v2off_r1", [93075, 93076, 93077, 93078, 93079]], ["ours_v2off_r1", [93080, 93081, 93082, 93083, 93084]], ["ours_v3off_r1", [93065, 93066, 93067, 93068, 93069]], ["ours_v2off_r1", [93085, 93086, 93087, 93088, 93089]], ["ours_v2off_r1", [93065, 93066, 93067, 93068, 93069]], ["ours_v3off_r1", [93095, 93096, 93097, 93098, 93099]], ["ours_v2off_r1", [93060, 93061, 93062, 93063, 93064]]], "t": 1791341242.9652195}
+{"event": "start", "arm": "ours_v3off_r1", "seeds": [93075, 93076, 93077, 93078, 93079], "worker": "w0", "carla_port": 2050, "gpu": 1, "tm_base": 9700, "svc_slot": null, "t": 1791341242.965578}
+{"event": "start", "arm": "ours_v3off_r1", "seeds": [93070, 93071, 93072, 93073, 93074], "worker": "w1", "carla_port": 2060, "gpu": 2, "tm_base": 9760, "svc_slot": null, "t": 1791341242.965835}
+{"event": "start", "arm": "ours_v2off_r1", "seeds": [93070, 93071, 93072, 93073, 93074], "worker": "w2", "carla_port": 2070, "gpu": 4, "tm_base": 9820, "svc_slot": null, "t": 1791341242.9663599}
+{"event": "start", "arm": "ours_v3off_r1", "seeds": [93060, 93061, 93062, 93063, 93064], "worker": "w3", "carla_port": 2080, "gpu": 5, "tm_base": 9850, "svc_slot": null, "t": 1791341242.9666748}
+{"event": "start", "arm": "ours_v2off_r1", "seeds": [93095, 93096, 93097, 93098, 93099], "worker": "w4", "carla_port": 2090, "gpu": 7, "tm_base": 9880, "svc_slot": null, "t": 1791341242.9669495}
+{"event": "end", "arm": "ours_v3off_r1", "worker": "w3", "requeued": [], "t": 1791341975.3994913}
+{"event": "start", "arm": "ours_v2off_r1", "seeds": [93090, 93091, 93092, 93093, 93094], "worker": "w3", "carla_port": 2080, "gpu": 5, "tm_base": 9850, "svc_slot": null, "t": 1791341975.399561}
+{"event": "end", "arm": "ours_v2off_r1", "worker": "w4", "requeued": [], "t": 1791342170.288179}
+{"event": "start", "arm": "ours_v3off_r1", "seeds": [93085, 93086, 93087, 93088, 93089], "worker": "w4", "carla_port": 2090, "gpu": 7, "tm_base": 9880, "svc_slot": null, "t": 1791342170.2883346}
+{"event": "end", "arm": "ours_v2off_r1", "worker": "w2", "requeued": [], "t": 1791342175.3725579}
+{"event": "start", "arm": "ours_v3off_r1", "seeds": [93080, 93081, 93082, 93083, 93084], "worker": "w2", "carla_port": 2070, "gpu": 4, "tm_base": 9820, "svc_slot": null, "t": 1791342175.3726423}
+{"event": "end", "arm": "ours_v3off_r1", "worker": "w0", "requeued": [], "t": 1791342185.6448092}
+{"event": "start", "arm": "ours_v3off_r1", "seeds": [93090, 93091, 93092, 93093, 93094], "worker": "w0", "carla_port": 2050, "gpu": 1, "tm_base": 9700, "svc_slot": null, "t": 1791342185.644879}
+{"event": "end", "arm": "ours_v3off_r1", "worker": "w1", "requeued": [], "t": 1791342235.6938043}
+{"event": "start", "arm": "ours_v2off_r1", "seeds": [93075, 93076, 93077, 93078, 93079], "worker": "w1", "carla_port": 2060, "gpu": 2, "tm_base": 9760, "svc_slot": null, "t": 1791342235.6938791}
+{"event": "end", "arm": "ours_v2off_r1", "worker": "w3", "requeued": [93093], "t": 1791342702.513255}
+{"event": "start", "arm": "ours_v2off_r1", "seeds": [93080, 93081, 93082, 93083, 93084], "worker": "w3", "carla_port": 2080, "gpu": 5, "tm_base": 9850, "svc_slot": null, "t": 1791342702.513334}
+{"event": "end", "arm": "ours_v3off_r1", "worker": "w4", "requeued": [93086], "t": 1791342912.6364722}
+{"event": "start", "arm": "ours_v3off_r1", "seeds": [93065, 93066, 93067, 93068, 93069], "worker": "w4", "carla_port": 2090, "gpu": 7, "tm_base": 9880, "svc_slot": null, "t": 1791342912.6365495}
+{"event": "end", "arm": "ours_v2off_r1", "worker": "w1", "requeued": [], "t": 1791342962.5899158}
+{"event": "start", "arm": "ours_v2off_r1", "seeds": [93085, 93086, 93087, 93088, 93089], "worker": "w1", "carla_port": 2060, "gpu": 2, "tm_base": 9760, "svc_slot": null, "t": 1791342962.5899982}
+{"event": "end", "arm": "ours_v3off_r1", "worker": "w0", "requeued": [], "t": 1791343117.9989765}
+{"event": "start", "arm": "ours_v2off_r1", "seeds": [93065, 93066, 93067, 93068, 93069], "worker": "w0", "carla_port": 2050, "gpu": 1, "tm_base": 9700, "svc_slot": null, "t": 1791343117.999055}
+{"event": "end", "arm": "ours_v3off_r1", "worker": "w2", "requeued": [], "t": 1791343457.3940265}
+{"event": "start", "arm": "ours_v3off_r1", "seeds": [93095, 93096, 93097, 93098, 93099], "worker": "w2", "carla_port": 2070, "gpu": 4, "tm_base": 9820, "svc_slot": null, "t": 1791343457.3941085}
+{"event": "end", "arm": "ours_v2off_r1", "worker": "w3", "requeued": [], "t": 1791343699.588539}
+{"event": "start", "arm": "ours_v2off_r1", "seeds": [93060, 93061, 93062, 93063, 93064], "worker": "w3", "carla_port": 2080, "gpu": 5, "tm_base": 9850, "svc_slot": null, "t": 1791343699.5886226}
+{"event": "end", "arm": "ours_v3off_r1", "worker": "w4", "requeued": [], "t": 1791343889.5724251}
+{"event": "start", "arm": "ours_v2off_r1", "seeds": [93093], "worker": "w4", "carla_port": 2090, "gpu": 7, "tm_base": 9880, "svc_slot": null, "t": 1791343889.5725017}
+{"event": "end", "arm": "ours_v2off_r1", "worker": "w1", "requeued": [93086], "t": 1791343899.6950178}
+{"event": "start", "arm": "ours_v3off_r1", "seeds": [93086], "worker": "w1", "carla_port": 2060, "gpu": 2, "tm_base": 9760, "svc_slot": null, "t": 1791343899.695094}
+{"event": "end", "arm": "ours_v2off_r1", "worker": "w4", "requeued": [], "t": 1791344077.2433736}
+{"event": "start", "arm": "ours_v2off_r1", "seeds": [93086], "worker": "w4", "carla_port": 2090, "gpu": 7, "tm_base": 9880, "svc_slot": null, "t": 1791344077.243448}
+{"event": "end", "arm": "ours_v2off_r1", "worker": "w0", "requeued": [], "t": 1791344235.0604608}
+{"event": "end", "arm": "ours_v3off_r1", "worker": "w1", "requeued": [], "t": 1791344271.6847937}
+{"event": "end", "arm": "ours_v3off_r1", "worker": "w2", "requeued": [], "t": 1791344359.4608095}
+{"event": "end", "arm": "ours_v2off_r1", "worker": "w4", "requeued": [], "t": 1791344424.2907872}
+{"event": "end", "arm": "ours_v2off_r1", "worker": "w3", "requeued": [], "t": 1791344786.8412762}

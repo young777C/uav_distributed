@@ -89,6 +89,20 @@ class SyntheticStage2Dataset(Dataset):
         return self.samples[i]
 
 
+
+def _frame_keep(cfg, f):
+    """Opt-in training-frame mask (cfg data.frame_mask: "train"; 2026-10-11, default off → legacy behaviour unchanged):
+    drop frames near an in-view unjam relocation or with the camera (near) inside a building
+    (carla_uav_tracking/recording/building_mask.py: train_keep_mask). Returns None when disabled."""
+    if cfg["data"].get("frame_mask") != "train":
+        return None
+    import sys
+    root = str(Path(__file__).resolve().parents[1] / "carla_uav_tracking")
+    if root not in sys.path:
+        sys.path.insert(0, root)
+    from recording.building_mask import train_keep_mask
+    return train_keep_mask(f)
+
 class RealStage2Dataset(Dataset):
     """Reads episodes + a MULTI-LAYER context cache (backbone_kv --layers ...) and
     labels.py-derived targets. Candidate features are pooled from the cached grid at
@@ -151,8 +165,10 @@ class RealStage2Dataset(Dataset):
                 n = f["rgb"].shape[0]
                 a = f.attrs
                 tier = self._tier_of(str(a.get("strategy", "")), int(a.get("num_similar", 0)))
+                keep = _frame_keep(cfg, f)
             valid = n - horizon
-            for i in list(range(0, max(0, valid), stride))[:cap]:
+            # cap FIRST, then mask: the context cache (backbone_kv) holds exactly range(0, n, stride)[:cap]
+            for i in [i for i in list(range(0, max(0, valid), stride))[:cap] if keep is None or keep[i]]:
                 idx.append((ep, str(ctx), i, tier))
         return idx
 

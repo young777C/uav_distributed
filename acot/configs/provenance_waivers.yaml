@@ -1,0 +1,7 @@
+# Accepted provenance gaps (framework §10.2): an artefact whose compat field does not match the protocol (or is unknown)
+# may only be used with a written reason here. Listed in every resolved arm and in the report footnotes.
+waivers:
+  tah_relm_dag:
+    fields: [fov_deg, tick_s]
+    reason: "final model's association memory; the FOV-fix retrain on 90° data with the same recipe was NOT better on dev
+      (acot_note/1004_tahrelm_retrain_diag.md) → kept; mixes 0.2 s offline + 0.6 s DAgger sequences"

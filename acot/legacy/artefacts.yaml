@@ -1,0 +1,115 @@
+# Legacy offline products → artefact store (framework §10.5). Every entry states what is KNOWN about the artefact; what
+# is not known is recorded as a provenance gap / 'unknown' compat value (unknown never counts as compatible).
+F_DINO: &dino dino_s14_lvd142m_cls384_c224_p1.3
+artefacts:
+  - kind: dataset
+    name: mvp_full_v5
+    glob: /nvidia/hque/data/carla_data/mvp_full_v5/episode_*.h5
+    compat: {fov_deg: 70.0, width: 512, height: 512, fps: 10}
+    camera_override: {fov_deg: 70.0, evidence: runs/data_audit/fov_check_5ep, note: "h5 has no fov attr; images are 70°
+      while train/config_v5.yaml projects labels / boxes at 90° (memory acot-uav-postprocess-fov-bug)"}
+    provenance_gaps: ["no fov attribute in the h5 files", "generator config not snapshotted"]
+  - kind: dataset
+    name: mvp_full_v5_fov90
+    glob: /nvidia/hque/data/carla_data/mvp_full_v5_fov90/episode_s*.h5
+    compat: {fov_deg: 90.0, width: 512, height: 512, fps: 10}
+    plan: runs/tah_v90/b_manifest.json
+    provenance_gaps: ["seed 49 substituted by 108 (stationary target on re-generation)"]
+  - kind: dataset
+    name: mvp_v5_fov90_fast
+    glob: /nvidia/hque/data/carla_data/mvp_v5_fov90_fast/*/episode_*.h5
+    compat: {fov_deg: 90.0, width: 512, height: 512, fps: 10}
+    plan: /nvidia/hque/data/carla_data/mvp_v5_fov90_fast/manifest.json
+    provenance_gaps: ["2026-10-11 minimal regeneration (scene.kinematics, QC v3; orchestrator runs/datagen_moving/full_fast.py,
+      not acot data gen); same town mix as mvp_full_v5_fov90, failed seeds replaced by same-town substitutes (manifest);
+      train with the frame mask recording/building_mask.py:train_keep_mask"]
+  - kind: tah_seq
+    name: tah_cache_v5
+    file: runs/tah_cache.pt
+    inputs: {dataset: mvp_full_v5, config: train/config_v5.yaml, stride: 2}
+    compat: {fov_deg: "70img/90proj", tick_s: 0.2, feature_id: *dino, depth_scale: 100.0, d_feat: 384}
+    provenance_gaps: ["boxes projected at 90° on 70° images", "no order / stride / fov metadata in the file"]
+  - kind: tah_seq
+    name: tah_cache_v5_fov90
+    file: runs/tah_v90/off90.pt
+    inputs: {dataset: mvp_full_v5_fov90, config: train/config_v5_fov90.yaml, stride: 2,
+             shards: [runs/tah_v90/off90_shard0.pt, runs/tah_v90/off90_shard1.pt, runs/tah_v90/off90_shard2.pt, runs/tah_v90/off90_shard3.pt]}
+    compat: {fov_deg: 90.0, tick_s: 0.2, feature_id: *dino, depth_scale: 100.0, d_feat: 384}
+    provenance_gaps: ["merged file dropped the shards' order / fov metadata"]
+  - kind: dagger
+    name: tah_dagger_v1
+    file: runs/tah_cache_dag.pt
+    inputs: {protocol: deploy_v1, seeds: train_dagger_v1, policy: "runs/tah_rel.pt (907)"}
+    compat: {fov_deg: 90.0, tick_s: 0.6, feature_id: *dino, depth_scale: 100.0, d_feat: 384, identity_keys: sim}
+    provenance_gaps: ["collection script / policy config not recorded"]
+  - kind: dagger
+    name: tah_dagger_v1_reencoded
+    file: runs/tah_v90/dag_old.pt
+    inputs: {source: tah_dagger_v1}
+    compat: {fov_deg: 90.0, tick_s: 0.6, feature_id: *dino, depth_scale: 100.0, d_feat: 384, identity_keys: sim}
+    provenance_gaps: ["re-encoding procedure not recorded"]
+  - kind: dagger
+    name: tah_dagger_v2
+    file: runs/tah_v90/dag_v2.pt
+    inputs: {protocol: sim_proxy_v2, seeds: train_dagger_v2, launcher: runs/tah_v90/collect_dagger.sh}
+    compat: {fov_deg: 90.0, tick_s: 0.6, feature_id: *dino, depth_scale: 100.0, d_feat: 384, identity_keys: tracker}
+  - kind: tah_ckpt
+    name: tah_relm_dag
+    file: runs/tah_relm_dag.pt
+    inputs: {train: [tah_cache_v5, tah_dagger_v1], recipe: "unknown (907: --rel --motion --aug, 60 epochs)"}
+    compat: {fov_deg: "70img/90proj+90", tick_s: [0.2, 0.6], feature_id: *dino, depth_scale: 100.0, d_feat: 384, arch: relm}
+    provenance_gaps: ["no recipe in the checkpoint", "offline part trained on 70°-image / 90°-projection boxes",
+                      "mixes 0.2 s offline and 0.6 s DAgger sequences"]
+  - {kind: tah_ckpt, name: tah_relm_v90_s0, file: runs/tah_v90/tah_relm_v90_s0.pt, recipe_from_ckpt: true,
+     inputs: {train: [tah_cache_v5_fov90, tah_dagger_v1_reencoded, tah_dagger_v2]},
+     compat: {fov_deg: 90.0, tick_s: [0.2, 0.6], feature_id: *dino, depth_scale: 100.0, d_feat: 384, arch: relm},
+     provenance_gaps: ["mixes 0.2 s offline and 0.6 s DAgger sequences"]}
+  - {kind: tah_ckpt, name: tah_relm_v90_s0_last, file: runs/tah_v90/tah_relm_v90_s0_last.pt, recipe_from_ckpt: true,
+     inputs: {train: [tah_cache_v5_fov90, tah_dagger_v1_reencoded, tah_dagger_v2]},
+     compat: {fov_deg: 90.0, tick_s: [0.2, 0.6], feature_id: *dino, depth_scale: 100.0, d_feat: 384, arch: relm},
+     provenance_gaps: ["mixes 0.2 s offline and 0.6 s DAgger sequences"]}
+  - {kind: tah_ckpt, name: tah_relm_v90_s1, file: runs/tah_v90/tah_relm_v90_s1.pt, recipe_from_ckpt: true,
+     inputs: {train: [tah_cache_v5_fov90, tah_dagger_v1_reencoded, tah_dagger_v2]},
+     compat: {fov_deg: 90.0, tick_s: [0.2, 0.6], feature_id: *dino, depth_scale: 100.0, d_feat: 384, arch: relm},
+     provenance_gaps: ["mixes 0.2 s offline and 0.6 s DAgger sequences"]}
+  - {kind: tah_ckpt, name: tah_relm_v90_s2, file: runs/tah_v90/tah_relm_v90_s2.pt, recipe_from_ckpt: true,
+     inputs: {train: [tah_cache_v5_fov90, tah_dagger_v1_reencoded, tah_dagger_v2]},
+     compat: {fov_deg: 90.0, tick_s: [0.2, 0.6], feature_id: *dino, depth_scale: 100.0, d_feat: 384, arch: relm},
+     provenance_gaps: ["mixes 0.2 s offline and 0.6 s DAgger sequences"]}
+  - kind: stage2_ckpt
+    name: stage2_v5
+    file: runs/stage2_v5/stage2_best.pt
+    # trained 2026-08-17 on the ORIGINAL mvp_full_v5 (rendered at 90°, labels / boxes at 90° — consistent), which a root
+    # disk cleanup deleted on 09-04; the on-disk mvp_full_v5 is a DIFFERENT 70° regeneration (acot_note/1003_data-check.md
+    # §5.1, 904_mvp-regen-spec.md) → not the registered dataset artefact mvp_full_v5
+    inputs: {dataset: "mvp_full_v5 original (08-11→08-17, 90°; deleted 09-04)", config: train/config_v5.yaml}
+    compat: {fov_deg: 90.0, language_mode: neutral, ablate: null}
+    provenance_gaps: ["no recipe / git in the checkpoint",
+                      "training data deleted 09-04 (the on-disk mvp_full_v5 is a different 70° regeneration) and its Qwen3-VL context caches deleted → not reproducible from data on disk",
+                      "split manifest missing → naive train/val slice (the evaluation town Town05 was inside the training data)"]
+  - kind: opening_cls
+    name: opening_attr_lin
+    file: carla_uav_tracking/rollout/eval_out/opening_attr_cls.pt
+    inputs: {snapshots: runs/opening_dump/npz_tr, seeds: train_opening, script: carla_uav_tracking/rollout/opening_cls.py}
+    compat: {fov_deg: 90.0, hires_k: 3, feature_id: dino_s14_lvd142m_clsmean768_s1.5-2.0_flip}
+    provenance_gaps: ["recipe arguments not stored in the checkpoint"]
+  - kind: opening_ft
+    name: opening_attr_ft
+    file: carla_uav_tracking/rollout/eval_out/opening_attr_ft.pt
+    inputs: {snapshots: runs/opening_dump/npz_tr, seeds: train_opening, script: carla_uav_tracking/rollout/opening_ft.py}
+    compat: {fov_deg: 90.0, hires_k: 3, feature_id: dinov2_s14_ft4_c224}
+    provenance_gaps: ["recipe arguments not stored in the checkpoint"]
+  - kind: opening_snapshots
+    name: opening_snapshots_train
+    glob: runs/opening_dump/npz_tr/*.npz
+    extra_files: [runs/opening_dump/hostmap_npz_tr.txt]
+    inputs: {seeds: train_opening, how: "closed-loop opening dumps (OPENING_DUMP, hi-res k=3) + actor labels (DUMP_LABELS)"}
+    compat: {fov_deg: 90.0, hires_k: 3}
+    provenance_gaps: ["dump launcher arguments not recorded with the files"]
+  - kind: opening_snapshots
+    name: opening_snapshots_hi_eval
+    glob: runs/opening_dump/npz_hi/*.npz
+    extra_files: [runs/opening_dump/hostmap_npz_hi.txt]
+    inputs: {seeds: "dev2 93000–93099 + dev 91000–91019", how: "closed-loop opening dumps, hi-res k=3"}
+    compat: {fov_deg: 90.0, hires_k: 3}
+    provenance_gaps: ["dump launcher arguments not recorded with the files"]

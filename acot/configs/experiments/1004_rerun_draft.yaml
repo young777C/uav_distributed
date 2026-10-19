@@ -1,0 +1,25 @@
+# DRAFT — 1004 re-runs under the frozen protocol with the shared attribute opening (NOT RUN; the ablation set awaits the
+# user's decision on acot_note/1004_ablation_design.md). Every arm differs from ours_final only as shown by
+# `python -m acot show acot/configs/experiments/1004_rerun_draft.yaml --diff`.
+name: 1004_rerun_draft
+protocol: sim_proxy_v2@1
+seeds: {set: dev, expect: 20}
+completeness: {require: all_complete, allow_skipped_reasons: [], pairing: strict}
+retry: {infra_attempts: 2}
+arms:
+  ours:            {method: ours_final, role: main}
+  no_pgif:         {method: ours_no_pgif, role: ablation}
+  no_absent_hold:  {method: ours_no_absent, role: ablation}
+  pgif_bayes:      {method: ours_pgif_bayes, role: ablation}
+  open_head:       {method: ours_final, ablation: opening,
+                    override: {frontend.opening.module: head, frontend.opening.window: 1}}
+  ext_dam4sam:     {method: ext_dam4sam, role: baseline}
+  ext_deepsort:    {method: ext_assoc_deepsort, role: baseline}
+  ext_ocsort:      {method: ext_assoc_motion, role: baseline}
+  lang_xattn:      {method: lang_xattn, role: baseline}
+  oracle_absent:   {method: diag_oracle_absent}
+collect: [ticks, trk, gt_access, scenario]
+comparisons:
+  - {family: ablation, a: ours, b: [no_pgif, no_absent_hold, pgif_bayes, open_head], metrics: [correct, longC, longW]}
+  - {family: baseline, a: ours, b: [ext_dam4sam, ext_deepsort, ext_ocsort, lang_xattn], metrics: [correct, longC, longW]}
+  - {family: diagnostic, a: oracle_absent, b: [ours], metrics: [correct, longC, longW]}

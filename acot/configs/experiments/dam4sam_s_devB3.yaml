@@ -1,0 +1,27 @@
+# DAM4SAM backbone size (user request 2026-10-15; 1007 §5.8 item 3: "a smaller SAM2 backbone is faster, accuracy must be
+# re-evaluated"). The tuned DAM4SAM baseline (gate 160, conf_tau 0.05) with ONLY the SAM2.1 backbone swapped Hiera-L →
+# Hiera-S (`sam2.1_hiera_small.pt`); dev-B 93060–93099, protocol @3, natural opening, r = 2.
+# Reference (seed- and repeat-paired, common random numbers via `repeat`): DAM4SAM-L = t0_grid_devB dam4sam_g160_t0p05
+# (repeat 0) + opt2a_screen_devB3 dam4sam_r1 (repeat 1). Not re-tuned for S (drop-in replacement).
+# The acot runtime does not pass identity.dam4sam.model to the service: the backbone is whatever the service instance
+# was launched with, so this experiment points at dedicated sam21pp-S instances (dam4sam-svc, ports 5611–5616, launched
+# with `dam4sam_service.py --model sam21pp-S`); the override below only records it in the config hash.
+name: dam4sam_s_devB3
+protocol: sim_proxy_v2@3
+seeds: {set: dev2, subset: [[93060, 93099]], expect: 40}
+completeness: {require: allow_skipped, allow_skipped_reasons: ["target stationary"], pairing: intersection}
+schedule: {block: 5, seed: 10151, max_infra_attempts: 3}
+arms:
+  ds_r0: {method: ext_dam4sam, role: baseline, override: {identity.dam4sam.model: sam21pp-S}}
+  ds_r1: {method: ext_dam4sam, role: baseline, repeat: 1, override: {identity.dam4sam.model: sam21pp-S}}
+collect: [ticks, gt_access, scenario]
+infra:
+  runtime: acot
+  services:
+    dam4sam:
+      instances: [{container: dam4sam-svc, host: dam4sam-svc, port: 5611},
+                  {container: dam4sam-svc, host: dam4sam-svc, port: 5612},
+                  {container: dam4sam-svc, host: dam4sam-svc, port: 5613},
+                  {container: dam4sam-svc, host: dam4sam-svc, port: 5614},
+                  {container: dam4sam-svc, host: dam4sam-svc, port: 5615},
+                  {container: dam4sam-svc, host: dam4sam-svc, port: 5616}]

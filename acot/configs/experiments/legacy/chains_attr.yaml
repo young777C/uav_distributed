@@ -1,0 +1,8 @@
+# L0 golden replica of runs/opening_dump/chains_attr.sh (final model, attribute opening v1, dev 91000–19 in 3 blocks).
+name: legacy_chains_attr
+protocol: sim_proxy_v2@1
+seeds: {set: dev, expect: 20}
+arms:
+  zoa: {method: ours_final}
+collect: [ticks]
+infra: {runtime: legacy}           # reproduces / documents a run of the legacy policy runtime (P1 path)

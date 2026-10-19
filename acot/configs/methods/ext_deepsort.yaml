@@ -1,0 +1,10 @@
+# External baseline (1016): DeepSORT identity adaptation (Wojke et al., ICIP 2017; github.com/nwojke/deep_sort, GPL-3.0)
+# — the official tracker (KF + Mahalanobis gate + appearance matching cascade + IoU stage) over all shared candidate boxes,
+# appearance = the shared crop-DINOv2; the target = the track bound to the opening pick (acot/runtime/head_mot.py).
+# Main arm: one tracker step per camera frame (10 Hz), the identity decision at S2 ticks; repo defaults, frame units
+# converted (_base.yaml). The head's margin is 1 (pick) or 0 (abstain), so any conf_tau in (0, 1] is equivalent.
+name: ext_deepsort
+extends: _base
+identity:
+  head: deepsort
+  conf_tau: 0.05

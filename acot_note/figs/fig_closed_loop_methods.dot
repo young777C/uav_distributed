@@ -1,0 +1,63 @@
+// 闭环评测 · 方法配置 → 开关字段 → 代码分支。渲染:
+//   dot -Tpng -Gdpi=130 fig_closed_loop_methods.dot -o fig_closed_loop_methods.png
+// 说明见 acot_note/1012_closed_loop_impl_map.md §4
+digraph G {
+  graph [rankdir=LR, fontname="SimHei", fontsize=13, nodesep=0.18, ranksep=0.9, newrank=true,
+         label="图 C  方法 = methods/*.yaml(extends 链)→ 开关字段 → 运行时代码分支(所有方法共用同一感知、开局、WHERE、DiT)", labelloc=t];
+  node  [shape=box, style="rounded,filled", fontname="SimHei", fontsize=10.5, margin="0.10,0.04"];
+  edge  [color="#777777", arrowsize=0.6];
+
+  subgraph cluster_m {
+    label="acot/configs/methods/"; style="rounded"; color="#888888";
+    node [fillcolor="#fff2cc"];
+    ours  [label="ours_final(Ours)\nhead tah + PGIF tempered\n实验中 override conf_tau 0.05", fillcolor="#ffd98a"];
+    fasta [label="ours_fast_a / ours_rt_s0 / ours_v2off\n(只换 tah.ckpt)"];
+    v3    [label="ours_dinov3 / ours_v3full / ours_v3off\n(tah.feature = dinov3_crop)"];
+    node [fillcolor="#e8f0fb"];
+    reid  [label="ext_reid\n(DINOv2 gallery re-ID)"];
+    ds    [label="ext_assoc_deepsort\n(DeepSORT 式)"];
+    oc    [label="ext_assoc_motion\n(OC-SORT 式)"];
+    dam   [label="ext_dam4sam"];
+    oav   [label="ext_oavat / ext_oavat_dinov2"];
+    xat   [label="lang_xattn\n(单帧语言 grounding)"];
+    pg    [label="ext_reid_pgif / ext_dam4sam_pgif\n(基线 + PGIF)"];
+    node [fillcolor="#e2f0d9"];
+    abl   [label="ours_no_pgif / ours_no_absent\nours_no_force_conf / ours_no_gate_*\nours_no_temper / ours_pgif_bayes / _resid"];
+    abo   [label="noopen(臂级 override,ablation: opening)\nfrontend.opening.module = head, window 1"];
+    abw   [label="ours_absent_cv\n(control.absent_where = cv)"];
+    node [fillcolor="#f4e1f7"];
+    dg    [label="diag_oracle_head / diag_gt_memory\ndiag_oracle_absent(用真值,role 必须 diagnostic)"];
+  }
+
+  subgraph cluster_k {
+    label="开关字段(resolve.py:224 合并 protocol ⊕ method ⊕ 臂 override)"; style="rounded"; color="#888888";
+    node [fillcolor="#ffffff"];
+    kh  [label="identity.head"];
+    kc  [label="identity.tah.ckpt / tah.feature"];
+    kf  [label="filter.mode / filter_kind\nabsent_hold / gate_* / force_conf / resid_decay"];
+    kt  [label="identity.conf_tau(承诺门)\ncontrol.commit_k = 5"];
+    ko  [label="frontend.opening.*\n(protocol 字段,需 ablation: opening)"];
+    kw  [label="control.absent_where"];
+    kg  [label="identity.memory_seed = gt\nhead = oracle / oracle_absent"];
+  }
+
+  subgraph cluster_c {
+    label="代码分支(acot/runtime/)"; style="rounded"; color="#888888";
+    node [fillcolor="#fafafa"];
+    c_init [label="AcotPolicy.__init__ 选身份头  policy.py:51–78"];
+    c_id   [label="_identity 身份头分支  policy.py:210–255\nheads.py(Tah / Assoc / Dam4sam / Reid)\nhead_oavat.py(OavatHead)"];
+    c_pg   [label="Pgif.from_method / step  pgif.py:30/78\n_filter  policy.py:313"];
+    c_wh   [label="_where / _update_commit  policy.py:386/356"];
+    c_op   [label="Frontend 开局模块  frontend.py:72\n_opening  policy.py:285"];
+    c_or   [label="OracleHandle(真值通道白名单)io.py:67\n审计 gt_access.json"];
+  }
+
+  ours -> kh; ours -> kc; ours -> kf; ours -> kt;
+  fasta -> kc; v3 -> kc;
+  reid -> kh; ds -> kh; oc -> kh; dam -> kh; oav -> kh; xat -> kh;
+  pg -> kh; pg -> kf;
+  abl -> kf; abo -> ko; abw -> kw; dg -> kg;
+
+  kh -> c_init; kh -> c_id; kc -> c_init;
+  kf -> c_pg; kt -> c_wh; ko -> c_op; kw -> c_wh; kg -> c_or; kg -> c_id;
+}

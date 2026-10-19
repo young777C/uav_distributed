@@ -1,0 +1,8 @@
+# L0 golden replica of runs/tah_v90/collect_dagger.sh (on-policy TAH DAgger collection, 7 workers × 15 seeds, 4 towns).
+name: legacy_dagger_v2
+protocol: sim_proxy_v2@1
+seeds: {set: train_dagger_v2, expect: 105}
+arms:
+  dag: {method: ours_final}
+collect: [ticks, tah_dagger]
+infra: {runtime: legacy}           # reproduces / documents a run of the legacy policy runtime (P1 path)

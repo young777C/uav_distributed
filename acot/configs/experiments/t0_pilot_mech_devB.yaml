@@ -1,0 +1,14 @@
+# 1006 T0 §7.3 mechanism pilot (shared opening, dev-B 40 seeds, protocol @2): Full vs w/o PGIF, r = 2 — variance
+# estimation ONLY. Shared opening table from t0_refopen_devB pass A (acot/configs/shared_opening/devB.json).
+name: t0_pilot_mech_devB
+protocol: sim_proxy_v2@2
+seeds: {set: dev2, subset: [[93060, 93099]], expect: 40}
+completeness: {require: allow_skipped, allow_skipped_reasons: ["target stationary"], pairing: intersection}
+schedule: {block: 5, seed: 10064, max_infra_attempts: 3}
+arms:
+  full_sh_r0:   {method: ours_final, ablation: opening, override: {frontend.opening.shared: {file: acot/configs/shared_opening/devB.json}}}
+  full_sh_r1:   {method: ours_final, ablation: opening, repeat: 1, override: {frontend.opening.shared: {file: acot/configs/shared_opening/devB.json}}}
+  nopgif_sh_r0: {method: ours_no_pgif, ablation: opening, override: {frontend.opening.shared: {file: acot/configs/shared_opening/devB.json}}}
+  nopgif_sh_r1: {method: ours_no_pgif, ablation: opening, repeat: 1, override: {frontend.opening.shared: {file: acot/configs/shared_opening/devB.json}}}
+collect: [ticks, trk, gt_access, scenario]
+infra: {runtime: acot}

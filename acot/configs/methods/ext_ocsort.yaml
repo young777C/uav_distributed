@@ -1,0 +1,10 @@
+# External baseline (1016): OC-SORT identity adaptation (Cao et al., CVPR 2023; github.com/noahcao/OC_SORT, MIT) — the
+# official motion-only tracker (KF + ORU / OCM / OCR, IoU association) over all shared candidate boxes; the target = the
+# track bound to the opening pick (acot/runtime/head_mot.py). Main arm: one tracker step per camera frame (10 Hz), the
+# identity decision at S2 ticks; repo defaults, frame units converted (_base.yaml). The head's margin is 1 (pick) or 0
+# (abstain), so any conf_tau in (0, 1] is equivalent.
+name: ext_ocsort
+extends: _base
+identity:
+  head: ocsort
+  conf_tau: 0.05

@@ -1,0 +1,77 @@
+{"event": "plan", "seed": 10074, "block": 5, "n_units": 32, "order": [["full_sh_r0", [93070, 93071, 93072, 93073, 93074]], ["full_sh_r0", [93060, 93061, 93062, 93063, 93064]], ["nopgif_sh_r0", [93075, 93076, 93077, 93078, 93079]], ["nopgif_sh_r1", [93060, 93061, 93062, 93063, 93064]], ["full_sh_r1", [93095, 93096, 93097, 93098, 93099]], ["full_sh_r1", [93075, 93076, 93077, 93078, 93079]], ["full_sh_r1", [93065, 93066, 93067, 93068, 93069]], ["full_sh_r1", [93090, 93091, 93092, 93093, 93094]], ["nopgif_sh_r1", [93070, 93071, 93072, 93073, 93074]], ["full_sh_r1", [93060, 93061, 93062, 93063, 93064]], ["nopgif_sh_r0", [93070, 93071, 93072, 93073, 93074]], ["full_sh_r0", [93080, 93081, 93082, 93083, 93084]], ["nopgif_sh_r1", [93085, 93086, 93087, 93088, 93089]], ["nopgif_sh_r1", [93075, 93076, 93077, 93078, 93079]], ["full_sh_r1", [93070, 93071, 93072, 93073, 93074]], ["full_sh_r1", [93085, 93086, 93087, 93088, 93089]], ["nopgif_sh_r0", [93065, 93066, 93067, 93068, 93069]], ["full_sh_r1", [93080, 93081, 93082, 93083, 93084]], ["full_sh_r0", [93095, 93096, 93097, 93098, 93099]], ["nopgif_sh_r0", [93095, 93096, 93097, 93098, 93099]], ["nopgif_sh_r0", [93080, 93081, 93082, 93083, 93084]], ["nopgif_sh_r1", [93080, 93081, 93082, 93083, 93084]], ["full_sh_r0", [93085, 93086, 93087, 93088, 93089]], ["nopgif_sh_r1", [93090, 93091, 93092, 93093, 93094]], ["nopgif_sh_r1", [93095, 93096, 93097, 93098, 93099]], ["nopgif_sh_r0", [93060, 93061, 93062, 93063, 93064]], ["nopgif_sh_r0", [93085, 93086, 93087, 93088, 93089]], ["nopgif_sh_r1", [93065, 93066, 93067, 93068, 93069]], ["nopgif_sh_r0", [93090, 93091, 93092, 93093, 93094]], ["full_sh_r0", [93090, 93091, 93092, 93093, 93094]], ["full_sh_r0", [93075, 93076, 93077, 93078, 93079]], ["full_sh_r0", [93065, 93066, 93067, 93068, 93069]]], "t": 1791341925.662275}
+{"event": "start", "arm": "full_sh_r0", "seeds": [93070, 93071, 93072, 93073, 93074], "worker": "w0", "carla_port": 2230, "gpu": 3, "tm_base": 9730, "svc_slot": null, "t": 1791341925.662744}
+{"event": "start", "arm": "full_sh_r0", "seeds": [93060, 93061, 93062, 93063, 93064], "worker": "w1", "carla_port": 2250, "gpu": 6, "tm_base": 9790, "svc_slot": null, "t": 1791341925.6629696}
+{"event": "end", "arm": "full_sh_r0", "worker": "w0", "requeued": [], "t": 1791342952.9944568}
+{"event": "start", "arm": "nopgif_sh_r0", "seeds": [93075, 93076, 93077, 93078, 93079], "worker": "w0", "carla_port": 2230, "gpu": 3, "tm_base": 9730, "svc_slot": null, "t": 1791342952.994556}
+{"event": "end", "arm": "full_sh_r0", "worker": "w1", "requeued": [93063], "t": 1791342987.3407254}
+{"event": "start", "arm": "nopgif_sh_r1", "seeds": [93060, 93061, 93062, 93063, 93064], "worker": "w1", "carla_port": 2250, "gpu": 6, "tm_base": 9790, "svc_slot": null, "t": 1791342987.340844}
+{"event": "end", "arm": "nopgif_sh_r0", "worker": "w0", "requeued": [93077], "t": 1791343784.7901516}
+{"event": "start", "arm": "full_sh_r1", "seeds": [93095, 93096, 93097, 93098, 93099], "worker": "w0", "carla_port": 2230, "gpu": 3, "tm_base": 9730, "svc_slot": null, "t": 1791343784.7902315}
+{"event": "end", "arm": "nopgif_sh_r1", "worker": "w1", "requeued": [], "t": 1791343864.3904698}
+{"event": "start", "arm": "full_sh_r1", "seeds": [93075, 93076, 93077, 93078, 93079], "worker": "w1", "carla_port": 2250, "gpu": 6, "tm_base": 9790, "svc_slot": null, "t": 1791343864.390547}
+{"event": "end", "arm": "full_sh_r1", "worker": "w0", "requeued": [], "t": 1791344762.0081394}
+{"event": "start", "arm": "full_sh_r1", "seeds": [93065, 93066, 93067, 93068, 93069], "worker": "w0", "carla_port": 2230, "gpu": 3, "tm_base": 9730, "svc_slot": null, "t": 1791344762.0082176}
+{"event": "end", "arm": "full_sh_r1", "worker": "w1", "requeued": [], "t": 1791344771.4204454}
+{"event": "start", "arm": "full_sh_r1", "seeds": [93090, 93091, 93092, 93093, 93094], "worker": "w1", "carla_port": 2250, "gpu": 6, "tm_base": 9790, "svc_slot": null, "t": 1791344771.4205143}
+{"event": "end", "arm": "full_sh_r1", "worker": "w1", "requeued": [], "t": 1791345728.4486244}
+{"event": "start", "arm": "nopgif_sh_r1", "seeds": [93070, 93071, 93072, 93073, 93074], "worker": "w1", "carla_port": 2250, "gpu": 6, "tm_base": 9790, "svc_slot": null, "t": 1791345728.4488816}
+{"event": "end", "arm": "full_sh_r1", "worker": "w0", "requeued": [], "t": 1791345788.932868}
+{"event": "start", "arm": "full_sh_r1", "seeds": [93060, 93061, 93062, 93063, 93064], "worker": "w0", "carla_port": 2230, "gpu": 3, "tm_base": 9730, "svc_slot": null, "t": 1791345788.9329412}
+{"event": "end", "arm": "nopgif_sh_r1", "worker": "w1", "requeued": [], "t": 1791346695.4080622}
+{"event": "start", "arm": "nopgif_sh_r0", "seeds": [93070, 93071, 93072, 93073, 93074], "worker": "w1", "carla_port": 2250, "gpu": 6, "tm_base": 9790, "svc_slot": null, "t": 1791346695.4081345}
+{"event": "end", "arm": "full_sh_r1", "worker": "w0", "requeued": [], "t": 1791346865.8610203}
+{"event": "start", "arm": "full_sh_r0", "seeds": [93080, 93081, 93082, 93083, 93084], "worker": "w0", "carla_port": 2230, "gpu": 3, "tm_base": 9730, "svc_slot": null, "t": 1791346865.8611038}
+{"event": "end", "arm": "nopgif_sh_r0", "worker": "w1", "requeued": [], "t": 1791347552.3712306}
+{"event": "start", "arm": "nopgif_sh_r1", "seeds": [93085, 93086, 93087, 93088, 93089], "worker": "w1", "carla_port": 2250, "gpu": 6, "tm_base": 9790, "svc_slot": null, "t": 1791347552.3713124}
+{"event": "end", "arm": "full_sh_r0", "worker": "w0", "requeued": [], "t": 1791347992.8417456}
+{"event": "start", "arm": "nopgif_sh_r1", "seeds": [93075, 93076, 93077, 93078, 93079], "worker": "w0", "carla_port": 2230, "gpu": 3, "tm_base": 9730, "svc_slot": null, "t": 1791347992.8418605}
+{"event": "end", "arm": "nopgif_sh_r1", "worker": "w0", "requeued": [], "t": 1791348669.911817}
+{"event": "start", "arm": "full_sh_r1", "seeds": [93070, 93071, 93072, 93073, 93074], "worker": "w0", "carla_port": 2230, "gpu": 3, "tm_base": 9730, "svc_slot": null, "t": 1791348669.9119058}
+{"event": "end", "arm": "nopgif_sh_r1", "worker": "w1", "requeued": [], "t": 1791348707.3188815}
+{"event": "start", "arm": "full_sh_r1", "seeds": [93085, 93086, 93087, 93088, 93089], "worker": "w1", "carla_port": 2250, "gpu": 6, "tm_base": 9790, "svc_slot": null, "t": 1791348707.318962}
+{"event": "end", "arm": "full_sh_r1", "worker": "w0", "requeued": [], "t": 1791349837.55947}
+{"event": "start", "arm": "nopgif_sh_r0", "seeds": [93065, 93066, 93067, 93068, 93069], "worker": "w0", "carla_port": 2230, "gpu": 3, "tm_base": 9730, "svc_slot": null, "t": 1791349837.5595977}
+{"event": "end", "arm": "full_sh_r1", "worker": "w1", "requeued": [], "t": 1791349854.2657883}
+{"event": "start", "arm": "full_sh_r1", "seeds": [93080, 93081, 93082, 93083, 93084], "worker": "w1", "carla_port": 2250, "gpu": 6, "tm_base": 9790, "svc_slot": null, "t": 1791349854.2658672}
+{"event": "end", "arm": "nopgif_sh_r0", "worker": "w0", "requeued": [], "t": 1791350853.300561}
+{"event": "start", "arm": "full_sh_r0", "seeds": [93095, 93096, 93097, 93098, 93099], "worker": "w0", "carla_port": 2230, "gpu": 3, "tm_base": 9730, "svc_slot": null, "t": 1791350853.3006413}
+{"event": "end", "arm": "full_sh_r1", "worker": "w1", "requeued": [], "t": 1791350906.4001918}
+{"event": "start", "arm": "nopgif_sh_r0", "seeds": [93095, 93096, 93097, 93098, 93099], "worker": "w1", "carla_port": 2250, "gpu": 6, "tm_base": 9790, "svc_slot": null, "t": 1791350906.4003077}
+{"event": "end", "arm": "nopgif_sh_r0", "worker": "w1", "requeued": [], "t": 1791351983.741441}
+{"event": "start", "arm": "nopgif_sh_r0", "seeds": [93080, 93081, 93082, 93083, 93084], "worker": "w1", "carla_port": 2250, "gpu": 6, "tm_base": 9790, "svc_slot": null, "t": 1791351983.7415392}
+{"event": "end", "arm": "full_sh_r0", "worker": "w0", "requeued": [], "t": 1791352060.3284552}
+{"event": "start", "arm": "nopgif_sh_r1", "seeds": [93080, 93081, 93082, 93083, 93084], "worker": "w0", "carla_port": 2230, "gpu": 3, "tm_base": 9730, "svc_slot": null, "t": 1791352060.328537}
+{"event": "end", "arm": "nopgif_sh_r0", "worker": "w1", "requeued": [], "t": 1791352870.7132378}
+{"event": "start", "arm": "full_sh_r0", "seeds": [93085, 93086, 93087, 93088, 93089], "worker": "w1", "carla_port": 2250, "gpu": 6, "tm_base": 9790, "svc_slot": null, "t": 1791352870.713317}
+{"event": "end", "arm": "nopgif_sh_r1", "worker": "w0", "requeued": [93081], "t": 1791353307.386172}
+{"event": "start", "arm": "nopgif_sh_r1", "seeds": [93090, 93091, 93092, 93093, 93094], "worker": "w0", "carla_port": 2230, "gpu": 3, "tm_base": 9730, "svc_slot": null, "t": 1791353307.386329}
+{"event": "end", "arm": "full_sh_r0", "worker": "w1", "requeued": [93086], "t": 1791353952.5391345}
+{"event": "start", "arm": "nopgif_sh_r1", "seeds": [93095, 93096, 93097, 93098, 93099], "worker": "w1", "carla_port": 2250, "gpu": 6, "tm_base": 9790, "svc_slot": null, "t": 1791353952.5392115}
+{"event": "end", "arm": "nopgif_sh_r1", "worker": "w0", "requeued": [], "t": 1791354324.476581}
+{"event": "start", "arm": "nopgif_sh_r0", "seeds": [93060, 93061, 93062, 93063, 93064], "worker": "w0", "carla_port": 2230, "gpu": 3, "tm_base": 9730, "svc_slot": null, "t": 1791354324.4766598}
+{"event": "end", "arm": "nopgif_sh_r1", "worker": "w1", "requeued": [93097], "t": 1791354849.4374075}
+{"event": "start", "arm": "nopgif_sh_r0", "seeds": [93085, 93086, 93087, 93088, 93089], "worker": "w1", "carla_port": 2250, "gpu": 6, "tm_base": 9790, "svc_slot": null, "t": 1791354849.4375665}
+{"event": "end", "arm": "nopgif_sh_r0", "worker": "w0", "requeued": [], "t": 1791355301.5050712}
+{"event": "start", "arm": "nopgif_sh_r1", "seeds": [93065, 93066, 93067, 93068, 93069], "worker": "w0", "carla_port": 2230, "gpu": 3, "tm_base": 9730, "svc_slot": null, "t": 1791355301.5051618}
+{"event": "end", "arm": "nopgif_sh_r0", "worker": "w1", "requeued": [], "t": 1791355996.3530657}
+{"event": "start", "arm": "nopgif_sh_r0", "seeds": [93090, 93091, 93092, 93093, 93094], "worker": "w1", "carla_port": 2250, "gpu": 6, "tm_base": 9790, "svc_slot": null, "t": 1791355996.3531468}
+{"event": "end", "arm": "nopgif_sh_r1", "worker": "w0", "requeued": [], "t": 1791356301.6410155}
+{"event": "start", "arm": "full_sh_r0", "seeds": [93090, 93091, 93092, 93093, 93094], "worker": "w0", "carla_port": 2230, "gpu": 3, "tm_base": 9730, "svc_slot": null, "t": 1791356301.6411216}
+{"event": "end", "arm": "nopgif_sh_r0", "worker": "w1", "requeued": [], "t": 1791356993.5316718}
+{"event": "start", "arm": "full_sh_r0", "seeds": [93075, 93076, 93077, 93078, 93079], "worker": "w1", "carla_port": 2250, "gpu": 6, "tm_base": 9790, "svc_slot": null, "t": 1791356993.5317674}
+{"event": "end", "arm": "full_sh_r0", "worker": "w0", "requeued": [], "t": 1791357268.8759656}
+{"event": "start", "arm": "full_sh_r0", "seeds": [93065, 93066, 93067, 93068, 93069], "worker": "w0", "carla_port": 2230, "gpu": 3, "tm_base": 9730, "svc_slot": null, "t": 1791357268.876122}
+{"event": "end", "arm": "full_sh_r0", "worker": "w1", "requeued": [93076], "t": 1791357770.5647726}
+{"event": "start", "arm": "nopgif_sh_r0", "seeds": [93077], "worker": "w1", "carla_port": 2250, "gpu": 6, "tm_base": 9790, "svc_slot": null, "t": 1791357770.5648491}
+{"event": "end", "arm": "nopgif_sh_r0", "worker": "w1", "requeued": [], "t": 1791357927.559508}
+{"event": "start", "arm": "nopgif_sh_r1", "seeds": [93081], "worker": "w1", "carla_port": 2250, "gpu": 6, "tm_base": 9790, "svc_slot": null, "t": 1791357927.5595984}
+{"event": "end", "arm": "nopgif_sh_r1", "worker": "w1", "requeued": [], "t": 1791358214.9899971}
+{"event": "end", "arm": "full_sh_r0", "worker": "w0", "requeued": [], "t": 1791358426.5900984}
+{"event": "start", "arm": "full_sh_r0", "seeds": [93063], "worker": "w0", "carla_port": 2230, "gpu": 3, "tm_base": 9730, "svc_slot": null, "t": 1791358426.5901768}
+{"event": "end", "arm": "full_sh_r0", "worker": "w0", "requeued": [], "t": 1791358603.5016038}
+{"event": "start", "arm": "full_sh_r0", "seeds": [93086], "worker": "w0", "carla_port": 2230, "gpu": 3, "tm_base": 9730, "svc_slot": null, "t": 1791358603.501688}
+{"event": "end", "arm": "full_sh_r0", "worker": "w0", "requeued": [], "t": 1791358880.460434}
+{"event": "start", "arm": "nopgif_sh_r1", "seeds": [93097], "worker": "w0", "carla_port": 2230, "gpu": 3, "tm_base": 9730, "svc_slot": null, "t": 1791358880.460544}
+{"event": "end", "arm": "nopgif_sh_r1", "worker": "w0", "requeued": [], "t": 1791359127.3991976}
+{"event": "start", "arm": "full_sh_r0", "seeds": [93076], "worker": "w0", "carla_port": 2230, "gpu": 3, "tm_base": 9730, "svc_slot": null, "t": 1791359127.3992794}
+{"event": "end", "arm": "full_sh_r0", "worker": "w0", "requeued": [], "t": 1791359354.8148134}

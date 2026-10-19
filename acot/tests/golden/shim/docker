@@ -1,0 +1,81 @@
+#!/usr/bin/env python3
+"""Fake `docker` for the L0 golden tests (framework §9): records every call (argv / env / mounts) as a JSON line to
+$SHIM_LOG and simulates just enough for the legacy launchers to run to completion: `docker logs` says the server is
+listening, `docker ps` lists the fake containers, `docker exec … run_rollout.py --out X` writes X with N fake episodes."""
+import json
+import os
+import sys
+
+LOG, STATE, REPO = os.environ["SHIM_LOG"], os.environ["SHIM_STATE"], os.environ["SHIM_REPO"]
+VALUE_OPTS = {"-e", "--env", "-v", "--volume", "-w", "--workdir", "--name", "--network", "--gpus", "--shm-size", "-u",
+              "--user", "--entrypoint", "--format"}
+
+
+def log(rec):
+    with open(LOG, "a") as f:
+        f.write(json.dumps(rec) + "\n")
+
+
+def options(args):
+    """docker-style options until the first positional → (opts list of (opt, value), rest)."""
+    opts, i = [], 0
+    while i < len(args) and args[i].startswith("-"):
+        a = args[i]
+        if "=" in a and a.split("=", 1)[0] in VALUE_OPTS:
+            opts.append(tuple(a.split("=", 1))); i += 1
+        elif a in VALUE_OPTS:
+            opts.append((a, args[i + 1])); i += 2
+        else:
+            opts.append((a, None)); i += 1
+    return opts, args[i:]
+
+
+def envs(opts):
+    out = {}
+    for o, v in opts:
+        if o in ("-e", "--env"):
+            k, _, val = v.partition("=")
+            out[k] = val
+    return out
+
+
+args = sys.argv[1:]
+cmd = args[0] if args else ""
+if cmd == "run":
+    opts, rest = options(args[1:])
+    d = dict((o, v) for o, v in opts)
+    name = d.get("--name", "anon")
+    log({"op": "run", "name": name, "image": rest[0], "command": rest[1:], "env": envs(opts),
+         "mounts": [v for o, v in opts if o in ("-v", "--volume")], "network": d.get("--network"),
+         "gpus": d.get("--gpus"), "shm": d.get("--shm-size"), "workdir": d.get("-w"),
+         "detached": "-d" in d, "rm": "--rm" in d})
+    open(os.path.join(STATE, name), "w").close()
+    print("0123456789ab")
+elif cmd == "rm":
+    for n in args[1:]:
+        if not n.startswith("-") and os.path.exists(os.path.join(STATE, n)):
+            os.remove(os.path.join(STATE, n))
+    log({"op": "rm", "args": args[1:]})
+elif cmd == "logs":
+    print("[policy-server] listening on 0.0.0.0:5555 (shim)")
+elif cmd == "ps":
+    for n in sorted(os.listdir(STATE)):
+        print(n)
+elif cmd == "exec":
+    opts, rest = options(args[1:])
+    container, command = rest[0], rest[1:]
+    log({"op": "exec", "container": container, "command": command, "env": envs(opts),
+         "detached": any(o == "-d" for o, _ in opts)})
+    if any(c.endswith("run_rollout.py") for c in command):
+        a = command
+        out = a[a.index("--out") + 1]
+        n, base = int(a[a.index("--episodes") + 1]), int(a[a.index("--seed-base") + 1])
+        host = out.replace("/workspace", os.path.join(REPO, "carla_uav_tracking"), 1)
+        os.makedirs(os.path.dirname(host), exist_ok=True)
+        eps = [{"episode_seed": base + i, "mis_follow_inst": 0.0, "mis_follow_sustained": 0.0, "steps": 1}
+               for i in range(n)]
+        json.dump({"episodes": eps}, open(host, "w"))
+        for i in range(n):
+            print(f"[rollout] ep{i} seed={base + i} [OK] (shim)")
+else:
+    log({"op": cmd, "args": args[1:]})

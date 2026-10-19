@@ -1,0 +1,30 @@
+# DeepSORT / OC-SORT identity adaptations (1016 §4; acot/runtime/head_mot.py): the pre-registered dev-B grid of 1016 §4.4
+# (written before any dev-B result), = the baseline tuning of 1006 §6.1 for the two replacements of the self-implemented
+# "DeepSORT-style / OC-SORT-style" arms. Main arms: one tracker step per camera frame (10 Hz), identity decision at S2
+# ticks; appendix arms: one step per S2 tick (protocol rate, repo defaults converted). dev-B 93060–93099, protocol @3,
+# natural opening, r = 0 (as every 1006 §6.1 grid). Selection rule (1006 §6.1): highest primary metric; two arms within
+# 0.03 → the higher TR90.
+name: mot_grid_devB3
+protocol: sim_proxy_v2@3
+seeds: {set: dev2, subset: [[93060, 93099]], expect: 40}
+completeness: {require: allow_skipped, allow_skipped_reasons: ["target stationary"], pairing: intersection}
+schedule: {block: 5, seed: 10162, max_infra_attempts: 3}
+arms:
+  ds_c020_a10: {method: ext_deepsort, role: baseline}
+  ds_c030_a10: {method: ext_deepsort, role: baseline, override: {identity.deepsort.max_cosine_distance: 0.3}}
+  ds_c040_a10: {method: ext_deepsort, role: baseline, override: {identity.deepsort.max_cosine_distance: 0.4}}
+  ds_c020_a30: {method: ext_deepsort, role: baseline, override: {identity.deepsort.max_age: 30}}
+  ds_c030_a30: {method: ext_deepsort, role: baseline,
+                override: {identity.deepsort.max_cosine_distance: 0.3, identity.deepsort.max_age: 30}}
+  ds_c040_a30: {method: ext_deepsort, role: baseline,
+                override: {identity.deepsort.max_cosine_distance: 0.4, identity.deepsort.max_age: 30}}
+  oc_i030_a10: {method: ext_ocsort, role: baseline}
+  oc_i020_a10: {method: ext_ocsort, role: baseline, override: {identity.ocsort.iou_threshold: 0.2}}
+  oc_i030_a30: {method: ext_ocsort, role: baseline, override: {identity.ocsort.max_age: 30}}
+  oc_i020_a30: {method: ext_ocsort, role: baseline,
+                override: {identity.ocsort.iou_threshold: 0.2, identity.ocsort.max_age: 30}}
+  ds_s2: {method: ext_deepsort_s2, role: baseline}
+  oc_s2: {method: ext_ocsort_s2, role: baseline}
+collect: [ticks, gt_access, scenario]
+infra:
+  runtime: acot

@@ -1,0 +1,4 @@
+# ours_final without PGIF (TAHRelM memory alone, committed) = the S0-style ablation.
+name: ours_no_pgif
+extends: ours_final
+filter: {mode: "off"}

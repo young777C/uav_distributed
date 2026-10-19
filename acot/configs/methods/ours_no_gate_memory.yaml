@@ -1,0 +1,5 @@
+# ours_final without memory gating: the memory keeps its own write; PGIF still sets the pick / commitment
+# (1006 §5.2, H-P5).
+name: ours_no_gate_memory
+extends: ours_final
+filter: {gate_memory: false}

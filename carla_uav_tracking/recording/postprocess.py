@@ -94,17 +94,29 @@ def compute_occlusion_labels(bbox_u, bbox_v, bbox_w, occ_raycast, W, H,
 class PostProcessor:
     """Add training annotations to raw recording data."""
 
-    def __init__(self, output_dir: Path, fov: float = _FOV_DEG):
+    def __init__(self, output_dir: Path, fov: float | None = None, allow_legacy_fov: bool = False):
         self._output_dir = Path(output_dir)
+        # v6: the episode's own attrs['fov'] (written by the recorder) is authoritative; `fov` is only
+        # a cross-check. Files without the attr are refused unless allow_legacy_fov (then `fov`/90 used).
+        self._allow_legacy_fov = bool(allow_legacy_fov)
         # §10: the sensor FOV was narrowed 90→70; bbox/off_screen projection MUST use the
         # SAME fov as the camera (else off_screen under-reports — the target leaves the real
         # 70° frame but a 90° projection still counts it in-frame). Caller passes output.fov.
-        self._fov = float(fov)
+        self._fov = None if fov is None else float(fov)
 
     def process_episode(self, episode_path: Path) -> None:
         """Add annotations to one episode HDF5 file."""
         with h5py.File(episode_path, "r+") as f:
             n_steps = f["rgb"].shape[0]
+            if "fov" in f.attrs:
+                fov = float(f.attrs["fov"])
+                if self._fov is not None and abs(fov - self._fov) > 1e-6:
+                    raise ValueError(f"{episode_path}: attrs fov={fov} != expected {self._fov}")
+            elif self._allow_legacy_fov:
+                fov = self._fov if self._fov is not None else _FOV_DEG
+            else:
+                raise ValueError(f"{episode_path}: no attrs['fov'] — refusing to guess the camera FOV")
+            self._fov = fov
 
             # 1. Correct-projection 2D bboxes: TARGET + ALL DISTRACTORS
             bboxes = self._compute_bboxes(f, n_steps, self._fov)               # (n, 4)
@@ -146,6 +158,10 @@ class PostProcessor:
             self._write_dataset(f, "annotation/waypoints", wp_flat)
             self._write_dataset(f, "annotation/waypoint_sigma", wp_sigmas)
 
+            # v6 per-actor labels (recorded live) → visibility, gap-breaking tracklet ids, re-entry events
+            if "actors" in f:
+                self._v6_post(f)
+
             # Finalize the language with the target's ACTUAL early motion (accurate
             # "about to turn left / stop / accelerate"), derived from the trajectory.
             self._finalize_language(f, n_steps)
@@ -153,6 +169,29 @@ class PostProcessor:
     # ------------------------------------------------------------------
     # Annotation computation
     # ------------------------------------------------------------------
+
+    # v6 postprocess constants (also written to attrs so consumers never guess)
+    V6_VIS_MIN_PX = 20          # an actor counts as visible if >= this many instance pixels
+    V6_TRACKLET_GAP = 10        # frames (1 s @10 fps) of invisibility after which a tracklet id breaks
+    V6_REENTRY_MIN_GAP = 10     # frames; target re-entry events are logged after gaps >= this
+
+    def _v6_post(self, f: h5py.File) -> None:
+        from recording.labels_v6 import reentry_events, tracklet_ids
+        g = f["actors"]
+        vis = g["vis_px"][:] >= self.V6_VIS_MIN_PX                       # (T, A)
+        role = g["role"][:]
+        trk = tracklet_ids(vis, self.V6_TRACKLET_GAP)
+        off_t = g["in_frame"][:, 0] == 0
+        n_look = (vis[:, 1:] & (role[1:] == 1)[None]).sum(1)
+        n_veh = vis[:, 1:].sum(1)
+        ev = reentry_events(vis[:, 0], off_t, n_look, n_veh, self.V6_REENTRY_MIN_GAP)
+        self._write_dataset(f, "actors/visible", vis, np.uint8)
+        self._write_dataset(f, "actors/tracklet_id", trk, np.int32)
+        self._write_dataset(f, "events/target_reentry", ev, np.int32)
+        f.attrs["v6_vis_min_px"] = self.V6_VIS_MIN_PX
+        f.attrs["v6_tracklet_gap_frames"] = self.V6_TRACKLET_GAP
+        f.attrs["v6_reentry_min_gap_frames"] = self.V6_REENTRY_MIN_GAP
+        f.attrs["v6_reentry_columns"] = "frame,gap_frames,cause(0 off/1 occ/2 mixed),n_lookalike_vis,n_scene_vehicle_vis"
 
     @staticmethod
     def _campose(f, i):
@@ -336,8 +375,8 @@ class PostProcessor:
             distance_m=dist_m, rng=_r.Random(seed))
 
     @staticmethod
-    def _write_dataset(f: h5py.File, name: str, data: np.ndarray) -> None:
+    def _write_dataset(f: h5py.File, name: str, data: np.ndarray, dtype=np.float32) -> None:
         if name in f:
             del f[name]
-        f.create_dataset(name, data=data.astype(np.float32), compression="gzip",
+        f.create_dataset(name, data=data.astype(dtype), compression="gzip",
                          compression_opts=4)

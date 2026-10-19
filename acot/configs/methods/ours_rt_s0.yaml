@@ -1,0 +1,8 @@
+# 1006 G13: Ours with TAHRelM retrained under the fixed recipe (train/tah_train.py --motion --aug, cache
+# runs/tah_cache_dag.pt, seed 0, best-val selection) — closed-loop equivalence with runs/tah_relm_dag.pt on dev-B.
+name: ours_rt_s0
+extends: ours_final
+identity:
+  tah: {ckpt: runs/tah_1006/tah_relm_s0.pt}
+accept_provenance_gaps:
+  identity.tah.ckpt: "recipe stored in the checkpoint (train/tah_train.py --motion --aug --seed 0, cache runs/tah_cache_dag.pt)"

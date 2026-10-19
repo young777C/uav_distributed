@@ -1,0 +1,73 @@
+// 闭环评测 · 总体编排:宿主机调度器 + CARLA 容器客户端 + 策略容器服务端 + DAM4SAM 服务 + 分析。渲染:
+//   dot -Tpng -Gdpi=130 fig_closed_loop_overview.dot -o fig_closed_loop_overview.png
+// 说明见 acot_note/1012_closed_loop_impl_map.md §2
+digraph G {
+  graph [rankdir=TB, fontname="SimHei", fontsize=13, nodesep=0.3, ranksep=0.35, newrank=true, compound=true,
+         label="图 A  闭环在线评测总体流程(python -m acot eval;一个 unit = 一组 × 同一城镇 5 个连续种子)", labelloc=t];
+  node  [shape=box, style="rounded,filled", fillcolor="#ffffff", fontname="SimHei", fontsize=10.5, margin="0.10,0.05"];
+  edge  [fontname="SimHei", fontsize=9, color="#555555"];
+
+  subgraph cluster_host {
+    label="宿主机:调度(acot/eval/scheduler.py)"; style="rounded"; color="#3070b0"; fontcolor="#3070b0";
+    node [fillcolor="#e8f0fb"];
+    cli  [label="python -m acot eval <exp.yaml> --workers N --carla-ports … --gpus …\ncli.py:63 cmd_eval → run_experiment  scheduler.py:514"];
+    res  [label="resolve_experiment  resolve.py:284\n每组 resolve_arm  resolve.py:224:protocol ⊕ method(extends)⊕ override → config_hash\nsupport.unsupported  support.py:53(acot 运行时不支持的配置直接拒绝)"];
+    pre  [label="preflight  preflight.py:16/68 + Run.workers()  scheduler.py:87\n(CARLA 端口在线 + GPU 空闲 ≥ 20 GB + 文件锁租约 + TM 端口块)"];
+    spec [label="write_specs  scheduler.py:142\n<arm>/resolved.json、resolved_spec.json;实验级 manifest.json / experiment.resolved.json"];
+    disp [label="Dispatcher  scheduler.py:426\n(组 × 5 种子块)按 schedule.seed 打乱成一个共享队列,每个 worker 线程取单元\nDAM4SAM 组每单元独占一个服务实例  scheduler.py:181"];
+    unit [label="Run.run_unit  scheduler.py:328", fillcolor="#d5e5f7"];
+    sp   [label="① start_policy_acot  scheduler.py:284\ndocker run(镜像 acot-uav-train:cu118-acot,指定 GPU)\n等 \"listening\" → 核对 server_echo 的 config_hash(L1)"];
+    cl   [label="② 写 parts/<tag>.client.json  scheduler.py:348–366\ndocker exec cyh-carla python /workspace/acot_client/episode.py\n(-e CARLA_PORT / CARLA_TM_PORT)"];
+    wd   [label="③ 看门狗  scheduler.py:377–396\n数日志里的 \"[acot] seed=\" 行;12 min 无进展(首个种子 25 min)→ 杀客户端 + restart_carla  :311"];
+    post [label="④ docker rm 策略容器 → post_part  scheduler.py:398\n定 status(complete / skipped / failed)+ gt_access 违规判失败\ninfra 失败换 worker 重排队(≤ 3 次)→ summary.json"];
+    cli -> res -> pre -> spec -> disp -> unit;
+    unit -> sp -> cl -> wd -> post;
+  }
+
+  subgraph cluster_carla {
+    label="CARLA 容器 cyh-carla(py3.8):客户端 carla_uav_tracking/acot_client/"; style="rounded"; color="#2e7d32"; fontcolor="#2e7d32";
+    node [fillcolor="#e2f0d9"];
+    ep   [label="episode.py:36 main\nload_config(rollout/run_rollout.py)→ carla.Client.load_world(town)\nAcotRemotePolicy 连接策略容器:5555  wire.py:12"];
+    seed [label="每个种子  episode.py:56\nstatus=partial → @3:reload_world + 同步模式(fixed_delta 0.1 s)\nSceneManager + AcotScorer + StudentRolloutEnv → env.run  rollout/env.py:165"];
+    setup[label="setup_episode  scene/scene_manager.py:74\nTM 播种、目标 + 4–8 辆相似干扰车 + 背景车流、无人机(运动学,无物理)\n指令 build_instruction  :281(服务端 neutral 模式只留颜色 + 车型)"];
+    warm [label="暖机 90 tick,专家控制对准目标  env.py:203\n目标最大速度 < 1.2 m/s → skipped(target stationary)"];
+    rst  [label="policy.reset() → {cmd: reset, seed, arm, config_hash}  wire.py:18"];
+    loop [label="900 tick 循环(10 Hz,90 s) env.py:236–318\nstep_target → world.tick → 取帧 rgb(512²;step 0/6/12 另取 1536² rgb_hi)\n读 GT:tpos / dstates / campose + ray-cast 可见性 vis", fillcolor="#c9e4bd"];
+    act  [label="policy.act  wire.py:24\n按 blank 规则清空 target_color/bp、road、retarget  wire.py:25–30\n发 act 消息,收 {action, pred_slot, cand_lite, committed}"];
+    sc   [label="scorer.update  acot_client/scoring.py:45\n(RolloutScorer  rollout/metrics.py:93 + 策略承诺 pc_*)"];
+    mv   [label="step_drone(dx, dy, dz, dyaw)  scene_manager.py:1500\n→ KinematicDrone.step  carla_uav/drone.py:73;目标出画连续 18 s → 截断"];
+    fin  [label="finalize  scoring.py:77 → episode.json(pc_correct、tr90、pc_max_wrong_run_s …)\nscenario.json、status.json;打印 \"[acot] seed=… status=…\"  episode.py:109"];
+    ep -> seed -> setup -> warm -> rst -> loop -> act -> sc -> mv;
+    mv -> loop [label="下一 tick", style=dashed];
+    mv -> fin [label="结束"];
+  }
+
+  subgraph cluster_pol {
+    label="策略容器 acot-<exp>-<arm>-w<k>(py3.11 + GPU):acot/runtime/server.py"; style="rounded"; color="#b06a00"; fontcolor="#b06a00";
+    node [fillcolor="#fff2cc"];
+    srv  [label="server.py:149 main\n禁止旧环境变量 → 重算 config_hash 必须一致  :171\nRuntime(Frontend + SimProxyPerception + AcotPolicy)  :46\n写 server_echo_<tag>.json → listening:5555"];
+    onr  [label="on_reset  server.py:240\n按种子打开 ticks.jsonl / trk.jsonl / act_record.pkl;开启 GT 审计"];
+    ona  [label="on_act  server.py:259 → Runtime.step → AcotPolicy.act\n(详见图 B)", fillcolor="#ffd98a"];
+    fl   [label="flush  server.py:210(下一个 reset 或 close 时)\ngt_access.json、cost.json、可选 tah_dagger.pt"];
+    srv -> onr -> ona -> fl;
+  }
+
+  dam [label="DAM4SAM 服务 dam4sam-svc:5601–5604\nrollout/dam4sam_service.py(独立 conda 环境,SAM2.1-L)", shape=component, fillcolor="#f4e1f7"];
+
+  subgraph cluster_ana {
+    label="分析(宿主机)"; style="rounded"; color="#6a1b9a"; fontcolor="#6a1b9a";
+    node [fillcolor="#f4e1f7"];
+    ld   [label="results.load  acot/analysis/results.py:41\n{arm: {seed: status / episode / scenario / gt_access / ticks}}"];
+    an   [label="metrics.value  metrics.py:44(pc_correct、tr90、auc_sr、pc_longW …)\nstats.bootstrap_ci / sign_flip_p  stats.py:16/24(种子配对)"];
+    out  [label="acot analyze → report.py:37(<exp>/report/report.md)\n专项判定:p02_decision.py、dinov3_decision.py 等"];
+    ld -> an -> out;
+  }
+
+  sp -> srv [label="docker run", lhead=cluster_pol];
+  cl -> ep  [label="docker exec", lhead=cluster_carla];
+  rst -> onr [label="TCP 5555(rollout/bridge.py:\n8 字节长度 + pickle)", color="#b06a00", fontcolor="#b06a00"];
+  act -> ona [dir=both, color="#b06a00", fontcolor="#b06a00", label="每 tick 一次 act"];
+  ona -> dam [dir=both, style=dotted, label="仅 DAM4SAM 组"];
+  fin -> wd [style=dashed, label="日志行"];
+  post -> ld [label="eval_out/exp/<exp>/<arm>/seeds/<seed>/"];
+}

@@ -1,0 +1,6 @@
+# LEGACY reproduction of carla_uav_tracking/rollout/eval_ext_dam4sam.sh: DAM4SAM initialised from the GT target box
+# (policy default --gallery-seed gt) → diagnostic. Import / reproduction only.
+name: ext_dam4sam_legacy
+extends: ext_dam4sam
+identity: {memory_seed: gt}
+diagnostics: [gallery_seed_gt]

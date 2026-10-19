@@ -1,0 +1,16 @@
+# Smoke (1016): DeepSORT / OC-SORT identity adaptations (acot/runtime/head_mot.py) — 10 Hz main arms and the 0.6 s
+# appendix arms on 2 dev-B seeds; checks the runtime wiring (every-frame boxes, tracker stepping, binding, GT audit,
+# timing fields) before the dev-B grid. Not an evaluation.
+name: mot_smoke_devB3
+protocol: sim_proxy_v2@3
+seeds: {set: dev2, subset: [[93060, 93061]], expect: 2}
+completeness: {require: allow_skipped, allow_skipped_reasons: ["target stationary"], pairing: intersection}
+schedule: {block: 1, seed: 10161, max_infra_attempts: 2}
+arms:
+  deepsort: {method: ext_deepsort, role: baseline}
+  ocsort: {method: ext_ocsort, role: baseline}
+  deepsort_s2: {method: ext_deepsort_s2, role: baseline}
+  ocsort_s2: {method: ext_ocsort_s2, role: baseline}
+collect: [ticks, gt_access, scenario]
+infra:
+  runtime: acot

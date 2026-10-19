@@ -1,0 +1,21 @@
+# P0-2 stage A closed-loop gate (acot_note/1012_p02_identity_retrain.md §3, fixed 2026-10-12 before running): the
+# existing Ours setting (ours_final + conf_tau 0.05) with ONLY the TAH weights replaced by the stage-A retrain
+# (method ours_fast_a), dev-B 93060–93099, protocol @3, natural opening, r = 2. Reference (seed- and repeat-paired):
+# opt1_screen_devB3 tau005 (repeat 0) + opt2a_screen_devB3 tau005_r1 (repeat 1).
+#   python -m acot.analysis.p02_decision --stage a
+# SECONDARY (added 2026-10-12 BEFORE any closed-loop run, user decision; plan §3.2–3.3): fa_cal_* = the same weights
+# with the commit gate matched to the paper weights' block rate — conf_tau 0.63 = the 13th percentile of the s1
+# margins on tah_dagger_v2, as conf_tau 0.05 blocks 13 % for the paper weights (computed offline, dev-B unseen).
+#   python -m acot.analysis.p02_decision --stage a_cal   (reported as secondary; the primary gate is stage a)
+name: p02_fast_a_devB3
+protocol: sim_proxy_v2@3
+seeds: {set: dev2, subset: [[93060, 93099]], expect: 40}
+completeness: {require: allow_skipped, allow_skipped_reasons: ["target stationary"], pairing: intersection}
+schedule: {block: 5, seed: 10121, max_infra_attempts: 3}
+arms:
+  fa_r0: {method: ours_fast_a, role: ablation, override: {identity.conf_tau: 0.05}}
+  fa_r1: {method: ours_fast_a, role: ablation, repeat: 1, override: {identity.conf_tau: 0.05}}
+  fa_cal_r0: {method: ours_fast_a, role: ablation, override: {identity.conf_tau: 0.63}}
+  fa_cal_r1: {method: ours_fast_a, role: ablation, repeat: 1, override: {identity.conf_tau: 0.63}}
+collect: [ticks, gt_access, scenario]
+infra: {runtime: acot}

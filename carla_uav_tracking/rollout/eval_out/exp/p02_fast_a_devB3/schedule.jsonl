@@ -1,0 +1,65 @@
+{"event": "plan", "seed": 10121, "block": 5, "n_units": 32, "order": [["fa_cal_r1", [93080, 93081, 93082, 93083, 93084]], ["fa_cal_r1", [93065, 93066, 93067, 93068, 93069]], ["fa_cal_r0", [93070, 93071, 93072, 93073, 93074]], ["fa_r1", [93075, 93076, 93077, 93078, 93079]], ["fa_r0", [93085, 93086, 93087, 93088, 93089]], ["fa_cal_r0", [93060, 93061, 93062, 93063, 93064]], ["fa_cal_r0", [93085, 93086, 93087, 93088, 93089]], ["fa_cal_r1", [93090, 93091, 93092, 93093, 93094]], ["fa_cal_r0", [93080, 93081, 93082, 93083, 93084]], ["fa_r0", [93070, 93071, 93072, 93073, 93074]], ["fa_r0", [93075, 93076, 93077, 93078, 93079]], ["fa_r1", [93090, 93091, 93092, 93093, 93094]], ["fa_cal_r1", [93075, 93076, 93077, 93078, 93079]], ["fa_r1", [93080, 93081, 93082, 93083, 93084]], ["fa_cal_r1", [93085, 93086, 93087, 93088, 93089]], ["fa_r1", [93085, 93086, 93087, 93088, 93089]], ["fa_r1", [93070, 93071, 93072, 93073, 93074]], ["fa_cal_r0", [93090, 93091, 93092, 93093, 93094]], ["fa_r0", [93080, 93081, 93082, 93083, 93084]], ["fa_cal_r0", [93065, 93066, 93067, 93068, 93069]], ["fa_cal_r1", [93095, 93096, 93097, 93098, 93099]], ["fa_cal_r1", [93060, 93061, 93062, 93063, 93064]], ["fa_cal_r1", [93070, 93071, 93072, 93073, 93074]], ["fa_r1", [93065, 93066, 93067, 93068, 93069]], ["fa_r0", [93090, 93091, 93092, 93093, 93094]], ["fa_r0", [93060, 93061, 93062, 93063, 93064]], ["fa_r0", [93095, 93096, 93097, 93098, 93099]], ["fa_r1", [93060, 93061, 93062, 93063, 93064]], ["fa_cal_r0", [93075, 93076, 93077, 93078, 93079]], ["fa_r0", [93065, 93066, 93067, 93068, 93069]], ["fa_cal_r0", [93095, 93096, 93097, 93098, 93099]], ["fa_r1", [93095, 93096, 93097, 93098, 93099]]], "t": 1791792394.4453447}
+{"event": "start", "arm": "fa_cal_r1", "seeds": [93080, 93081, 93082, 93083, 93084], "worker": "w0", "carla_port": 2050, "gpu": 1, "tm_base": 9700, "svc_slot": null, "t": 1791792394.445899}
+{"event": "start", "arm": "fa_cal_r1", "seeds": [93065, 93066, 93067, 93068, 93069], "worker": "w1", "carla_port": 2060, "gpu": 2, "tm_base": 9730, "svc_slot": null, "t": 1791792394.446331}
+{"event": "start", "arm": "fa_cal_r0", "seeds": [93070, 93071, 93072, 93073, 93074], "worker": "w2", "carla_port": 2070, "gpu": 4, "tm_base": 9760, "svc_slot": null, "t": 1791792394.4484415}
+{"event": "start", "arm": "fa_r1", "seeds": [93075, 93076, 93077, 93078, 93079], "worker": "w3", "carla_port": 2080, "gpu": 5, "tm_base": 9790, "svc_slot": null, "t": 1791792394.4489791}
+{"event": "start", "arm": "fa_r0", "seeds": [93085, 93086, 93087, 93088, 93089], "worker": "w4", "carla_port": 2090, "gpu": 7, "tm_base": 9820, "svc_slot": null, "t": 1791792394.449549}
+{"event": "start", "arm": "fa_cal_r0", "seeds": [93060, 93061, 93062, 93063, 93064], "worker": "w5", "carla_port": 2230, "gpu": 3, "tm_base": 9850, "svc_slot": null, "t": 1791792394.4505198}
+{"event": "start", "arm": "fa_cal_r0", "seeds": [93085, 93086, 93087, 93088, 93089], "worker": "w6", "carla_port": 2250, "gpu": 6, "tm_base": 9880, "svc_slot": null, "t": 1791792394.4510086}
+{"event": "end", "arm": "fa_r0", "worker": "w4", "requeued": [], "t": 1791793359.3039606}
+{"event": "start", "arm": "fa_cal_r1", "seeds": [93090, 93091, 93092, 93093, 93094], "worker": "w4", "carla_port": 2090, "gpu": 7, "tm_base": 9820, "svc_slot": null, "t": 1791793359.3040364}
+{"event": "end", "arm": "fa_r1", "worker": "w3", "requeued": [], "t": 1791793394.2420158}
+{"event": "start", "arm": "fa_cal_r0", "seeds": [93080, 93081, 93082, 93083, 93084], "worker": "w3", "carla_port": 2080, "gpu": 5, "tm_base": 9790, "svc_slot": null, "t": 1791793394.2420945}
+{"event": "end", "arm": "fa_cal_r0", "worker": "w6", "requeued": [], "t": 1791793474.6482842}
+{"event": "start", "arm": "fa_r0", "seeds": [93070, 93071, 93072, 93073, 93074], "worker": "w6", "carla_port": 2250, "gpu": 6, "tm_base": 9880, "svc_slot": null, "t": 1791793474.648438}
+{"event": "end", "arm": "fa_cal_r0", "worker": "w2", "requeued": [], "t": 1791793509.4274838}
+{"event": "start", "arm": "fa_r0", "seeds": [93075, 93076, 93077, 93078, 93079], "worker": "w2", "carla_port": 2070, "gpu": 4, "tm_base": 9760, "svc_slot": null, "t": 1791793509.4275618}
+{"event": "end", "arm": "fa_cal_r1", "worker": "w1", "requeued": [], "t": 1791793568.9096832}
+{"event": "start", "arm": "fa_r1", "seeds": [93090, 93091, 93092, 93093, 93094], "worker": "w1", "carla_port": 2060, "gpu": 2, "tm_base": 9730, "svc_slot": null, "t": 1791793568.9097638}
+{"event": "end", "arm": "fa_cal_r0", "worker": "w5", "requeued": [], "t": 1791793573.869041}
+{"event": "start", "arm": "fa_cal_r1", "seeds": [93075, 93076, 93077, 93078, 93079], "worker": "w5", "carla_port": 2230, "gpu": 3, "tm_base": 9850, "svc_slot": null, "t": 1791793573.8691242}
+{"event": "end", "arm": "fa_cal_r1", "worker": "w0", "requeued": [], "t": 1791793713.2750964}
+{"event": "start", "arm": "fa_r1", "seeds": [93080, 93081, 93082, 93083, 93084], "worker": "w0", "carla_port": 2050, "gpu": 1, "tm_base": 9700, "svc_slot": null, "t": 1791793713.27526}
+{"event": "end", "arm": "fa_r0", "worker": "w2", "requeued": [], "t": 1791794406.8797078}
+{"event": "start", "arm": "fa_cal_r1", "seeds": [93085, 93086, 93087, 93088, 93089], "worker": "w2", "carla_port": 2070, "gpu": 4, "tm_base": 9760, "svc_slot": null, "t": 1791794406.8798091}
+{"event": "end", "arm": "fa_cal_r1", "worker": "w4", "requeued": [], "t": 1791794491.515879}
+{"event": "start", "arm": "fa_r1", "seeds": [93085, 93086, 93087, 93088, 93089], "worker": "w4", "carla_port": 2090, "gpu": 7, "tm_base": 9820, "svc_slot": null, "t": 1791794491.51612}
+{"event": "end", "arm": "fa_cal_r1", "worker": "w5", "requeued": [], "t": 1791794581.1608818}
+{"event": "start", "arm": "fa_r1", "seeds": [93070, 93071, 93072, 93073, 93074], "worker": "w5", "carla_port": 2230, "gpu": 3, "tm_base": 9850, "svc_slot": null, "t": 1791794581.1609905}
+{"event": "end", "arm": "fa_cal_r0", "worker": "w3", "requeued": [], "t": 1791794606.5858335}
+{"event": "start", "arm": "fa_cal_r0", "seeds": [93090, 93091, 93092, 93093, 93094], "worker": "w3", "carla_port": 2080, "gpu": 5, "tm_base": 9790, "svc_slot": null, "t": 1791794606.5859141}
+{"event": "end", "arm": "fa_r0", "worker": "w6", "requeued": [], "t": 1791794612.0174866}
+{"event": "start", "arm": "fa_r0", "seeds": [93080, 93081, 93082, 93083, 93084], "worker": "w6", "carla_port": 2250, "gpu": 6, "tm_base": 9880, "svc_slot": null, "t": 1791794612.0175588}
+{"event": "end", "arm": "fa_r1", "worker": "w1", "requeued": [], "t": 1791794666.5143995}
+{"event": "start", "arm": "fa_cal_r0", "seeds": [93065, 93066, 93067, 93068, 93069], "worker": "w1", "carla_port": 2060, "gpu": 2, "tm_base": 9730, "svc_slot": null, "t": 1791794666.5144818}
+{"event": "end", "arm": "fa_r1", "worker": "w0", "requeued": [], "t": 1791795080.6421514}
+{"event": "start", "arm": "fa_cal_r1", "seeds": [93095, 93096, 93097, 93098, 93099], "worker": "w0", "carla_port": 2050, "gpu": 1, "tm_base": 9700, "svc_slot": null, "t": 1791795080.6422331}
+{"event": "end", "arm": "fa_cal_r1", "worker": "w2", "requeued": [], "t": 1791795545.8982582}
+{"event": "start", "arm": "fa_cal_r1", "seeds": [93060, 93061, 93062, 93063, 93064], "worker": "w2", "carla_port": 2070, "gpu": 4, "tm_base": 9760, "svc_slot": null, "t": 1791795545.8983388}
+{"event": "end", "arm": "fa_r1", "worker": "w5", "requeued": [], "t": 1791795628.8456142}
+{"event": "start", "arm": "fa_cal_r1", "seeds": [93070, 93071, 93072, 93073, 93074], "worker": "w5", "carla_port": 2230, "gpu": 3, "tm_base": 9850, "svc_slot": null, "t": 1791795628.8456903}
+{"event": "end", "arm": "fa_cal_r0", "worker": "w3", "requeued": [], "t": 1791795633.9096003}
+{"event": "start", "arm": "fa_r1", "seeds": [93065, 93066, 93067, 93068, 93069], "worker": "w3", "carla_port": 2080, "gpu": 5, "tm_base": 9790, "svc_slot": null, "t": 1791795633.9096823}
+{"event": "end", "arm": "fa_cal_r0", "worker": "w1", "requeued": [], "t": 1791795654.1737878}
+{"event": "start", "arm": "fa_r0", "seeds": [93090, 93091, 93092, 93093, 93094], "worker": "w1", "carla_port": 2060, "gpu": 2, "tm_base": 9730, "svc_slot": null, "t": 1791795654.173861}
+{"event": "end", "arm": "fa_r1", "worker": "w4", "requeued": [], "t": 1791795708.8772535}
+{"event": "start", "arm": "fa_r0", "seeds": [93060, 93061, 93062, 93063, 93064], "worker": "w4", "carla_port": 2090, "gpu": 7, "tm_base": 9820, "svc_slot": null, "t": 1791795708.8773391}
+{"event": "end", "arm": "fa_r0", "worker": "w6", "requeued": [], "t": 1791795939.2342834}
+{"event": "start", "arm": "fa_r0", "seeds": [93095, 93096, 93097, 93098, 93099], "worker": "w6", "carla_port": 2250, "gpu": 6, "tm_base": 9880, "svc_slot": null, "t": 1791795939.2343838}
+{"event": "end", "arm": "fa_cal_r1", "worker": "w0", "requeued": [], "t": 1791796387.8128061}
+{"event": "start", "arm": "fa_r1", "seeds": [93060, 93061, 93062, 93063, 93064], "worker": "w0", "carla_port": 2050, "gpu": 1, "tm_base": 9700, "svc_slot": null, "t": 1791796387.8128853}
+{"event": "end", "arm": "fa_cal_r1", "worker": "w2", "requeued": [], "t": 1791796493.3354437}
+{"event": "start", "arm": "fa_cal_r0", "seeds": [93075, 93076, 93077, 93078, 93079], "worker": "w2", "carla_port": 2070, "gpu": 4, "tm_base": 9760, "svc_slot": null, "t": 1791796493.3355234}
+{"event": "end", "arm": "fa_r0", "worker": "w4", "requeued": [], "t": 1791796651.364427}
+{"event": "start", "arm": "fa_r0", "seeds": [93065, 93066, 93067, 93068, 93069], "worker": "w4", "carla_port": 2090, "gpu": 7, "tm_base": 9820, "svc_slot": null, "t": 1791796651.3646553}
+{"event": "end", "arm": "fa_cal_r1", "worker": "w5", "requeued": [], "t": 1791796676.025368}
+{"event": "start", "arm": "fa_cal_r0", "seeds": [93095, 93096, 93097, 93098, 93099], "worker": "w5", "carla_port": 2230, "gpu": 3, "tm_base": 9850, "svc_slot": null, "t": 1791796676.0254524}
+{"event": "end", "arm": "fa_r0", "worker": "w1", "requeued": [], "t": 1791796701.3660371}
+{"event": "start", "arm": "fa_r1", "seeds": [93095, 93096, 93097, 93098, 93099], "worker": "w1", "carla_port": 2060, "gpu": 2, "tm_base": 9730, "svc_slot": null, "t": 1791796701.3661132}
+{"event": "end", "arm": "fa_r1", "worker": "w3", "requeued": [], "t": 1791796881.1051362}
+{"event": "end", "arm": "fa_r0", "worker": "w6", "requeued": [], "t": 1791797126.757032}
+{"event": "end", "arm": "fa_cal_r0", "worker": "w2", "requeued": [], "t": 1791797230.4823365}
+{"event": "end", "arm": "fa_r1", "worker": "w0", "requeued": [], "t": 1791797314.955603}
+{"event": "end", "arm": "fa_r0", "worker": "w4", "requeued": [], "t": 1791797824.2817311}
+{"event": "end", "arm": "fa_cal_r0", "worker": "w5", "requeued": [], "t": 1791797864.0651815}
+{"event": "end", "arm": "fa_r1", "worker": "w1", "requeued": [], "t": 1791797908.4912796}

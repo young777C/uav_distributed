@@ -1,0 +1,7 @@
+# External baseline: DeepSORT-style tracking-by-detection association (motion gate + crop-DINOv2 appearance), deployable.
+name: ext_assoc_deepsort
+extends: _base
+identity:
+  head: assoc
+  assoc: {mode: deepsort}
+  conf_tau: 0.05

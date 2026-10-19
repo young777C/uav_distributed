@@ -1,0 +1,15 @@
+# Sim-proxy perception protocol v2, version 3 (1006, 2026-10-06): = sim_proxy_v2@2 + CARLA environment determinism
+# (1006_t0_log.md "CARLA 不确定性排查"). Under @2 three identical runs of one seed already differed at step 0 (target
+# 0.7–5.3 m, scene spawned while the world ran asynchronously on wall-clock time). @3: the world is switched to
+# synchronous mode (fixed dt) BEFORE the scene is spawned, and reload_world() before every seed. Verified
+# (t0_determinism2): traffic / target / distractors / initial drone state bit-identical across runs over whole episodes;
+# the residual (rendering noise amplified by the closed loop) is not removable without changing the visual domain.
+# Frozen: any change = a new version file. From 2026-10-06 the remaining 1006 experiments (pilots, grid, test)
+# reference this version; t0_dinov3_devB / t0_dinov3_r1_devB stay on @2 (paired pair).
+extends: sim_proxy_v2@2
+name: sim_proxy_v2
+version: 3
+aliases: []
+description: sim_proxy_v2@2 + synchronous scene setup + reload_world per seed (1006 CARLA determinism)
+sim:
+  env_determinism: {sync_setup: true, reload_world: true}

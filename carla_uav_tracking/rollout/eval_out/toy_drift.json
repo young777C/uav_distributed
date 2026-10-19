@@ -1,0 +1,14 @@
+{
+ "no_asd": {
+  "wrong_frac": 0.26926,
+  "auroc_conf": 0.40366050878582094,
+  "auroc_anchor": 0.9961202496622718,
+  "return_after_5wrong": 0.5950920245398773
+ },
+ "asd": {
+  "wrong_frac": 0.07064,
+  "auroc_conf": 0.6290678939688009,
+  "auroc_anchor": 0.987459434571372,
+  "return_after_5wrong": 0.9411764705882353
+ }
+}

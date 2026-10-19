@@ -68,7 +68,7 @@ def main():
                 elif cmd == "track":
                     img = Image.fromarray(np.asarray(msg["rgb"], dtype=np.uint8))
                     out = tracker.track(img)
-                    send_msg(conn, {"bbox": _mask_to_bbox(_pred_mask(out))})
+                    send_msg(conn, {"bbox": _mask_to_bbox(_pred_mask(out)), "iou": out.get("iou", float("nan"))})
                 elif cmd == "close":
                     send_msg(conn, {"ok": True}); break
                 else:

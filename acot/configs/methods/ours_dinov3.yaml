@@ -1,0 +1,6 @@
+# 1006 backbone control (exploratory, not in a Holm family): Ours with TAHRelM fed DINOv3 ViT-B/16 crop features (same
+# crops as the shared DINOv2 feature; TAHRelM weights unchanged = zero-shot). Tracker ids / perception stay DINOv2.
+name: ours_dinov3
+extends: ours_final
+identity:
+  tah: {feature: dinov3_crop}

@@ -1,0 +1,7 @@
+# External baseline: DAM4SAM (CVPR'25 distractor-aware SAM2 memory) as the WHICH module, deployable (memory initialised
+# from the shared opening pick, not the GT box).
+name: ext_dam4sam
+extends: _base
+identity:
+  head: dam4sam
+  conf_tau: 0.05

@@ -1,0 +1,219 @@
+{
+  "episodes": [
+    {
+      "success": false,
+      "mis_follow_inst": 0.0,
+      "mis_follow_sustained": 0.0,
+      "id_switches": 0,
+      "track_frames": 63,
+      "track_seconds": 6.3,
+      "centering_rate": 0.06349206349206349,
+      "max_wrong_run_s": 0.0,
+      "max_correct_run_s": 6.3,
+      "vis_frames": 56,
+      "occluded_frames": 7,
+      "correct_committed_vis": 1.0,
+      "correct_strict_vis": 1.0,
+      "abstain_rate_vis": 0.0,
+      "abstain_rate_occluded": 0.42857142857142855,
+      "mean_uav_target_dist": 74.27788881031901,
+      "reacquire_attempts": 1,
+      "reacquire_success_rate": 0.0,
+      "reacquire_timeout_rate": 1.0,
+      "reacquire_lock_wrong_rate": 0.0,
+      "reacquire_convergence_s_mean": null,
+      "shortcut_nearest_rate": 0.0,
+      "shortcut_target_central_rate": 0.06349206349206349,
+      "mis_by_N": {
+        "5": 0.0,
+        "2": 0.0
+      },
+      "n_dist": {
+        "5": 54,
+        "2": 6
+      },
+      "mis_by_central": {
+        "central": 0.0,
+        "off": 0.0
+      },
+      "c_dist": {
+        "central": 4,
+        "off": 56
+      },
+      "mis_by_depth": {
+        "d30-60": 0.0
+      },
+      "d_dist": {
+        "d30-60": 60
+      },
+      "steps": 242,
+      "episode_seed": 91012,
+      "duration_seconds": 99.34488010406494,
+      "language": "Track the beige Nissan Patrol SUV directly ahead, heading south, maintaining a tracking distance of about 35 m."
+    },
+    {
+      "success": false,
+      "mis_follow_inst": 0.5490196078431373,
+      "mis_follow_sustained": 0.934640522875817,
+      "id_switches": 1,
+      "track_frames": 153,
+      "track_seconds": 15.3,
+      "centering_rate": 0.16339869281045752,
+      "max_wrong_run_s": 14.3,
+      "max_correct_run_s": 1.0,
+      "vis_frames": 151,
+      "occluded_frames": 2,
+      "correct_committed_vis": 0.06622516556291391,
+      "correct_strict_vis": 0.039735099337748346,
+      "abstain_rate_vis": 0.40397350993377484,
+      "abstain_rate_occluded": 1.0,
+      "mean_uav_target_dist": 42.476739007323225,
+      "reacquire_attempts": 1,
+      "reacquire_success_rate": 0.0,
+      "reacquire_timeout_rate": 1.0,
+      "reacquire_lock_wrong_rate": 1.0,
+      "reacquire_convergence_s_mean": null,
+      "shortcut_nearest_rate": 0.4,
+      "shortcut_target_central_rate": 0.16339869281045752,
+      "mis_by_N": {
+        "4": 0.9230769230769231,
+        "3": 1.0,
+        "2": 1.0
+      },
+      "n_dist": {
+        "4": 78,
+        "3": 49,
+        "2": 24
+      },
+      "mis_by_central": {
+        "central": 0.76,
+        "off": 1.0
+      },
+      "c_dist": {
+        "central": 25,
+        "off": 126
+      },
+      "mis_by_depth": {
+        "d30-60": 0.8333333333333334,
+        "d<30": 1.0
+      },
+      "d_dist": {
+        "d30-60": 36,
+        "d<30": 115
+      },
+      "steps": 353,
+      "episode_seed": 91013,
+      "duration_seconds": 132.89743280410767,
+      "language": "Track the light blue Nissan Patrol SUV directly ahead, heading west, maintaining a tracking distance of about 35 m."
+    },
+    {
+      "success": false,
+      "mis_follow_inst": 0.5850746268656717,
+      "mis_follow_sustained": 0.8059701492537313,
+      "id_switches": 3,
+      "track_frames": 335,
+      "track_seconds": 33.5,
+      "centering_rate": 0.10746268656716418,
+      "max_wrong_run_s": 18.0,
+      "max_correct_run_s": 3.7,
+      "vis_frames": 322,
+      "occluded_frames": 13,
+      "correct_committed_vis": 0.20186335403726707,
+      "correct_strict_vis": 0.09006211180124224,
+      "abstain_rate_vis": 0.3385093167701863,
+      "abstain_rate_occluded": 0.0,
+      "mean_uav_target_dist": 73.67331491767214,
+      "reacquire_attempts": 4,
+      "reacquire_success_rate": 0.25,
+      "reacquire_timeout_rate": 0.75,
+      "reacquire_lock_wrong_rate": 1.0,
+      "reacquire_convergence_s_mean": 5.1,
+      "shortcut_nearest_rate": 0.39823008849557523,
+      "shortcut_target_central_rate": 0.10746268656716418,
+      "mis_by_N": {
+        "6": 0.8914027149321267,
+        "5": 0.9354838709677419
+      },
+      "n_dist": {
+        "6": 221,
+        "5": 93
+      },
+      "mis_by_central": {
+        "central": 0.6666666666666666,
+        "off": 0.935251798561151
+      },
+      "c_dist": {
+        "central": 36,
+        "off": 278
+      },
+      "mis_by_depth": {
+        "d30-60": 0.8723404255319149,
+        "d>=60": 0.930635838150289
+      },
+      "d_dist": {
+        "d30-60": 141,
+        "d>=60": 173
+      },
+      "steps": 550,
+      "episode_seed": 91014,
+      "duration_seconds": 204.96347784996033,
+      "language": "Stay locked on the gray Nissan Micra directly ahead, heading north, maintaining a tracking distance of about 40 m."
+    },
+    {
+      "success": false,
+      "mis_follow_inst": 0.0,
+      "mis_follow_sustained": 0.0,
+      "id_switches": 1,
+      "track_frames": 69,
+      "track_seconds": 6.9,
+      "centering_rate": 0.34782608695652173,
+      "max_wrong_run_s": 0.0,
+      "max_correct_run_s": 6.9,
+      "vis_frames": 69,
+      "occluded_frames": 0,
+      "correct_committed_vis": 1.0,
+      "correct_strict_vis": 0.9565217391304348,
+      "abstain_rate_vis": 0.043478260869565216,
+      "abstain_rate_occluded": null,
+      "mean_uav_target_dist": 25.660498993066945,
+      "reacquire_attempts": 1,
+      "reacquire_success_rate": 0.0,
+      "reacquire_timeout_rate": 1.0,
+      "reacquire_lock_wrong_rate": 0.0,
+      "reacquire_convergence_s_mean": null,
+      "shortcut_nearest_rate": 0.0,
+      "shortcut_target_central_rate": 0.34782608695652173,
+      "mis_by_N": {
+        "4": 0.0,
+        "3": 0.0,
+        "2": 1.0
+      },
+      "n_dist": {
+        "4": 48,
+        "3": 18,
+        "2": 3
+      },
+      "mis_by_central": {
+        "central": 0.0,
+        "off": 0.06666666666666667
+      },
+      "c_dist": {
+        "central": 24,
+        "off": 45
+      },
+      "mis_by_depth": {
+        "d<30": 0.043478260869565216
+      },
+      "d_dist": {
+        "d<30": 69
+      },
+      "steps": 248,
+      "episode_seed": 91015,
+      "duration_seconds": 90.93715000152588,
+      "language": "Stay locked on the red Citroen C3 directly ahead, heading west, maintaining a tracking distance of about 25 m."
+    }
+  ],
+  "merged_from": [
+    "carla_uav_tracking/rollout/eval_out/paper_it_zoh_pgif_trk_d_p1.json"
+  ]
+}

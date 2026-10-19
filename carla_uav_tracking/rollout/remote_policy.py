@@ -29,6 +29,8 @@ class RemotePolicy:
                              "proprio": np.asarray(obs.proprio), "step": int(obs.step),
                              "target_color": getattr(obs, "target_color", ""),
                              "target_bp": getattr(obs, "target_bp", ""),
+                             "rgb_hi": getattr(obs, "rgb_hi", None),
+                             "retarget_event": bool(getattr(obs, "retarget_event", False)),
                              "gt_candidates": gt_candidates})
         r = recv_msg(self.sock)
         cl = r.get("cand_lite")

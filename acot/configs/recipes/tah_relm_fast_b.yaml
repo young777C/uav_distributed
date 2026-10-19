@@ -1,0 +1,14 @@
+# P0-2 stage B (2026-10-14; acot_note/1012_p02_identity_retrain.md §6.3): stage A (tah_relm_fast_a) + one DAgger round
+# collected by the stage-A model at the deployed protocol @3 (tah_dagger_v3; DAgger aggregation keeps the earlier
+# rounds' data). Epoch selection on the held-out @3 DAgger set tah_dagger_v3_val (stage A: tah_dagger_v2, @1).
+# Architecture / hyper-parameters / group_phases identical to stage A. Seeds 0 / 1 / 2, one artefact name per seed:
+#   python -m acot train acot/configs/recipes/tah_relm_fast_b.yaml --gpu G seed=N name=tah_relm_fast_b_sN
+kind: tah_ckpt
+name: tah_relm_fast_b
+trainer: tah_relm
+inputs: [artefact:tah_seq_v5_fov90_fast, artefact:tah_dagger_v1_reencoded, artefact:tah_dagger_v3]
+val_inputs: [artefact:tah_dagger_v3_val]
+hparams: {epochs: 60, lr: 0.0003, val_frac: 0.15, rel: true, motion: true, aug: true, fnoise: 0.05, pjit: 0.02, wd: 0.0001,
+          group_phases: true}
+seed: 0
+save_last: true

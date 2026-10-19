@@ -1,0 +1,65 @@
+# Root of every method (framework §5.3): the shared defaults of all per-arm policy knobs. Concrete methods `extends: _base`
+# and state only what differs; `python -m acot show <exp> --arm <a> --diff` lists an arm's differences from _base.
+# Sections of identity heads / the filter that the chosen head / mode does not read are dropped at resolve time.
+name: _base
+control:
+  ex_source: track          # DiT z_ex from the committed candidate (≠ track → GT-seeded WHERE = diagnostic)
+  frame_gain: 0.0
+  commit_k: 5               # policy hysteresis; the METRIC uses protocol.scorer.commit_k
+  ablate: null              # ear | iar needs a matching stage-2 ckpt (ablation: frontend)
+  shuffle_seed: 0           # candidate-shuffle RNG, re-seeded at every reset
+  expert_control: false     # diagnostics (run_rollout)
+  predict_road: false
+  road_oracle: false
+identity:
+  head: xattn
+  memory_seed: committed    # gt = memory / gallery / tracker init from the GT target (diagnostic)
+  conf_tau: 0.0
+  conf_consensus: 0.0
+  warmup_oracle_s: 0.0
+  event_override: false
+  reanchor: {mode: "off", patience: 5, tavg: 0.0}
+  cold: {window: 0, lambda: 0.9, single: false}
+  tah: {ckpt: null, lang_reanchor_thr: 0.6}             # ckpt must be set by any method that uses it
+  reid: {feature: vlmpool, bank: 1, topm: 1, tavg: 0.0, motion: 0.0, motion_gate_px: 160.0}
+  assoc: {mode: deepsort, gate_px: 160.0, lambda: 1.0}
+  dam4sam: {model: sam21pp-L, gate_px: 160.0, every_frame: false, reinit_cooldown: 3, service: dam4sam}
+  attrbind: {ckpt: null}
+  oavat: {model: dinov3_vitb16, checkpoint: external/OA-VAT/weights/dinov3/dinov3_vitb16_pretrain_lvd1689m-73cec8be.pth,
+          match_thresh: 0.75, reacq_thresh: 0.70, iou_pred: 0.2, fullframe_after: 3, max_predict_ticks: 3,
+          enhance_every: 3, enhance_alpha: 0.8, history: 2}
+  # 1016 DeepSORT / OC-SORT identity adaptations (acot/runtime/head_mot.py), repo defaults (deep_sort_app.py + README
+  # --nn_budget=100; OC_SORT utils/args.py + OCSort()). every_frame: one tracker step per camera frame (10 Hz; false =
+  # per S2 tick, ext_*_s2). Time-unit defaults converted from MOT17's 30 fps to the step rate (max_age 30 frames = 1.0 s →
+  # 10 frames at 10 Hz / 2 S2 ticks; delta_t 3 frames = 0.1 s → 1 step); evidence counts kept (n_init, min_hits: 3
+  # updates). min_hits only gates OC-SORT's reported output, which the head does not read
+  deepsort: {every_frame: true, max_cosine_distance: 0.2, nn_budget: 100, max_iou_distance: 0.7, max_age: 10, n_init: 3}
+  ocsort: {every_frame: true, det_thresh: 0.6, max_age: 10, min_hits: 3, iou_threshold: 0.3, delta_t: 1, asso_func: iou,
+           inertia: 0.2, use_byte: false}
+filter:
+  mode: "off"
+  filter_kind: null         # must be set explicitly when mode = filter (the ASD class default is the bayes ablation)
+  resid_decay: 0.98
+  absent_hold: false
+  absent_max: 8
+  conf_window: 30
+  gate_memory: true
+  gate_tah: true
+  gate_dam: true
+  naive: false
+  alpha: null
+  q_lo: 0.2
+  q_hi: 0.7
+  eps_switch: 0.01
+  anchor_mode: first
+  k_anchor: 3
+  beta_lang: 0.25
+  lang_ema: 0.7
+  tau: 0.1
+  kappa: 0.25
+  h: 2.0
+  refractory: 3
+  learned_ckpt: null
+  v1_selfreset: false
+oracle_absent: "off"        # abstain | hygiene = perfect "target absent" detector (diagnostic)
+diagnostics: []

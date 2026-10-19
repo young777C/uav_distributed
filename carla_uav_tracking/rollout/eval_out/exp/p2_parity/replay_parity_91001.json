@@ -1,0 +1,129 @@
+{
+ "record": "/nvidia/hque/code/cyhe/uav-acot-track/carla_uav_tracking/rollout/eval_out/exp/smoke_acot_runtime/ours/seeds/91001/act_record.pkl",
+ "n_act": 891,
+ "atol": 1e-05,
+ "arms": {
+  "ours": {
+   "n": 891,
+   "length_equal": true,
+   "n_mismatch": 0,
+   "first": [],
+   "max_abs_action_diff": 0.0,
+   "s2_ticks": 149,
+   "pgif_fires": 1,
+   "pgif_absent": 42,
+   "abstain_ticks": 92,
+   "ok": true,
+   "seconds": 497.6
+  },
+  "no_pgif": {
+   "n": 891,
+   "length_equal": true,
+   "n_mismatch": 0,
+   "first": [],
+   "max_abs_action_diff": 0.0,
+   "s2_ticks": 149,
+   "pgif_fires": 0,
+   "pgif_absent": 0,
+   "abstain_ticks": 50,
+   "ok": true,
+   "seconds": 505.0
+  },
+  "no_absent_hold": {
+   "n": 891,
+   "length_equal": true,
+   "n_mismatch": 0,
+   "first": [],
+   "max_abs_action_diff": 0.0,
+   "s2_ticks": 149,
+   "pgif_fires": 10,
+   "pgif_absent": 0,
+   "abstain_ticks": 50,
+   "ok": true,
+   "seconds": 494.3
+  },
+  "pgif_bayes": {
+   "n": 891,
+   "length_equal": true,
+   "n_mismatch": 0,
+   "first": [],
+   "max_abs_action_diff": 0.0,
+   "s2_ticks": 149,
+   "pgif_fires": 15,
+   "pgif_absent": 0,
+   "abstain_ticks": 50,
+   "ok": true,
+   "seconds": 491.3
+  },
+  "open_head": {
+   "n": 891,
+   "length_equal": true,
+   "n_mismatch": 0,
+   "first": [],
+   "max_abs_action_diff": 0.0,
+   "s2_ticks": 149,
+   "pgif_fires": 1,
+   "pgif_absent": 42,
+   "abstain_ticks": 92,
+   "ok": true,
+   "seconds": 484.7
+  },
+  "ext_deepsort": {
+   "n": 891,
+   "length_equal": true,
+   "n_mismatch": 0,
+   "first": [],
+   "max_abs_action_diff": 0.0,
+   "s2_ticks": 149,
+   "pgif_fires": 0,
+   "pgif_absent": 0,
+   "abstain_ticks": 50,
+   "ok": true,
+   "seconds": 484.8
+  },
+  "ext_ocsort": {
+   "n": 891,
+   "length_equal": true,
+   "n_mismatch": 0,
+   "first": [],
+   "max_abs_action_diff": 0.0,
+   "s2_ticks": 149,
+   "pgif_fires": 0,
+   "pgif_absent": 0,
+   "abstain_ticks": 50,
+   "ok": true,
+   "seconds": 482.6
+  },
+  "lang_xattn": {
+   "n": 891,
+   "length_equal": true,
+   "n_mismatch": 0,
+   "first": [],
+   "max_abs_action_diff": 0.0,
+   "s2_ticks": 149,
+   "pgif_fires": 0,
+   "pgif_absent": 0,
+   "abstain_ticks": 50,
+   "ok": true,
+   "seconds": 474.7
+  },
+  "oracle_absent": {
+   "n": 891,
+   "length_equal": true,
+   "n_mismatch": 0,
+   "first": [],
+   "max_abs_action_diff": 0.0,
+   "s2_ticks": 149,
+   "pgif_fires": 2,
+   "pgif_absent": 71,
+   "abstain_ticks": 121,
+   "ok": true,
+   "seconds": 479.3
+  }
+ },
+ "ok": true,
+ "image": {
+  "name": "acot-uav-train:cu118-acot",
+  "id": "sha256:08dcad02975f6aecadbdf091199d3c341178207ee8c25b804676c0f695bd9869"
+ }
+}

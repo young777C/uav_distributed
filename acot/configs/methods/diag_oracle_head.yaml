@@ -1,0 +1,6 @@
+# UPPER BOUND U1 (1006 表 1, uses GT): the identity module outputs the true target whenever it is among the detections
+# (control / WHERE ceiling under perfect identity). No PGIF.
+name: diag_oracle_head
+extends: _base
+identity: {head: oracle, conf_tau: 0.0}
+diagnostics: [oracle_head]

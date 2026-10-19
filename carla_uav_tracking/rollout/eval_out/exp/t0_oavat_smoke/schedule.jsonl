@@ -1,0 +1,9 @@
+{"event": "plan", "seed": 10066, "block": 1, "n_units": 4, "order": [["oavat_v2", [93061]], ["oavat", [93060]], ["oavat", [93061]], ["oavat_v2", [93060]]], "t": 1791332427.5655417}
+{"event": "start", "arm": "oavat_v2", "seeds": [93061], "worker": "w0", "carla_port": 2050, "gpu": 1, "tm_base": 9700, "svc_slot": null, "t": 1791332427.5660036}
+{"event": "start", "arm": "oavat", "seeds": [93060], "worker": "w1", "carla_port": 2060, "gpu": 2, "tm_base": 9760, "svc_slot": null, "t": 1791332427.566436}
+{"event": "start", "arm": "oavat", "seeds": [93061], "worker": "w2", "carla_port": 2070, "gpu": 4, "tm_base": 9820, "svc_slot": null, "t": 1791332427.5668442}
+{"event": "start", "arm": "oavat_v2", "seeds": [93060], "worker": "w3", "carla_port": 2080, "gpu": 5, "tm_base": 9850, "svc_slot": null, "t": 1791332427.567151}
+{"event": "end", "arm": "oavat_v2", "worker": "w0", "requeued": [], "t": 1791332634.937865}
+{"event": "end", "arm": "oavat", "worker": "w1", "requeued": [], "t": 1791332639.9304533}
+{"event": "end", "arm": "oavat_v2", "worker": "w3", "requeued": [], "t": 1791332685.4989514}
+{"event": "end", "arm": "oavat", "worker": "w2", "requeued": [], "t": 1791332759.9544492}

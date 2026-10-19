@@ -1,0 +1,14 @@
+# 1007 optimisation round 2b (2026-10-08): PGIF evidence inheritance across tracker-id changes (filter.inherit; gate
+# 160 px + 30 px per tick since the vanished key was last seen). dev-B, protocol @3, natural opening, conf_tau 0.05.
+# (dampgif_inherit removed before the run — user 2026-10-08: the DAM4SAM + PGIF line is not pursued.)
+name: opt2b_screen_devB3
+protocol: sim_proxy_v2@3
+seeds: {set: dev2, subset: [[93060, 93099]], expect: 40}
+completeness: {require: allow_skipped, allow_skipped_reasons: ["target stationary"], pairing: intersection}
+schedule: {block: 5, seed: 10093, max_infra_attempts: 3}
+arms:
+  inherit_tau005:      {method: ours_final, role: ablation, override: {identity.conf_tau: 0.05, filter.inherit: true}}
+  inherit_memw_tau005: {method: ours_final, role: ablation, override: {identity.conf_tau: 0.05, filter.inherit: true,
+                                                                       identity.tah.memory_write: committed}}
+collect: [ticks, gt_access, scenario]
+infra: {runtime: acot}

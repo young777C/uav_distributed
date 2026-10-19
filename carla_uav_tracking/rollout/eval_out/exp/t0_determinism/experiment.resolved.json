@@ -1,0 +1,856 @@
+{
+ "name": "t0_determinism",
+ "source": "acot/configs/experiments/t0_determinism.yaml",
+ "protocol_ref": "sim_proxy_v2@2",
+ "prereg_ref": null,
+ "ad_hoc": false,
+ "seeds": [
+  {
+   "town": "Town05",
+   "seed": 93060
+  },
+  {
+   "town": "Town05",
+   "seed": 93061
+  }
+ ],
+ "seed_purpose": "dev",
+ "completeness": {
+  "require": "allow_skipped",
+  "allow_skipped_reasons": [
+   "target stationary"
+  ],
+  "pairing": "intersection"
+ },
+ "retry": {
+  "infra_attempts": 2
+ },
+ "collect": [
+  "ticks",
+  "gt_access",
+  "scenario",
+  "record_act"
+ ],
+ "comparisons": [],
+ "infra": {
+  "docker": {
+   "network": "cyh-carla-net",
+   "carla_container": "cyh-carla",
+   "carla_mounts": {
+    "/workspace": "carla_uav_tracking",
+    "/data": "/nvidia/hque/data/carla_data"
+   },
+   "policy_image": "acot-uav-train:cu118",
+   "policy_image_acot": "acot-uav-train:cu118-acot",
+   "policy_container_prefix": "acot-",
+   "shm_size": "16g"
+  },
+  "runtime": "acot",
+  "python": {
+   "carla_client": "python",
+   "carla_client_version": "3.8",
+   "policy": "python",
+   "policy_version": "3.11"
+  },
+  "results_root": "carla_uav_tracking/rollout/eval_out/exp",
+  "carla_servers": [
+   {
+    "port": 2000,
+    "adapter": 0
+   },
+   {
+    "port": 2010,
+    "adapter": 2
+   },
+   {
+    "port": 2020,
+    "adapter": 3
+   },
+   {
+    "port": 2030,
+    "adapter": 4
+   },
+   {
+    "port": 2040,
+    "adapter": 5
+   },
+   {
+    "port": 2050,
+    "adapter": 6
+   },
+   {
+    "port": 2060,
+    "adapter": 7
+   },
+   {
+    "port": 2070,
+    "adapter": 0
+   },
+   {
+    "port": 2080,
+    "adapter": 3
+   },
+   {
+    "port": 2090,
+    "adapter": 5
+   },
+   {
+    "port": 2230,
+    "adapter": 0
+   },
+   {
+    "port": 2250,
+    "adapter": 3
+   }
+  ],
+  "tm_ports": {
+   "base": 9700,
+   "per_worker": 30,
+   "per_restart": 10
+  },
+  "policy_gpus": [
+   1,
+   2,
+   4,
+   6
+  ],
+  "reserved": {
+   "carla_ports": [
+    [
+     2100,
+     2190
+    ]
+   ],
+   "gpus": [],
+   "containers": []
+  },
+  "policy_port": 5555,
+  "pip_preinstall": "timm==1.0.29",
+  "services": {
+   "dam4sam": {
+    "instances": [
+     {
+      "container": "dam4sam-svc",
+      "host": "dam4sam-svc",
+      "port": 5601
+     },
+     {
+      "container": "dam4sam-svc",
+      "host": "dam4sam-svc",
+      "port": 5602
+     },
+     {
+      "container": "dam4sam-svc",
+      "host": "dam4sam-svc",
+      "port": 5603
+     },
+     {
+      "container": "dam4sam-svc",
+      "host": "dam4sam-svc",
+      "port": 5604
+     }
+    ],
+    "clients_per_instance": 1,
+    "lifecycle": "external",
+    "start_cmd": "source /opt/conda/etc/profile.d/conda.sh && conda activate dam4sam && python /nvidia/hque/code/cyhe/uav-acot-track/carla_uav_tracking/rollout/dam4sam_service.py --model {model} --port {port}"
+   }
+  },
+  "watchdog": {
+   "first_min": 25,
+   "stall_min": 12,
+   "max_restarts": 5
+  },
+  "paths": {
+   "repo": "/nvidia/hque/code/cyhe/uav-acot-track",
+   "data": "/nvidia/hque/data/carla_data",
+   "hf_cache": "~/.cache/huggingface"
+  },
+  "threads": {
+   "omp": 6
+  },
+  "record_act_ticks": 900
+ },
+ "arms": {
+  "det_a": {
+   "name": "det_a",
+   "role": "main",
+   "ablation": null,
+   "method_chain": [
+    "_base",
+    "ours_final"
+   ],
+   "override": {},
+   "uses_gt": [],
+   "provenance_gaps": [
+    "identity.tah.ckpt",
+    "identity.tah.ckpt: tah_ckpt/tah_relm_dag@08995f18d5cc fov_deg='70img/90proj+90'",
+    "identity.tah.ckpt: tah_ckpt/tah_relm_dag@08995f18d5cc tick_s=[0.2, 0.6]"
+   ],
+   "artefacts": [
+    {
+     "path": "frontend.vlm.stage2_ckpt",
+     "artefact": "stage2_ckpt/stage2_v5@b387b619ab3b",
+     "gaps": [
+      "no recipe / git in the checkpoint",
+      "training data deleted 09-04 (the on-disk mvp_full_v5 is a different 70\u00b0 regeneration) and its Qwen3-VL context caches deleted \u2192 not reproducible from data on disk",
+      "split manifest missing \u2192 naive train/val slice (the evaluation town Town05 was inside the training data)"
+     ],
+     "waived": []
+    },
+    {
+     "path": "frontend.opening.attr.ckpt_lin",
+     "artefact": "opening_cls/opening_attr_lin@f9a3a90580aa",
+     "gaps": [
+      "recipe arguments not stored in the checkpoint"
+     ],
+     "waived": []
+    },
+    {
+     "path": "frontend.opening.attr.ckpt_ft",
+     "artefact": "opening_ft/opening_attr_ft@b2fb61a03eba",
+     "gaps": [
+      "recipe arguments not stored in the checkpoint"
+     ],
+     "waived": []
+    },
+    {
+     "path": "identity.tah.ckpt",
+     "artefact": "tah_ckpt/tah_relm_dag@08995f18d5cc",
+     "gaps": [
+      "no recipe in the checkpoint",
+      "offline part trained on 70\u00b0-image / 90\u00b0-projection boxes",
+      "mixes 0.2 s offline and 0.6 s DAgger sequences"
+     ],
+     "waived": [
+      [
+       "fov_deg",
+       "70img/90proj+90",
+       90.0
+      ],
+      [
+       "tick_s",
+       [
+        0.2,
+        0.6
+       ],
+       0.6
+      ]
+     ]
+    }
+   ],
+   "config_hash": "bbe9a4aab7bf",
+   "protocol": {
+    "name": "sim_proxy_v2",
+    "version": 2,
+    "aliases": [],
+    "description": "sim_proxy_v2@1 + Hungarian tracker + uniform opening hand-over + per-step policy RNG (1006)",
+    "camera": {
+     "fov_deg": 90.0,
+     "width": 512,
+     "height": 512,
+     "fps": 10
+    },
+    "sim": {
+     "s2_period": 6,
+     "episode_steps": 900,
+     "scenario": "mvp",
+     "max_lost_s": 18.0,
+     "warmup": {
+      "expert_ticks": 90,
+      "min_target_speed_mps": 1.2
+     },
+     "retarget_tick": null,
+     "policy_rng": "per_step"
+    },
+    "perception": {
+     "candidates": {
+      "source": "sim_projection",
+      "set": "task_vehicles",
+      "vehicle_size_m": 4.0,
+      "box_min_px": 10.0,
+      "box_max_px": 140.0
+     },
+     "occlusion": "raycast",
+     "identity_keys": "tracker",
+     "tracker": {
+      "max_age": 8,
+      "gate_px": 150.0,
+      "gate_box": 2.0,
+      "w_app": 0.85,
+      "min_cos": 0.2,
+      "vel_beta": 0.5,
+      "app_alpha": 0.3,
+      "assign": "hungarian"
+     },
+     "where_localisation": "gt_matched_box",
+     "noise": "none"
+    },
+    "frontend": {
+     "vlm": {
+      "model_config": "train/config_v5.yaml",
+      "stage2_ckpt": "runs/stage2_v5/stage2_best.pt",
+      "language_mode": "neutral"
+     },
+     "crop_features": {
+      "id": "dino_s14_lvd142m_cls384_c224_p1.3",
+      "depth_scale": 100.0
+     },
+     "opening": {
+      "module": "attr",
+      "hires_k": 3,
+      "window": 3,
+      "agg": "sum",
+      "final_reset": false,
+      "reset_asd": false,
+      "force_final": false,
+      "seed_asd": 0.0,
+      "attr": {
+       "ckpt_lin": "carla_uav_tracking/rollout/eval_out/opening_attr_cls.pt",
+       "ckpt_ft": "carla_uav_tracking/rollout/eval_out/opening_attr_ft.pt",
+       "wm": 1.0,
+       "wc": 1.0,
+       "wq": 0.0,
+       "ft": 0.5
+      },
+      "handoff": "uniform"
+     }
+    },
+    "scorer": {
+     "commit_k": 5,
+     "t_fail_s": 2.0,
+     "central_frac": 0.3,
+     "primary": "committed"
+    },
+    "privileged_perception": [
+     "cand_box_gt_projection",
+     "cand_depth_gt",
+     "occlusion_raycast_gt",
+     "task_vehicle_set",
+     "where_world_gt_matched_box"
+    ]
+   },
+   "method": {
+    "name": "ours_final",
+    "control": {
+     "ex_source": "track",
+     "frame_gain": 0.0,
+     "commit_k": 5,
+     "ablate": null,
+     "shuffle_seed": 0,
+     "expert_control": false,
+     "predict_road": false,
+     "road_oracle": false
+    },
+    "identity": {
+     "head": "tah",
+     "memory_seed": "committed",
+     "conf_tau": 0.5,
+     "conf_consensus": 0.0,
+     "warmup_oracle_s": 0.0,
+     "event_override": false,
+     "reanchor": {
+      "mode": "off",
+      "patience": 5,
+      "tavg": 0.0
+     },
+     "cold": {
+      "window": 0,
+      "lambda": 0.9,
+      "single": false
+     },
+     "tah": {
+      "ckpt": "runs/tah_relm_dag.pt",
+      "lang_reanchor_thr": 0.6
+     }
+    },
+    "filter": {
+     "mode": "filter",
+     "filter_kind": "tempered",
+     "resid_decay": 0.98,
+     "absent_hold": true,
+     "absent_max": 8,
+     "conf_window": 30,
+     "gate_memory": true,
+     "gate_tah": true,
+     "gate_dam": true,
+     "naive": false,
+     "alpha": null,
+     "q_lo": 0.2,
+     "q_hi": 0.7,
+     "eps_switch": 0.01,
+     "anchor_mode": "first",
+     "k_anchor": 3,
+     "beta_lang": 0.25,
+     "lang_ema": 0.7,
+     "tau": 0.1,
+     "kappa": 0.25,
+     "h": 2.0,
+     "refractory": 3,
+     "learned_ckpt": null,
+     "v1_selfreset": false
+    },
+    "oracle_absent": "off",
+    "diagnostics": [],
+    "accept_provenance_gaps": {
+     "identity.tah.ckpt": "no recipe/manifest; trained on 64 offline eps (70\u00b0 images / 90\u00b0 projection, 0.2 s stride) + 23 DAgger eps (deploy_v1, 0.6 s) \u2014 see acot_note/1004_tahrelm_retrain_diag.md"
+    }
+   }
+  },
+  "det_b": {
+   "name": "det_b",
+   "role": "main",
+   "ablation": null,
+   "method_chain": [
+    "_base",
+    "ours_final"
+   ],
+   "override": {},
+   "uses_gt": [],
+   "provenance_gaps": [
+    "identity.tah.ckpt",
+    "identity.tah.ckpt: tah_ckpt/tah_relm_dag@08995f18d5cc fov_deg='70img/90proj+90'",
+    "identity.tah.ckpt: tah_ckpt/tah_relm_dag@08995f18d5cc tick_s=[0.2, 0.6]"
+   ],
+   "artefacts": [
+    {
+     "path": "frontend.vlm.stage2_ckpt",
+     "artefact": "stage2_ckpt/stage2_v5@b387b619ab3b",
+     "gaps": [
+      "no recipe / git in the checkpoint",
+      "training data deleted 09-04 (the on-disk mvp_full_v5 is a different 70\u00b0 regeneration) and its Qwen3-VL context caches deleted \u2192 not reproducible from data on disk",
+      "split manifest missing \u2192 naive train/val slice (the evaluation town Town05 was inside the training data)"
+     ],
+     "waived": []
+    },
+    {
+     "path": "frontend.opening.attr.ckpt_lin",
+     "artefact": "opening_cls/opening_attr_lin@f9a3a90580aa",
+     "gaps": [
+      "recipe arguments not stored in the checkpoint"
+     ],
+     "waived": []
+    },
+    {
+     "path": "frontend.opening.attr.ckpt_ft",
+     "artefact": "opening_ft/opening_attr_ft@b2fb61a03eba",
+     "gaps": [
+      "recipe arguments not stored in the checkpoint"
+     ],
+     "waived": []
+    },
+    {
+     "path": "identity.tah.ckpt",
+     "artefact": "tah_ckpt/tah_relm_dag@08995f18d5cc",
+     "gaps": [
+      "no recipe in the checkpoint",
+      "offline part trained on 70\u00b0-image / 90\u00b0-projection boxes",
+      "mixes 0.2 s offline and 0.6 s DAgger sequences"
+     ],
+     "waived": [
+      [
+       "fov_deg",
+       "70img/90proj+90",
+       90.0
+      ],
+      [
+       "tick_s",
+       [
+        0.2,
+        0.6
+       ],
+       0.6
+      ]
+     ]
+    }
+   ],
+   "config_hash": "bbe9a4aab7bf",
+   "protocol": {
+    "name": "sim_proxy_v2",
+    "version": 2,
+    "aliases": [],
+    "description": "sim_proxy_v2@1 + Hungarian tracker + uniform opening hand-over + per-step policy RNG (1006)",
+    "camera": {
+     "fov_deg": 90.0,
+     "width": 512,
+     "height": 512,
+     "fps": 10
+    },
+    "sim": {
+     "s2_period": 6,
+     "episode_steps": 900,
+     "scenario": "mvp",
+     "max_lost_s": 18.0,
+     "warmup": {
+      "expert_ticks": 90,
+      "min_target_speed_mps": 1.2
+     },
+     "retarget_tick": null,
+     "policy_rng": "per_step"
+    },
+    "perception": {
+     "candidates": {
+      "source": "sim_projection",
+      "set": "task_vehicles",
+      "vehicle_size_m": 4.0,
+      "box_min_px": 10.0,
+      "box_max_px": 140.0
+     },
+     "occlusion": "raycast",
+     "identity_keys": "tracker",
+     "tracker": {
+      "max_age": 8,
+      "gate_px": 150.0,
+      "gate_box": 2.0,
+      "w_app": 0.85,
+      "min_cos": 0.2,
+      "vel_beta": 0.5,
+      "app_alpha": 0.3,
+      "assign": "hungarian"
+     },
+     "where_localisation": "gt_matched_box",
+     "noise": "none"
+    },
+    "frontend": {
+     "vlm": {
+      "model_config": "train/config_v5.yaml",
+      "stage2_ckpt": "runs/stage2_v5/stage2_best.pt",
+      "language_mode": "neutral"
+     },
+     "crop_features": {
+      "id": "dino_s14_lvd142m_cls384_c224_p1.3",
+      "depth_scale": 100.0
+     },
+     "opening": {
+      "module": "attr",
+      "hires_k": 3,
+      "window": 3,
+      "agg": "sum",
+      "final_reset": false,
+      "reset_asd": false,
+      "force_final": false,
+      "seed_asd": 0.0,
+      "attr": {
+       "ckpt_lin": "carla_uav_tracking/rollout/eval_out/opening_attr_cls.pt",
+       "ckpt_ft": "carla_uav_tracking/rollout/eval_out/opening_attr_ft.pt",
+       "wm": 1.0,
+       "wc": 1.0,
+       "wq": 0.0,
+       "ft": 0.5
+      },
+      "handoff": "uniform"
+     }
+    },
+    "scorer": {
+     "commit_k": 5,
+     "t_fail_s": 2.0,
+     "central_frac": 0.3,
+     "primary": "committed"
+    },
+    "privileged_perception": [
+     "cand_box_gt_projection",
+     "cand_depth_gt",
+     "occlusion_raycast_gt",
+     "task_vehicle_set",
+     "where_world_gt_matched_box"
+    ]
+   },
+   "method": {
+    "name": "ours_final",
+    "control": {
+     "ex_source": "track",
+     "frame_gain": 0.0,
+     "commit_k": 5,
+     "ablate": null,
+     "shuffle_seed": 0,
+     "expert_control": false,
+     "predict_road": false,
+     "road_oracle": false
+    },
+    "identity": {
+     "head": "tah",
+     "memory_seed": "committed",
+     "conf_tau": 0.5,
+     "conf_consensus": 0.0,
+     "warmup_oracle_s": 0.0,
+     "event_override": false,
+     "reanchor": {
+      "mode": "off",
+      "patience": 5,
+      "tavg": 0.0
+     },
+     "cold": {
+      "window": 0,
+      "lambda": 0.9,
+      "single": false
+     },
+     "tah": {
+      "ckpt": "runs/tah_relm_dag.pt",
+      "lang_reanchor_thr": 0.6
+     }
+    },
+    "filter": {
+     "mode": "filter",
+     "filter_kind": "tempered",
+     "resid_decay": 0.98,
+     "absent_hold": true,
+     "absent_max": 8,
+     "conf_window": 30,
+     "gate_memory": true,
+     "gate_tah": true,
+     "gate_dam": true,
+     "naive": false,
+     "alpha": null,
+     "q_lo": 0.2,
+     "q_hi": 0.7,
+     "eps_switch": 0.01,
+     "anchor_mode": "first",
+     "k_anchor": 3,
+     "beta_lang": 0.25,
+     "lang_ema": 0.7,
+     "tau": 0.1,
+     "kappa": 0.25,
+     "h": 2.0,
+     "refractory": 3,
+     "learned_ckpt": null,
+     "v1_selfreset": false
+    },
+    "oracle_absent": "off",
+    "diagnostics": [],
+    "accept_provenance_gaps": {
+     "identity.tah.ckpt": "no recipe/manifest; trained on 64 offline eps (70\u00b0 images / 90\u00b0 projection, 0.2 s stride) + 23 DAgger eps (deploy_v1, 0.6 s) \u2014 see acot_note/1004_tahrelm_retrain_diag.md"
+    }
+   }
+  },
+  "det_c": {
+   "name": "det_c",
+   "role": "main",
+   "ablation": null,
+   "method_chain": [
+    "_base",
+    "ours_final"
+   ],
+   "override": {},
+   "uses_gt": [],
+   "provenance_gaps": [
+    "identity.tah.ckpt",
+    "identity.tah.ckpt: tah_ckpt/tah_relm_dag@08995f18d5cc fov_deg='70img/90proj+90'",
+    "identity.tah.ckpt: tah_ckpt/tah_relm_dag@08995f18d5cc tick_s=[0.2, 0.6]"
+   ],
+   "artefacts": [
+    {
+     "path": "frontend.vlm.stage2_ckpt",
+     "artefact": "stage2_ckpt/stage2_v5@b387b619ab3b",
+     "gaps": [
+      "no recipe / git in the checkpoint",
+      "training data deleted 09-04 (the on-disk mvp_full_v5 is a different 70\u00b0 regeneration) and its Qwen3-VL context caches deleted \u2192 not reproducible from data on disk",
+      "split manifest missing \u2192 naive train/val slice (the evaluation town Town05 was inside the training data)"
+     ],
+     "waived": []
+    },
+    {
+     "path": "frontend.opening.attr.ckpt_lin",
+     "artefact": "opening_cls/opening_attr_lin@f9a3a90580aa",
+     "gaps": [
+      "recipe arguments not stored in the checkpoint"
+     ],
+     "waived": []
+    },
+    {
+     "path": "frontend.opening.attr.ckpt_ft",
+     "artefact": "opening_ft/opening_attr_ft@b2fb61a03eba",
+     "gaps": [
+      "recipe arguments not stored in the checkpoint"
+     ],
+     "waived": []
+    },
+    {
+     "path": "identity.tah.ckpt",
+     "artefact": "tah_ckpt/tah_relm_dag@08995f18d5cc",
+     "gaps": [
+      "no recipe in the checkpoint",
+      "offline part trained on 70\u00b0-image / 90\u00b0-projection boxes",
+      "mixes 0.2 s offline and 0.6 s DAgger sequences"
+     ],
+     "waived": [
+      [
+       "fov_deg",
+       "70img/90proj+90",
+       90.0
+      ],
+      [
+       "tick_s",
+       [
+        0.2,
+        0.6
+       ],
+       0.6
+      ]
+     ]
+    }
+   ],
+   "config_hash": "bbe9a4aab7bf",
+   "protocol": {
+    "name": "sim_proxy_v2",
+    "version": 2,
+    "aliases": [],
+    "description": "sim_proxy_v2@1 + Hungarian tracker + uniform opening hand-over + per-step policy RNG (1006)",
+    "camera": {
+     "fov_deg": 90.0,
+     "width": 512,
+     "height": 512,
+     "fps": 10
+    },
+    "sim": {
+     "s2_period": 6,
+     "episode_steps": 900,
+     "scenario": "mvp",
+     "max_lost_s": 18.0,
+     "warmup": {
+      "expert_ticks": 90,
+      "min_target_speed_mps": 1.2
+     },
+     "retarget_tick": null,
+     "policy_rng": "per_step"
+    },
+    "perception": {
+     "candidates": {
+      "source": "sim_projection",
+      "set": "task_vehicles",
+      "vehicle_size_m": 4.0,
+      "box_min_px": 10.0,
+      "box_max_px": 140.0
+     },
+     "occlusion": "raycast",
+     "identity_keys": "tracker",
+     "tracker": {
+      "max_age": 8,
+      "gate_px": 150.0,
+      "gate_box": 2.0,
+      "w_app": 0.85,
+      "min_cos": 0.2,
+      "vel_beta": 0.5,
+      "app_alpha": 0.3,
+      "assign": "hungarian"
+     },
+     "where_localisation": "gt_matched_box",
+     "noise": "none"
+    },
+    "frontend": {
+     "vlm": {
+      "model_config": "train/config_v5.yaml",
+      "stage2_ckpt": "runs/stage2_v5/stage2_best.pt",
+      "language_mode": "neutral"
+     },
+     "crop_features": {
+      "id": "dino_s14_lvd142m_cls384_c224_p1.3",
+      "depth_scale": 100.0
+     },
+     "opening": {
+      "module": "attr",
+      "hires_k": 3,
+      "window": 3,
+      "agg": "sum",
+      "final_reset": false,
+      "reset_asd": false,
+      "force_final": false,
+      "seed_asd": 0.0,
+      "attr": {
+       "ckpt_lin": "carla_uav_tracking/rollout/eval_out/opening_attr_cls.pt",
+       "ckpt_ft": "carla_uav_tracking/rollout/eval_out/opening_attr_ft.pt",
+       "wm": 1.0,
+       "wc": 1.0,
+       "wq": 0.0,
+       "ft": 0.5
+      },
+      "handoff": "uniform"
+     }
+    },
+    "scorer": {
+     "commit_k": 5,
+     "t_fail_s": 2.0,
+     "central_frac": 0.3,
+     "primary": "committed"
+    },
+    "privileged_perception": [
+     "cand_box_gt_projection",
+     "cand_depth_gt",
+     "occlusion_raycast_gt",
+     "task_vehicle_set",
+     "where_world_gt_matched_box"
+    ]
+   },
+   "method": {
+    "name": "ours_final",
+    "control": {
+     "ex_source": "track",
+     "frame_gain": 0.0,
+     "commit_k": 5,
+     "ablate": null,
+     "shuffle_seed": 0,
+     "expert_control": false,
+     "predict_road": false,
+     "road_oracle": false
+    },
+    "identity": {
+     "head": "tah",
+     "memory_seed": "committed",
+     "conf_tau": 0.5,
+     "conf_consensus": 0.0,
+     "warmup_oracle_s": 0.0,
+     "event_override": false,
+     "reanchor": {
+      "mode": "off",
+      "patience": 5,
+      "tavg": 0.0
+     },
+     "cold": {
+      "window": 0,
+      "lambda": 0.9,
+      "single": false
+     },
+     "tah": {
+      "ckpt": "runs/tah_relm_dag.pt",
+      "lang_reanchor_thr": 0.6
+     }
+    },
+    "filter": {
+     "mode": "filter",
+     "filter_kind": "tempered",
+     "resid_decay": 0.98,
+     "absent_hold": true,
+     "absent_max": 8,
+     "conf_window": 30,
+     "gate_memory": true,
+     "gate_tah": true,
+     "gate_dam": true,
+     "naive": false,
+     "alpha": null,
+     "q_lo": 0.2,
+     "q_hi": 0.7,
+     "eps_switch": 0.01,
+     "anchor_mode": "first",
+     "k_anchor": 3,
+     "beta_lang": 0.25,
+     "lang_ema": 0.7,
+     "tau": 0.1,
+     "kappa": 0.25,
+     "h": 2.0,
+     "refractory": 3,
+     "learned_ckpt": null,
+     "v1_selfreset": false
+    },
+    "oracle_absent": "off",
+    "diagnostics": [],
+    "accept_provenance_gaps": {
+     "identity.tah.ckpt": "no recipe/manifest; trained on 64 offline eps (70\u00b0 images / 90\u00b0 projection, 0.2 s stride) + 23 DAgger eps (deploy_v1, 0.6 s) \u2014 see acot_note/1004_tahrelm_retrain_diag.md"
+    }
+   }
+  }
+ },
+ "schedule": {
+  "block": 1,
+  "seed": 10067,
+  "max_infra_attempts": 3
+ },
+ "seeds_hash": "afb4064e9340"
+}

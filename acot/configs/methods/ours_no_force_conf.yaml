@@ -1,0 +1,5 @@
+# ours_final, a PGIF re-pick is not force-committed with c = 1: c = PGIF evidence margin, normal commitment rule
+# (1006 §5.2, exploratory).
+name: ours_no_force_conf
+extends: ours_final
+filter: {force_conf: false}

@@ -1,0 +1,15 @@
+# 1006 G8: decision parity of the ported reid head (acot runtime) with the legacy runtime, OPEN LOOP on recorded act
+# messages — `python -m acot replay-parity acot/configs/experiments/p2_parity_reid.yaml --record <pkl> --gpu G`.
+# Protocol @1 (the legacy runtime has no Hungarian / uniform hand-over); covers every reid branch.
+name: p2_parity_reid
+protocol: sim_proxy_v2@1
+seeds: {set: dev2, subset: [[93000, 93000]]}
+arms:
+  reid:          {method: ext_reid, role: baseline}
+  reid_tavg:     {method: ext_reid, role: baseline, override: {identity.reid.tavg: 0.4}}
+  reid_motion:   {method: ext_reid, role: baseline, override: {identity.reid.motion: 0.5}}
+  reid_vlmpool:  {method: ext_reid, role: baseline, override: {identity.reid.feature: vlmpool}}
+  reid_bank1:    {method: ext_reid, role: baseline, override: {identity.reid.bank: 1, identity.reid.topm: 1}}
+  reid_pgif:     {method: ext_reid_pgif, role: ablation}
+collect: [ticks]
+infra: {runtime: acot}

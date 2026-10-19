@@ -1,0 +1,20 @@
+# Legacy result arms → files, protocol tag and origin (framework §12.2). Arms not listed resolve by stem
+# (paper_it_<name>.json, else its parts). protocol_tag ∈ {gt_seeded, deploy_v1, deploy_v2_head, final_v2}.
+arms:
+  tahrelm: {files: [paper_dep_tahrelm.json], protocol_tag: deploy_v1, source: runs/asd/deploy_all/chains.sh}
+  pgif:
+    files: [paper_dep_tahrelm_pgif.json]
+    ticks: [[runs/asd/deploy_all/tahrelm_pgif.jsonl, paper_dep_tahrelm_pgif.json]]
+    protocol_tag: deploy_v1
+    source: runs/asd/deploy_all/chains.sh
+  dam4sam: {files: [paper_dep_dam4sam.json], protocol_tag: deploy_v1, source: runs/asd/deploy_all/rerun_dam4sam.sh}
+  dam4sam_t10: {files: [paper_it_dam4sam_t10.json], protocol_tag: deploy_v1, source: runs/asd/iter}
+  tahrelm_t03: {files: [paper_it_tahrelm_t03.json], protocol_tag: deploy_v1, source: runs/asd/iter}
+  dam4sam_t03: {files: [paper_it_dam4sam_t03_part1.json, {stem: dam4sam_t03b}], protocol_tag: deploy_v1,
+                note: "pre-reboot part (91000–06) + post-reboot remainder (91007–19)"}
+  v2_pgif_sim: {stem: v2_pgif_sim, protocol_tag: deploy_v2_head, source: runs/asd/deploy_v2/chains_v2.sh}
+  v2t_pgif_trk: {stem: v2t_pgif_trk, protocol_tag: deploy_v2_head, source: runs/asd/deploy_v2/chains_v2t.sh}
+  v2h_pgif_trk: {stem: v2h_pgif_trk, protocol_tag: deploy_v2_head, source: runs/asd/deploy_v2/chains_v2h.sh,
+                 note: "H-A = final model with the grounding-head opening"}
+  zoa_pgif_trk: {stems: [zoa_pgif_trk_a, zoa_pgif_trk_b, zoa_pgif_trk_c], protocol_tag: final_v2,
+                 source: runs/opening_dump/chains_attr.sh, note: "final model (attribute opening v1)"}

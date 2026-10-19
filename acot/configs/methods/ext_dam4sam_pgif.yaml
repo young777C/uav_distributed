@@ -1,0 +1,4 @@
+# 1006 表 3(b) cross-memory: PGIF (tempered + absent-hold) on DAM4SAM (gating = SAM2 re-init on the MAP box).
+name: ext_dam4sam_pgif
+extends: ext_dam4sam
+filter: {mode: filter, filter_kind: tempered, absent_hold: true, absent_max: 8}

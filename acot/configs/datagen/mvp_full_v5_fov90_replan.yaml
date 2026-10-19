@@ -1,0 +1,11 @@
+# The 90° replica's data plan expressed for `acot data gen` (frozen seed → town plan taken from the registered dataset).
+name: mvp_full_v5_fov90_replan
+scenario: config/scenarios/mvp.yaml
+camera: {fov_deg: 90.0, width: 512, height: 512}
+seed_base: 42
+plan: {source: from_dataset_manifest, ref: "artefact:mvp_full_v5_fov90"}
+qc: {params: {min_frames: 300, min_speed: 1.2}}
+data_root: /nvidia/hque/data/carla_data
+output: {staging: /nvidia/hque/data/carla_data/.staging/mvp_full_v5_fov90_replan,
+         final: /nvidia/hque/data/carla_data/mvp_full_v5_fov90_replan}
+workers: [{rpc_port: 2410, gpu: 1, tm_port: 8415}, {rpc_port: 2420, gpu: 2, tm_port: 8425}]

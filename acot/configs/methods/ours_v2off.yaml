@@ -1,0 +1,8 @@
+# 1006 DINOv3 trial (exploratory, dev only): Ours with TAHRelM retrained on the 64 OFFLINE episodes only (no DAgger),
+# DINOv2 crop features — the data-matched reference for ours_v3off.
+name: ours_v2off
+extends: ours_final
+identity:
+  tah: {ckpt: runs/tah_1006/tah_relm_v2off_s0.pt}
+accept_provenance_gaps:
+  identity.tah.ckpt: "recipe stored in the checkpoint (train/tah_train.py --motion --aug --seed 0, cache runs/tah_cache.pt)"

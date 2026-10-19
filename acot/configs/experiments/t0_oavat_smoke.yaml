@@ -1,0 +1,12 @@
+# 1006 G9: OA-VAT identity adaptation closed-loop smoke (dev-B 93060–93061): DINOv3 (native) and DINOv2 (backbone
+# control) heads end to end in the policy container (isolated deps, weights, diagnostics trace). NOT a results run.
+name: t0_oavat_smoke
+protocol: sim_proxy_v2@2
+seeds: {set: dev2, subset: [[93060, 93061]], expect: 2}
+completeness: {require: allow_skipped, allow_skipped_reasons: ["target stationary"], pairing: intersection}
+schedule: {block: 1, seed: 10066, max_infra_attempts: 3}
+arms:
+  oavat:    {method: ext_oavat, role: baseline}
+  oavat_v2: {method: ext_oavat_dinov2, role: baseline}
+collect: [ticks, gt_access, scenario]
+infra: {runtime: acot}

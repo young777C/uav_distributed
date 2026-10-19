@@ -1,0 +1,48 @@
+# 2026-10-09 minimal 90° regeneration of mvp_full_v5 with LESS TARGET STANDSTILL (user decision; 1009 plan).
+# = mvp.yaml + three scene-level switches from the v6.1 spec (1003_data-regen-v6-spec.md §4) that need no v6
+# labels: target + distractors ignore lights/signs, ambient cars spawned on a 30-200 m ring (not the nearest
+# points, which queued the target in from t=0), target/distractors may change lanes. Ambient count stays 80 (v5).
+# The v6.1 'unstick' (forced lane change) is NOT used: it only runs in v6-label mode (extra sensor, new format).
+# MVP dataset (~60 episodes / ~100K frames) — EAR convergence + demo (design §4.1).
+# Balanced across classes and both car-similarity strategies, moderate difficulty.
+environment:
+  max_duration_seconds: 150
+  towns: ["Town01", "Town02", "Town04", "Town05", "Town10HD"]
+  loss_events:                     # (c) enable deliberate sustained loss → predict-intercept
+    enabled: true
+    per_episode: 2
+    dur_range: [4.5, 6.5]          # >=3s off-frame run after ~1s exit lag → recovery counts
+
+scene:
+  # --- 2026-10-09 standstill switches (see header) ---
+  scene_actors_ignore_lights: 100.0
+  scene_actors_lane_change: true
+  ambient:
+    spawn_mode: ring
+    ring_m: [30.0, 200.0]
+    radius: 200          # smoke-1 (5 ep): with the default 70 m hybrid-physics radius, ring cars beyond 70 m went
+                         # dormant and were respawned next to the target (queue from t=0, junction gridlock)
+  num_distractors: [4, 8]
+  min_similar_distractors: 2
+  distractor_ahead_bias: 0.75
+  target_class_weights:            # spec §4d: all-sedan scene → rich look-alike pool (21 models × 18
+    car: 1.0                        # colours), higher co-visibility; drop sparse moto/bike/scooter
+    motorcycle: 0.0                 # (only 1-3 models each → too few look-alikes) + pedestrians (never targets)
+    bicycle: 0.0
+    scooter: 0.0
+    pedestrian: 0.0
+  similarity_strategy_weights:
+    same_color_diff_shape: 0.40
+    same_shape_diff_color: 0.40
+    distinct: 0.20
+
+target:
+  maneuver:                # OFF — stochastic TM maneuvers only fragment loss into
+                           # sub-second blips AND re-correlate target geometry (round-2
+                           # regressed offscreen+recovery+leak). Sustained loss is created
+                           # deliberately by environment.loss_events (blind-predict window)
+                           # instead. See acot-uav-review-loop / data-fix-spec (c).
+    sudden_stop_prob: 0.0
+    sharp_turn_prob: 0.0
+    acceleration_prob: 0.0
+    u_turn_prob: 0.0

@@ -1,0 +1,6 @@
+# Re-training of the attribute-opening linear heads (eval_out/opening_attr_cls.pt) through `acot train`.
+kind: opening_cls
+name: opening_attr_lin_repro
+trainer: opening_attr_lin
+snapshots: artefact:opening_snapshots_train
+args: {}

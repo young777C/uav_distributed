@@ -1,0 +1,8 @@
+# Opening-validation / reference-opening variant of sim_proxy_v2@2: 19-step episodes (S2 ticks 0/6/12/18).
+extends: sim_proxy_v2@2
+name: sim_proxy_v2_openval
+version: 2
+aliases: []
+description: sim_proxy_v2@2 with 19-step episodes (opening only / 1006 reference opening)
+sim:
+  episode_steps: 19

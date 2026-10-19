@@ -1,0 +1,32 @@
+# P2 acceptance (framework §9, §14): decision parity of the acot runtime with the legacy runtime, OPEN LOOP on recorded
+# act messages — `python -m acot replay-parity acot/configs/experiments/p2_parity.yaml --record <act_record.pkl> --gpu G`.
+# Not run on CARLA. Arms = every 1004 re-run arm the acot runtime implements (ext_dam4sam: p2_parity_dam4sam.yaml, needs
+# the service) + variants that exercise the remaining branches (PGIF kinds / gating, opening options, WHERE knobs,
+# oracle-absent hygiene, module ablation).
+name: p2_parity
+protocol: sim_proxy_v2@1
+seeds: {set: dev2, subset: [[93000, 93000]]}
+arms:
+  ours:            {method: ours_final, role: main}
+  no_pgif:         {method: ours_no_pgif, role: ablation}
+  no_absent_hold:  {method: ours_no_absent, role: ablation}
+  pgif_bayes:      {method: ours_pgif_bayes, role: ablation}
+  pgif_resid:      {method: ours_final, role: ablation, override: {filter.filter_kind: resid}}
+  no_gate_memory:  {method: ours_final, role: ablation, override: {filter.gate_memory: false}}
+  open_head:       {method: ours_final, ablation: opening,
+                    override: {frontend.opening.module: head, frontend.opening.window: 1}}
+  open_mean:       {method: ours_final, ablation: opening, override: {frontend.opening.agg: mean}}
+  open_last:       {method: ours_final, ablation: opening, override: {frontend.opening.agg: last}}
+  open_v4:         {method: ours_final, ablation: opening,
+                    override: {frontend.opening.force_final: true, frontend.opening.seed_asd: 3.0}}
+  open_v3:         {method: ours_final, ablation: opening,
+                    override: {frontend.opening.final_reset: true, frontend.opening.reset_asd: true}}
+  frame_gain:      {method: ours_final, role: ablation, override: {control.frame_gain: 0.5}}
+  conf_tau0:       {method: ours_final, role: ablation, override: {identity.conf_tau: 0.0}}
+  ext_deepsort:    {method: ext_assoc_deepsort, role: baseline}
+  ext_ocsort:      {method: ext_assoc_motion, role: baseline}
+  ext_deepsort_pgif: {method: ext_assoc_deepsort, role: ablation,
+                    override: {filter.mode: filter, filter.filter_kind: tempered, filter.absent_hold: true}}
+  lang_xattn:      {method: lang_xattn, role: baseline}
+  oracle_absent:   {method: diag_oracle_absent}
+  oracle_hygiene:  {method: diag_oracle_absent, override: {oracle_absent: hygiene, diagnostics: [oracle_absent_hygiene]}}

@@ -1,0 +1,12 @@
+# 1016 §3 step 0 smoke (2 dev-B seeds): the new sticky head and the client frame_state end to end before
+# headroom_devB3. Results are not used for any decision.
+name: headroom_smoke_devB3
+protocol: sim_proxy_v2@3
+seeds: {set: dev2, subset: [[93060, 93061]], expect: 2}
+completeness: {require: allow_skipped, allow_skipped_reasons: ["target stationary"], pairing: intersection}
+schedule: {block: 5, seed: 10182, max_infra_attempts: 3}
+arms:
+  u1_r0:     {method: diag_oracle_head, role: diagnostic}
+  sticky_r0: {method: null_sticky, role: baseline}
+collect: [ticks, trk, gt_access, scenario]
+infra: {runtime: acot}

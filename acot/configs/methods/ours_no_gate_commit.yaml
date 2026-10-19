@@ -1,0 +1,4 @@
+# ours_final, PGIF gates only the memory: the pick / commitment follow the memory's own pick (1006 §5.2, exploratory).
+name: ours_no_gate_commit
+extends: ours_final
+filter: {gate_commit: false}

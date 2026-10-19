@@ -1,0 +1,20 @@
+# P0-2 control (2026-10-12): identical to tah_relm_fast_a except the offline data = the OLD 90° data (tah_seq_v5_fov90_t6,
+# same cache options) → separates the data effect from the recipe effect. Original stage-A notes follow:
+# the 23 deploy_v1 DAgger eps), three changes:
+#   1. offline data = tah_seq_v5_fov90_fast (mvp_v5_fov90_fast, frame mask on);
+#   2. one tick interval: offline sequences at the deployed 0.6 s S2 tick (3 phases per episode), like the DAgger data;
+#      group_phases → one randomly drawn phase per source episode per epoch (= the recorded 64 + 23 step ratio);
+#   3. best-epoch selection on a held-out DEPLOYMENT-distribution set (tah_dagger_v2: 101 on-policy eps, tracker ids,
+#      occlusion-filtered candidates; never trained on) instead of the first 15 % of the offline cache, which saturates
+#      at ~0.99 from epoch 1 (every earlier retrain was selected at epoch 1-2).
+# Seeds 0 / 1 / 2, ONE ARTEFACT NAME PER SEED (codex P0-2 R1: a shared name lets the alias point at the last seed):
+#   python -m acot train acot/configs/recipes/tah_relm_t6_ctl.yaml --gpu G seed=N name=tah_relm_t6_ctl_sN
+kind: tah_ckpt
+name: tah_relm_t6_ctl
+trainer: tah_relm
+inputs: [artefact:tah_seq_v5_fov90_t6, artefact:tah_dagger_v1_reencoded]
+val_inputs: [artefact:tah_dagger_v2]
+hparams: {epochs: 60, lr: 0.0003, val_frac: 0.15, rel: true, motion: true, aug: true, fnoise: 0.05, pjit: 0.02, wd: 0.0001,
+          group_phases: true}
+seed: 0
+save_last: true

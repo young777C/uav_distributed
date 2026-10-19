@@ -1,0 +1,9 @@
+# NEGATIVE CONTROL (must be refused): the 70° dataset projected with the 90° model config — the 1003 FOV failure.
+kind: tah_seq
+name: tah_seq_v5_70_wrong
+dataset: artefact:mvp_full_v5
+split: artefact:split_v5_naive
+model_config: train/config_v5.yaml
+stride: 2
+feature_id: dino_s14_lvd142m_cls384_c224_p1.3
+depth_scale: 100.0
