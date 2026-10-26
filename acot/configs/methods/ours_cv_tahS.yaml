@@ -1,0 +1,9 @@
+# 1024 stress TAH retrain (acot_note/1023_stress_baselines.md §6): ours_cv with ONLY the TAH weights replaced by
+# tah_ckpt/tah_relm_stress_s0@a4877ac294cb (recipe tah_relm_stress: standard data + 58 stress DAgger eps; best val acc
+# 0.807 on 18 stress val eps). Paired against ours_cv on the stress_tune expert replay.
+name: ours_cv_tahS
+extends: ours_cv
+identity:
+  tah: {ckpt: runs/artefacts/tah_ckpt/tah_relm_stress_s0@a4877ac294cb/ckpt.pt}
+accept_provenance_gaps:
+  identity.tah.ckpt: "none for this checkpoint — registered artefact tah_ckpt/tah_relm_stress_s0@a4877ac294cb (recipe + manifest); the key is inherited from ours_final and cannot be removed by extends"

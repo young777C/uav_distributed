@@ -1,0 +1,67 @@
+{
+ "Town01": {
+  "still_frac": 0.597,
+  "stops_2s": 2.079,
+  "turns_45": 1.105,
+  "speed_moving": 5.165,
+  "occ_frac_inframe": 0.026,
+  "occ_runs_1s": 0.395,
+  "occ_runs_2s": 0.237,
+  "lost_frac": 0.234,
+  "lost_runs_2s": 2.158,
+  "clone_covis_frac": 0.0,
+  "n": 38
+ },
+ "Town02": {
+  "still_frac": 0.651,
+  "stops_2s": 2.706,
+  "turns_45": 1.618,
+  "speed_moving": 4.951,
+  "occ_frac_inframe": 0.013,
+  "occ_runs_1s": 0.206,
+  "occ_runs_2s": 0.059,
+  "lost_frac": 0.216,
+  "lost_runs_2s": 2.029,
+  "clone_covis_frac": 0.0,
+  "n": 34
+ },
+ "Town04": {
+  "still_frac": 0.417,
+  "stops_2s": 1.862,
+  "turns_45": 2.621,
+  "speed_moving": 7.868,
+  "occ_frac_inframe": 0.069,
+  "occ_runs_1s": 0.793,
+  "occ_runs_2s": 0.552,
+  "lost_frac": 0.282,
+  "lost_runs_2s": 2.345,
+  "clone_covis_frac": 0.0,
+  "n": 29
+ },
+ "Town05": {
+  "still_frac": 0.543,
+  "stops_2s": 2.474,
+  "turns_45": 2.211,
+  "speed_moving": 6.981,
+  "occ_frac_inframe": 0.077,
+  "occ_runs_1s": 0.947,
+  "occ_runs_2s": 0.632,
+  "lost_frac": 0.271,
+  "lost_runs_2s": 2.263,
+  "clone_covis_frac": 0.0,
+  "n": 38
+ },
+ "Town10HD": {
+  "still_frac": 0.477,
+  "stops_2s": 2.079,
+  "turns_45": 1.842,
+  "speed_moving": 5.556,
+  "occ_frac_inframe": 0.044,
+  "occ_runs_1s": 0.737,
+  "occ_runs_2s": 0.526,
+  "lost_frac": 0.241,
+  "lost_runs_2s": 2.395,
+  "clone_covis_frac": 0.0,
+  "n": 38
+ }
+}

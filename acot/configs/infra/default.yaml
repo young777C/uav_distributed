@@ -26,6 +26,9 @@ carla_servers:                       # CARLA RPC port → -graphicsadapter (laun
   - {port: 2090, adapter: 5}
   - {port: 2230, adapter: 0}
   - {port: 2250, adapter: 3}
+  - {port: 2240, adapter: 4}            # 10-22: 2 CARLA per GPU on the 4-GPU cap (GPUs 0,1,3,4)
+  - {port: 2260, adapter: 1}
+  - {port: 2270, adapter: 1}
 tm_ports: {base: 9700, per_worker: 30, per_restart: 10}
 policy_gpus: [1, 2, 4, 6]
 reserved: {carla_ports: [[2100, 2190]], gpus: [], containers: []}

@@ -1,0 +1,7 @@
+# 1024 OA-VAT FULL closed loop, gain config N0 = native-unit REFERENCE (assumed cm/s, deg/s; untuned) (acot_note/1023_oavat_closedloop_plan.md v3 §2.1):
+# forward 0.01 m/s and yaw 1.0 deg/s per command unit (±40 saturation → 0.4 m/s, 40 deg/s); else = ext_oavat_full_g2.
+# N0's 40 deg/s exceeds the expert's configured 30 deg/s: declared as an independent transfer limit (disclosed).
+name: ext_oavat_full_n0
+extends: ext_oavat_full_g2
+identity:
+  oavat_full: {g_forward: 0.01, g_yaw: 1.0, max_yaw_dps: 40.0}

@@ -33,7 +33,7 @@ def exec_py(container, code, python="python", timeout=120, workdir=None):
     return sh(args, timeout=timeout)
 
 
-def rm(name, prefix):
+def rm(name, prefix, timeout=None):
     if not name.startswith(prefix):
         raise PermissionError(f"acot only removes its own containers ({prefix}*), not {name}")
-    return sh(["docker", "rm", "-f", name])
+    return sh(["docker", "rm", "-f", name], timeout=timeout)

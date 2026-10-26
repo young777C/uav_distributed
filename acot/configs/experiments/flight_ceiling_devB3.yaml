@@ -1,0 +1,19 @@
+# 1019 §6.2 P1 (pre-registered 2026-10-19, before any run of these arms; acot_note/1019_metric_protocol_discussion.md):
+# flight ceiling. U1 and the never-switch null with the drone flown by the expert. Main read D_expert = M1(u1x) − M1(stickyx),
+# seed-paired (runs/headroom/headroom_m1.py). Routing: D_M1 (step-0 logs) ≥ 0.10 → revise the primary metric to M1 and
+# return to V1–V5; else D_expert ≥ 0.10 → identity headroom masked by flight; else → P2 (stress scenarios) or reframe.
+# codex R1 (before any P1 result): the expert servos the target + look-alike cluster centroid while the target is visible
+# (mvp decorrelate_position), so framing is not guaranteed. Interpretable only if truncated episodes ≤ 20% and the
+# off-scene frame share ≤ 0.15 over both arms; otherwise a D_expert < 0.10 is 'inconclusive' (≥ 0.10 still → masked).
+# Reported: old-metric D, TR90, truncation / episode length and scene shares vs step 0 (headroom_devB3).
+# dev-B 93060–93099, protocol @3, r0 only.
+name: flight_ceiling_devB3
+protocol: sim_proxy_v2@3
+seeds: {set: dev2, subset: [[93060, 93099]], expect: 40}
+completeness: {require: allow_skipped, allow_skipped_reasons: ["target stationary"], pairing: intersection}
+schedule: {block: 5, seed: 10191, max_infra_attempts: 3}
+arms:
+  u1x_r0:     {method: diag_oracle_head_expert, role: diagnostic}
+  stickyx_r0: {method: null_sticky_expert, role: diagnostic}
+collect: [ticks, trk, gt_access, scenario]
+infra: {runtime: acot}

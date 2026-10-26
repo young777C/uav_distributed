@@ -1,0 +1,9 @@
+{"event": "plan", "seed": 10243, "block": 2, "n_units": 4, "order": [["g2dp", [94040]], ["g2dp", [94000]], ["g2dp_rep", [94000]], ["g2dp_rep", [94040]]], "t": 1792903289.654601}
+{"event": "start", "arm": "g2dp", "seeds": [94040], "worker": "w0", "carla_port": 2070, "gpu": 0, "tm_base": 9700, "svc_slot": null, "t": 1792903289.6552038}
+{"event": "start", "arm": "g2dp", "seeds": [94000], "worker": "w1", "carla_port": 2260, "gpu": 1, "tm_base": 9730, "svc_slot": null, "t": 1792903289.6557384}
+{"event": "start", "arm": "g2dp_rep", "seeds": [94000], "worker": "w2", "carla_port": 2010, "gpu": 2, "tm_base": 9760, "svc_slot": null, "t": 1792903289.6566627}
+{"event": "start", "arm": "g2dp_rep", "seeds": [94040], "worker": "w3", "carla_port": 2090, "gpu": 5, "tm_base": 9790, "svc_slot": null, "t": 1792903289.6570027}
+{"event": "end", "arm": "g2dp_rep", "worker": "w2", "requeued": [], "t": 1792904103.851778}
+{"event": "end", "arm": "g2dp", "worker": "w1", "requeued": [], "t": 1792904115.7491894}
+{"event": "end", "arm": "g2dp", "worker": "w0", "requeued": [], "t": 1792905127.453247}
+{"event": "end", "arm": "g2dp_rep", "worker": "w3", "requeued": [], "t": 1792905152.4537177}

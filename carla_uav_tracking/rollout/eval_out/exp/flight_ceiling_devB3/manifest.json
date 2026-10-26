@@ -1,0 +1,82 @@
+{
+ "git_commit": "a6f69de29fc629b4dec06379106101407075634f",
+ "git_dirty_diff_sha256": "ae987602e9fd17ba65d031e3d61b1828f6eabb91f2252771fe568cab6fb4ffec",
+ "git_dirty_files": 13,
+ "host": "dcs-20-04",
+ "python": "3.12.8",
+ "time": 1792423356.111379,
+ "time_iso": "2026-10-19T11:22:36-0400",
+ "image": {
+  "name": "acot-uav-train:cu118-acot",
+  "id": "sha256:08dcad02975f6aecadbdf091199d3c341178207ee8c25b804676c0f695bd9869"
+ },
+ "runtime": "acot",
+ "files": {
+  "u1x_r0": {
+   "train/config_v5.yaml": "08fc471b2d489a216b73fba7aad83005f8bf22e5b12a562c9a79b0daf35c17eb",
+   "runs/stage2_v5/stage2_best.pt": "6465f91555798adeeef5af3213a463d88d99843d3714d354a73d56e93bdcc257",
+   "carla_uav_tracking/config/default.yaml": "b0f0c9a14f61fd8062b4c7cbdd6c9363fdff014b945224419f250b73d76d1e65",
+   "carla_uav_tracking/config/scenarios/mvp.yaml": "7af419e3ff5f0d25a0b42c7989ec410a1f359154aa353bdbb71917c57b793e8f",
+   "carla_uav_tracking/rollout/eval_out/opening_attr_cls.pt": "a5df3c4bc04c5915f285020f0ac312f02d2db30b69c9ee23f37c51584dbf0b9c",
+   "carla_uav_tracking/rollout/eval_out/opening_attr_ft.pt": "f315fb55d0cf57657246c4d482f08f39858d7d59909d8d547338f536aa0b78dc"
+  },
+  "stickyx_r0": {
+   "train/config_v5.yaml": "08fc471b2d489a216b73fba7aad83005f8bf22e5b12a562c9a79b0daf35c17eb",
+   "runs/stage2_v5/stage2_best.pt": "6465f91555798adeeef5af3213a463d88d99843d3714d354a73d56e93bdcc257",
+   "carla_uav_tracking/config/default.yaml": "b0f0c9a14f61fd8062b4c7cbdd6c9363fdff014b945224419f250b73d76d1e65",
+   "carla_uav_tracking/config/scenarios/mvp.yaml": "7af419e3ff5f0d25a0b42c7989ec410a1f359154aa353bdbb71917c57b793e8f",
+   "carla_uav_tracking/rollout/eval_out/opening_attr_cls.pt": "a5df3c4bc04c5915f285020f0ac312f02d2db30b69c9ee23f37c51584dbf0b9c",
+   "carla_uav_tracking/rollout/eval_out/opening_attr_ft.pt": "f315fb55d0cf57657246c4d482f08f39858d7d59909d8d547338f536aa0b78dc"
+  }
+ },
+ "workers": [
+  {
+   "id": "w0",
+   "carla_port": 2060,
+   "adapter": 7,
+   "gpu": 1,
+   "tm_base": 9700
+  },
+  {
+   "id": "w1",
+   "carla_port": 2070,
+   "adapter": 0,
+   "gpu": 2,
+   "tm_base": 9730
+  },
+  {
+   "id": "w2",
+   "carla_port": 2090,
+   "adapter": 5,
+   "gpu": 5,
+   "tm_base": 9760
+  },
+  {
+   "id": "w3",
+   "carla_port": 2230,
+   "adapter": 0,
+   "gpu": 7,
+   "tm_base": 9790
+  },
+  {
+   "id": "w4",
+   "carla_port": 2250,
+   "adapter": 3,
+   "gpu": 3,
+   "tm_base": 9820
+  }
+ ],
+ "argv": {
+  "cmd": "eval",
+  "experiment": "acot/configs/experiments/flight_ceiling_devB3.yaml",
+  "arms": null,
+  "seeds": null,
+  "dry_run": false,
+  "allow_test": false,
+  "workers": 5,
+  "carla_ports": "2060,2070,2090,2230,2250",
+  "gpus": "1,2,5,7,3",
+  "overrides": [],
+  "fn": "<function cmd_eval at 0x7f2190f04d60>"
+ }
+}

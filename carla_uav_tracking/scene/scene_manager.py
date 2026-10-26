@@ -75,6 +75,7 @@ class SceneManager:
         """Spawn all actors for a new episode. Returns episode metadata."""
         env_cfg = self._config.get("environment", {})
         scene_cfg = self._config.get("scene", {})
+        self._route_anchor_calls, self._route_meta, self._route_plan = 0, None, None   # 1026 stress_v2 (per episode)
 
         # -- Seeding (P1-b): make the whole episode reproducible --
         seed = env_cfg.get("seed", None)
@@ -278,6 +279,10 @@ class SceneManager:
         except (RuntimeError, AttributeError):
             pass
         heading = getattr(self._target, "direction", "")
+        if (self._config.get("scene", {}).get("instruction", {}) or {}).get("geometry", True) is False:
+            # 1020 stress scenario T2: no position / heading / distance phrase (a geometric shortcut at the
+            # opening) — the instruction names only the colour and model
+            spatial, heading, dist_m = "", "", None
         self.episode_language = self._language_gen.build_instruction(
             plan["target"]["desc"], plan.get("num_similar", 0),
             spatial=spatial, motion=(f"heading {heading}" if heading else ""),
@@ -298,7 +303,16 @@ class SceneManager:
             "weather": self._get_current_weather_dict(),
             "language": self.episode_language,
             "occlusion_biased": bool(getattr(self, "_occlusion_biased", False)),
+            # 1020 stress scenario: clone composition + the scheduled loss windows (E3, seconds since start)
+            "num_clones": int(plan.get("num_clones", 0)),
+            "num_near_clones": int(plan.get("num_near_clones", 0)),
+            "loss_windows": [list(w) for w in self._loss_scheduler.windows],
             "camera_pitch": float(getattr(self, "_camera_pitch", -50.0)),
+            # 1026 stress_v2 (absent keys = legacy): difficulty tier of the town + the planned convoy route
+            **({"town": self._world.get_map().name.split("/")[-1],
+                "town_tier": next((k for k, v in (env_cfg.get("town_tiers") or {}).items()
+                                   if self._world.get_map().name.split("/")[-1] in v), None),
+                "route_plan": getattr(self, "_route_meta", None)} if self._route_cfg() else {}),
         }
 
     # ------------------------------------------------------------------
@@ -326,6 +340,11 @@ class SceneManager:
         point whose forward lane drives under an overhead occluder (A1c③); otherwise a
         random spawn point. Falls back to random if no occluder anchors in this town."""
         cands = None
+        rp = self._route_cfg()
+        if rp and rp.get("anchor_search", 0):
+            a = self._route_anchor(int(rp["anchor_search"]))
+            if a is not None:
+                return a
         if getattr(self, "_occlusion_biased", False):
             anchors = self._occluder_anchors()
             if anchors:
@@ -473,7 +492,7 @@ class SceneManager:
                         color=COLOR_RGB.get(tgt.get("color") or ""),
                         # SAME speed distribution as distractors so the target does not drift
                         # to a systematic depth within the group (hero-only dynamics leaked).
-                        role_name="hero", speed_diff=convoy_speed + random.uniform(-5, 5))
+                        role_name="hero", speed_diff=self._target_speed_diff_pick(convoy_speed))
                     break
                 except RuntimeError:
                     continue
@@ -514,7 +533,10 @@ class SceneManager:
         self._target_in_frame = True      # updated each step by the recorder (recovery gate)
         self._recovery_mode = False       # hysteresis state for the centroid↔recovery framing switch
         self._reacq = 0
-        self._assign_convoy_route()
+        if self._route_cfg():
+            self._assign_planned_route()                   # 1026 stress_v2: replaces the (disabled) convoy route
+        else:
+            self._assign_convoy_route()
 
     def _lane_offset_transform(self, base_wp, offset_m: float) -> "carla.Transform":
         """Walk `offset_m` along the lane (forward if +, backward if −) from base_wp and
@@ -531,6 +553,23 @@ class SceneManager:
                            y=loc.y + random.uniform(-1.0, 1.0), z=loc.z + 0.3),
             wp.transform.rotation)
 
+    def _target_speed_diff_pick(self, convoy_speed: float) -> float:
+        """the target's TM speed difference (% below the limit); remembered for the clones' E1 offsets."""
+        self._target_speed_diff = convoy_speed + random.uniform(-5, 5)
+        return self._target_speed_diff
+
+    def _distractor_speed_diff(self, d: dict, convoy_speed: float) -> float:
+        """1020 stress scenario E1 (crossing / overtaking): a CLONE drives a configured percentage faster or slower
+        than the target (sign random per clone), so clones and target exchange places inside the cluster band — the
+        tracker's ID swaps are provoked by construction. Everything else keeps the legacy convoy speed."""
+        cd = self._config.get("scene", {}).get("clone_dynamics", {}) or {}
+        base = getattr(self, "_target_speed_diff", None)
+        if d.get("clone") and cd.get("enabled", False) and base is not None:
+            lo, hi = cd.get("speed_offset_pct", [12.0, 22.0])
+            v = base + random.choice([-1.0, 1.0]) * random.uniform(float(lo), float(hi))
+            return float(min(max(v, -30.0), 60.0))
+        return convoy_speed + random.uniform(-5, 5)
+
     def _spawn_distractor(self, d: dict, sp: "carla.Transform", convoy_speed: float) -> None:
         """Spawn one distractor (vehicle or pedestrian) at sp; skip on spawn collision."""
         try:
@@ -539,13 +578,17 @@ class SceneManager:
                 obj = VehicleTarget(
                     self._world, d["bp"], sp, carla_client=self._client,
                     color=COLOR_RGB.get(d.get("color") or ""),
-                    role_name="distractor", speed_diff=convoy_speed + random.uniform(-5, 5))
+                    role_name="distractor", speed_diff=self._distractor_speed_diff(d, convoy_speed),
+                    lane_change=bool(d.get("clone")) and bool(
+                        (self._config.get("scene", {}).get("clone_dynamics", {}) or {}).get("lane_change", False)))
             else:
                 obj = PedestrianTarget(self._world, d["bp"], sp, walk_speed=random.uniform(2.5, 3.5))
             self._distractors.append(obj)
             self._distractor_meta.append({
                 "id": obj.id, "bp": d["bp"], "color": d.get("color"),
                 "desc": d["desc"], "similar": d.get("similar", False), "cls": cls,
+                "clone": bool(d.get("clone", False)), "near_clone": bool(d.get("near_clone", False)),
+                "speed_diff": getattr(obj, "_speed_diff_set", None),
                 "desired_off": d.get("_desired_off"),   # §8 depth station-keeping target (or None)
             })
         except RuntimeError:
@@ -559,14 +602,21 @@ class SceneManager:
         RPCs. Falls back to the target if no similar distractor is currently alive."""
         tp = np.asarray(target_pos, dtype=float)
         pts = [tp]
+        # 1020 stress scenario (no target-anchored recovery): only look-alikes NEAR the target join the centroid, so
+        # the framing never leaves the target behind when it separates from its clones (a lone target is followed
+        # directly — no look-alike is near it then, so following it reveals nothing about which car it is)
+        radius = float(getattr(self, "_centroid_radius_m", 0.0) or 0.0)
         ds = getattr(self, "_distractor_states", None)
         if ds is not None and len(ds):
             for row, meta in zip(ds, self._distractor_meta):
                 if not meta.get("similar"):
                     continue
                 p = np.asarray(row[:3], dtype=float)
-                if not np.isnan(p).any():
-                    pts.append(p)
+                if np.isnan(p).any():
+                    continue
+                if radius > 0.0 and float(np.linalg.norm(p[:2] - tp[:2])) > radius:
+                    continue
+                pts.append(p)
         return np.mean(pts, axis=0)
 
     def _assign_convoy_route(self) -> None:
@@ -591,6 +641,118 @@ class SceneManager:
                 tm.set_route(v, list(route))
             except (RuntimeError, TypeError):
                 pass
+
+    # ------------------------------------------------------------------
+    # 1026 stress_v2: planned convoy route (scene/route_planner.py)
+    # ------------------------------------------------------------------
+    def _route_cfg(self) -> dict | None:
+        """scene.route_plan (dict, enabled) or None — absent / disabled = legacy behaviour everywhere."""
+        rp = (self._config.get("scene", {}) or {}).get("route_plan") or None
+        return rp if (rp and rp.get("enabled", False)) else None
+
+    def _route_graph(self) -> dict | None:
+        """the current town's lane graph + overhead coverage (built once per town, cached on disk and in-process)."""
+        rp = self._route_cfg()
+        town = self._world.get_map().name.split("/")[-1]
+        cache = getattr(SceneManager, "_route_graph_cache", {})
+        if town not in cache:
+            from scene.route_planner import load_or_build_graph
+            params = {k: rp[k] for k in ("step_m", "up_ray_m", "min_clear", "max_clear") if k in rp}
+            t0 = time.time()
+            try:
+                cache[town] = load_or_build_graph(self._world, town, rp.get("cache_dir", "/data/occ_cache"), params)
+            except RuntimeError as e:
+                print(f"  [route] {town}: graph build failed ({e})")
+                cache[town] = None
+            SceneManager._route_graph_cache = cache
+            g = cache[town]
+            if g is not None:
+                print(f"  [route] {town}: {len(g['edges'])} lane edges, "
+                      f"{sum(len(e['pts']) for e in g['edges'])} samples ({time.time() - t0:.0f} s)")
+        return cache[town]
+
+    def _route_rng(self, salt: int) -> random.Random:
+        """route planning has its own RNG (seeded from the episode seed) so it never shifts the scene's draws"""
+        seed = int(self._config.get("environment", {}).get("seed") or 0)
+        return random.Random(seed * 1000003 + salt)
+
+    def _route_anchor(self, n: int):
+        """the best of n random map spawn points by a quick plan score (turns + occluders ahead), or None"""
+        from scene.route_planner import plan_route
+        g = self._route_graph()
+        if g is None or not self._spawn_points:
+            return None
+        rp = self._route_cfg()
+        self._route_anchor_calls = getattr(self, "_route_anchor_calls", 0) + 1   # a re-pick after a failed spawn
+        rng = self._route_rng(100 + self._route_anchor_calls)                   # draws a different pool
+        pool = list(self._spawn_points)
+        rng.shuffle(pool)
+        quick = dict(rp.get("planner", {}) or {}, n_walks=int(rp.get("anchor_walks", 40)))
+        best, best_sc = None, None
+        for sp in pool[:n]:
+            loc = sp.location
+            plan = plan_route(g, (loc.x, loc.y, loc.z), sp.rotation.yaw, rng, quick)
+            if plan is None:
+                continue
+            if best_sc is None or plan["score"] > best_sc:
+                best, best_sc = sp, plan["score"]
+        return best
+
+    def _assign_planned_route(self) -> None:
+        """plan the convoy route from the target's spawn pose and hand every scene vehicle (target + vehicle
+        distractors) the planned locations still ahead of it (TM.set_path). Result summary → self._route_meta."""
+        from scene.route_planner import plan_route, points_for
+        self._route_meta = {"planned": False}
+        g = self._route_graph()
+        if g is None or self._target is None:
+            return
+        rp = self._route_cfg()
+        try:
+            t = self._target.transform
+        except RuntimeError:
+            return
+        plan = plan_route(g, (t.location.x, t.location.y, t.location.z), t.rotation.yaw, self._route_rng(2),
+                          rp.get("planner", {}) or {})
+        if plan is None:
+            print("  [route] target pose not on the lane graph → no planned route")
+            return
+        self._route_plan = plan
+        tm = self._client.get_trafficmanager(_tm_port())
+        n_set = 0
+        for o in [self._target] + list(self._distractors):
+            v = getattr(o, "_vehicle", None)
+            if v is None:
+                continue
+            try:
+                loc = v.get_transform().location
+                pts = points_for(plan, (loc.x, loc.y, loc.z))
+                if pts:
+                    tm.set_path(v, [carla.Location(x, y, z + 0.5) for _s, x, y, z in pts])
+                    n_set += 1
+            except (RuntimeError, TypeError):
+                pass
+        self._route_meta = {"planned": True, "length_m": round(plan["length_m"], 1), "score": plan["score"],
+                            "occluders": plan["occluders"], "too_long": plan["too_long"],
+                            "turns": plan["turns"], "n_points": len(plan["points"]), "n_vehicles_set": n_set,
+                            "polyline": [[round(x, 1), round(y, 1)] for _s, x, y, *_r in plan["samples"][::5]]}
+        print(f"  [route] {plan['length_m']:.0f} m, {len(plan['turns'])} turns, occluders "
+              f"{[(o['enter_m'], o['span_m'], o['label']) for o in plan['occluders']]}, set_path on {n_set} vehicles")
+
+    def _reroute_after_relocation(self, actor) -> None:
+        """a scene distractor teleported by unjam: hand it the planned locations still ahead of the TARGET, so it
+        drives back toward the convoy's route instead of chasing locations it can no longer consume."""
+        from scene.route_planner import points_for
+        plan = getattr(self, "_route_plan", None)
+        if plan is None or self._target is None:
+            return
+        try:
+            t = self._target.transform.location
+            pts = points_for(plan, (t.x, t.y, t.z))
+            if pts:
+                self._client.get_trafficmanager(_tm_port()).set_path(
+                    actor, [carla.Location(x, y, z + 0.5) for _s, x, y, z in pts])
+        except (RuntimeError, TypeError):
+            pass
 
     def _nav_near(self, center, radius: float, count: int, attempts: int = 120) -> list:
         """Sample navmesh locations within `radius` metres of `center`."""
@@ -1083,6 +1245,12 @@ class SceneManager:
         #    straight to where the target re-appears). The episode then continues through
         #    the loss and generates recovery demonstrations, rather than being truncated.
         servo_pos = target_pos
+        # 1020 stress scenario: the expert never switches to TARGET-anchored recovery framing (it would re-centre the
+        # true target exactly at the re-capture moment → a GT leak through the camera); it always servos the
+        # {target + similar} centroid, so the target re-enters as a random member of its clone group.
+        if getattr(self, "_no_target_recovery", False):
+            self._target_in_frame = True
+            self._recovery_mode = False
         # During a deliberate loss window the expert is flown BLIND: target_visible=False
         # makes the PID dead-reckon (predict) instead of re-centering, so the forced-evading
         # target genuinely leaves frame and stays off — the predict-intercept loss arc.
@@ -1141,6 +1309,29 @@ class SceneManager:
             action, pert_event = self._perturbation_injector.maybe_perturb(
                 action, uav_pos, target_pos, timestamp)
         return action, pert_event
+
+    def expert_look_away(self, target_pos: np.ndarray, uav_pos: np.ndarray, uav_yaw: float,
+                         timestamp: float) -> tuple[float, float, float, float]:
+        """1020 stress scenario E3 (group out-of-frame): during a scheduled loss window the expert HOVERS and turns
+        the camera away from the {target + similar} cluster by a per-window angle (120-180 deg, random side), so the
+        whole group leaves the frame for the window; afterwards expert_action brings the camera back to the cluster
+        centroid. The camera motion depends only on the window schedule and the cluster, never on which member is
+        the target — the recorded observation stream stays identity-independent."""
+        uav = np.asarray(uav_pos, dtype=float)
+        c = self._cluster_centroid(np.asarray(target_pos, dtype=float))
+        d = c[:2] - uav[:2]
+        base = np.arctan2(d[1], d[0]) if np.hypot(*d) > 1e-3 else np.radians(uav_yaw)
+        if not getattr(self, "_look_away_on", False):         # one angle per window, drawn at its first tick
+            self._look_away_on = True
+            self._look_away_ang = np.radians(random.uniform(120.0, 180.0)) * random.choice([-1.0, 1.0])
+        ang = base + self._look_away_ang
+        look = uav.copy()
+        look[:2] = uav[:2] + 40.0 * np.array([np.cos(ang), np.sin(ang)])
+        hold = np.array([uav[0], uav[1], float(np.asarray(target_pos, dtype=float)[2])])   # hover, keep altitude
+        return self.expert.act(hold, uav, uav_yaw, True, timestamp, look_pos=look)
+
+    def end_look_away(self) -> None:
+        self._look_away_on = False
 
     def check_maneuver(self, timestamp: float) -> Any | None:
         if self._maneuver_injector is not None and self._target_type == "vehicle":
@@ -1323,6 +1514,13 @@ class SceneManager:
         jit = float(kin.get("distractor_jitter_mps", 0.5))
         base = random.uniform(lo, hi)
         speeds = [base] + [float(np.clip(base + random.uniform(-jit, jit), lo, hi)) for _ in self._distractors]
+        if kin.get("clone_speed_offset", False):
+            # 1026 stress_v2: set_desired_speed overrides the E1 percentage offsets given at spawn → re-apply them here:
+            # a clone drives base · (1 − Δ/100), Δ = its spawn speed_diff − the target's (sign random, 12-22 %)
+            tsd = getattr(self, "_target_speed_diff", None)
+            for n, meta in enumerate(self._distractor_meta[:len(self._distractors)]):
+                if meta.get("clone") and meta.get("speed_diff") is not None and tsd is not None:
+                    speeds[n + 1] = float(base * (1.0 - (float(meta["speed_diff"]) - float(tsd)) / 100.0))
         for obj, mps in zip([self._target] + list(self._distractors), speeds):
             v = getattr(obj, "_vehicle", None)
             if v is None:
@@ -1459,6 +1657,8 @@ class SceneManager:
             except RuntimeError:
                 return False
             self._kin_still[aid] = 0
+            if aid in dis_ids and self._route_cfg():
+                self._reroute_after_relocation(a)          # 1026 stress_v2: its planned path is stale now
             self._kin_relocated += 1
             self._kin_events.append({"tick": self._kin_tick, "kind": why, "actor": aid, "in_view": bool(vis)})
             self._kin_quarantine[aid] = self._kin_tick + 10 * int(un.get("quarantine_s", 30))   # codex R2-2

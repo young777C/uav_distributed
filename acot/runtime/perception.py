@@ -15,7 +15,7 @@ from acot.runtime.io import Detection, ScoringInfo
 
 
 class SimProxyPerception:
-    def __init__(self, protocol, image_cfg, shuffle_seed, dino, device):
+    def __init__(self, protocol, image_cfg, shuffle_seed, dino, device, target_world=False):
         import rollout.tracklets as T
         # sim_proxy_v2 tracker = GREEDY assignment by default: every legacy deploy-v2 run had no scipy in the policy
         # image, so TrackletAssigner fell back to greedy (it uses Hungarian only if scipy imports) — pinned, not left
@@ -42,6 +42,9 @@ class SimProxyPerception:
         self.shuffle_seed = int(shuffle_seed)
         self.tracker = TrackletAssigner(**{k: v for k, v in pc["tracker"].items() if k != "assign"})
         self.dino, self.device = dino, device
+        # 1024 HOW ladder (diagnostic, control.ex_source = oracle): also put the target's true world position into the
+        # ScoringInfo labels at every S2 tick; off = no extra GT read (every other arm unchanged)
+        self.want_target_world = bool(target_world)
         self.reset()
 
     def reset(self):
@@ -59,6 +62,7 @@ class SimProxyPerception:
         """→ (detections tuple | None, ScoringInfo)."""
         from rollout.candidates import build_candidates
         tpos, dstates, campose = gt_candidates[:3]
+        tw = tuple(np.asarray(tpos, np.float64).tolist()) if getattr(self, "want_target_world", False) else None
         cset = build_candidates(grid_last, tpos, dstates, campose, self.image_cfg, self.rng)
         vis = gt_candidates[4] if len(gt_candidates) > 4 else None
         if cset is not None and self.occlusion and vis is not None:
@@ -74,7 +78,7 @@ class SimProxyPerception:
                                   mask=cset.mask[keep])
         if cset is None:
             return None, ScoringInfo(step=step, true_idx=-1, is_target=(), gt_idx=(), target_color=target_color,
-                                     target_bp=target_bp, vis=vis)
+                                     target_bp=target_bp, vis=vis, target_world=tw)
         ft = self.crop_feats(rgb, cset.cands)
         keys = self.tracker.update([(c.u, c.v) for c in cset.cands], [c.w for c in cset.cands], ft)
         ds = np.asarray(dstates)
@@ -89,7 +93,7 @@ class SimProxyPerception:
                                   vlm_feat=cset.feats[i], crop_feat=ft[i]))
         info = ScoringInfo(step=step, true_idx=int(cset.true_idx), is_target=tuple(bool(c.is_target) for c in cset.cands),
                            gt_idx=tuple(int(c.idx) for c in cset.cands), target_color=target_color,
-                           target_bp=target_bp, vis=vis)
+                           target_bp=target_bp, vis=vis, target_world=tw)
         return tuple(dets), info
 
     def frame_detections(self, gt_candidates, rgb, feats):

@@ -1,0 +1,7 @@
+# 1024 HOW ladder R0 (acot_note/1024_how_ceiling_prereg.md): U1 (diag_oracle_head, the true identity head) on the
+# CURRENT shared flight stack — constant-velocity WHERE while the committed key has no box (absent_where cv, as ours_cv)
+# + DiT. The deployable-WHERE rung of the ladder. Diagnostic (uses GT).
+name: diag_oracle_head_cv
+extends: diag_oracle_head
+control: {absent_where: cv}
+diagnostics: [oracle_head]

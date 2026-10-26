@@ -1,0 +1,6 @@
+# 1024 OA-VAT FULL closed loop, gain config G3 (= the configured expert envelope) (acot_note/1023_oavat_closedloop_plan.md v3 §2.1):
+# forward 0.3 m/s and yaw 0.75 deg/s per command unit (±40 saturation → 12 m/s, 30 deg/s); else = ext_oavat_full_g2.
+name: ext_oavat_full_g3
+extends: ext_oavat_full_g2
+identity:
+  oavat_full: {g_forward: 0.3, g_yaw: 0.75}

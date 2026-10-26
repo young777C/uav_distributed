@@ -1,0 +1,6 @@
+# 1024 OA-VAT FULL closed loop, gain config G1 (acot_note/1023_oavat_closedloop_plan.md v3 §2.1):
+# forward 0.1 m/s and yaw 0.25 deg/s per command unit (±40 saturation → 4 m/s, 10 deg/s); else = ext_oavat_full_g2.
+name: ext_oavat_full_g1
+extends: ext_oavat_full_g2
+identity:
+  oavat_full: {g_forward: 0.1, g_yaw: 0.25}

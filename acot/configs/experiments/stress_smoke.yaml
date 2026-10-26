@@ -1,0 +1,13 @@
+# 1020 identity stress scenario smoke (acot_note/1020_stress_scenario_design.md §5 step 3): 25 seeds (5 per town:
+# Town05 / 01 / 02 / 04 / 10HD) under expert flight with the re-ID baseline, recording act messages, to measure the
+# event trigger rates (clones co-visible, E1 crossings / tracker ID swaps, E2 occlusion, E3 group out-of-frame), the
+# truncation / skip rates and that a replay of the recording reproduces the live run.
+name: stress_smoke
+protocol: sim_proxy_v2@4
+seeds: {set: stress_smoke, expect: 25}
+completeness: {require: allow_skipped, allow_skipped_reasons: ["target stationary"], pairing: intersection}
+schedule: {block: 5, seed: 10202, max_infra_attempts: 2}
+arms:
+  reidx: {method: ext_reid_expert, role: diagnostic}
+collect: [ticks, trk, gt_access, scenario, record_act]
+infra: {runtime: acot, record_act_ticks: 900, watchdog: {first_min: 40, stall_min: 25, max_restarts: 5}}   # ~11 min episodes

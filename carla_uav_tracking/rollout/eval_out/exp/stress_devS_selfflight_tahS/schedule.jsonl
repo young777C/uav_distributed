@@ -1,0 +1,44 @@
+{"event": "plan", "seed": 10211, "block": 5, "n_units": 8, "order": [["ours_tahS", [94415, 94416, 94417, 94418, 94419]], ["ours_tahS", [94425, 94426, 94427, 94428, 94429]], ["ours_tahS", [94435, 94436, 94437, 94438, 94439]], ["ours_tahS", [94400, 94401, 94402, 94403, 94404]], ["ours_tahS", [94420, 94421, 94422, 94423, 94424]], ["ours_tahS", [94405, 94406, 94407, 94408, 94409]], ["ours_tahS", [94410, 94411, 94412, 94413, 94414]], ["ours_tahS", [94430, 94431, 94432, 94433, 94434]]], "t": 1792847485.779124}
+{"event": "start", "arm": "ours_tahS", "seeds": [94415, 94416, 94417, 94418, 94419], "worker": "w0", "carla_port": 2070, "gpu": 0, "tm_base": 9700, "svc_slot": null, "t": 1792847485.7795806}
+{"event": "start", "arm": "ours_tahS", "seeds": [94425, 94426, 94427, 94428, 94429], "worker": "w1", "carla_port": 2260, "gpu": 1, "tm_base": 9730, "svc_slot": null, "t": 1792847485.7799008}
+{"event": "start", "arm": "ours_tahS", "seeds": [94435, 94436, 94437, 94438, 94439], "worker": "w2", "carla_port": 2010, "gpu": 2, "tm_base": 9760, "svc_slot": null, "t": 1792847485.78028}
+{"event": "start", "arm": "ours_tahS", "seeds": [94400, 94401, 94402, 94403, 94404], "worker": "w3", "carla_port": 2090, "gpu": 3, "tm_base": 9790, "svc_slot": null, "t": 1792847485.7806864}
+{"event": "start", "arm": "ours_tahS", "seeds": [94420, 94421, 94422, 94423, 94424], "worker": "w4", "carla_port": 2050, "gpu": 5, "tm_base": 9820, "svc_slot": null, "t": 1792847485.7811513}
+{"event": "end", "arm": "ours_tahS", "worker": "w4", "requeued": [94422], "t": 1792857794.055572}
+{"event": "start", "arm": "ours_tahS", "seeds": [94405, 94406, 94407, 94408, 94409], "worker": "w4", "carla_port": 2050, "gpu": 5, "tm_base": 9820, "svc_slot": null, "t": 1792857794.0558548}
+{"event": "end", "arm": "ours_tahS", "worker": "w2", "requeued": [94435], "t": 1792858017.254134}
+{"event": "start", "arm": "ours_tahS", "seeds": [94410, 94411, 94412, 94413, 94414], "worker": "w2", "carla_port": 2010, "gpu": 2, "tm_base": 9760, "svc_slot": null, "t": 1792858017.254209}
+{"event": "end", "arm": "ours_tahS", "worker": "w3", "requeued": [94402], "t": 1792858097.554106}
+{"event": "start", "arm": "ours_tahS", "seeds": [94430, 94431, 94432, 94433, 94434], "worker": "w3", "carla_port": 2090, "gpu": 3, "tm_base": 9790, "svc_slot": null, "t": 1792858097.5541837}
+{"event": "end", "arm": "ours_tahS", "worker": "w1", "requeued": [], "t": 1792858784.3541813}
+{"event": "start", "arm": "ours_tahS", "seeds": [94422], "worker": "w1", "carla_port": 2260, "gpu": 1, "tm_base": 9730, "svc_slot": null, "t": 1792858784.354295}
+{"event": "end", "arm": "ours_tahS", "worker": "w1", "requeued": [94422], "t": 1792859492.1750247}
+{"event": "start", "arm": "ours_tahS", "seeds": [94435], "worker": "w1", "carla_port": 2260, "gpu": 1, "tm_base": 9730, "svc_slot": null, "t": 1792859492.1750965}
+{"event": "end", "arm": "ours_tahS", "worker": "w0", "requeued": [], "t": 1792859623.4567306}
+{"event": "start", "arm": "ours_tahS", "seeds": [94402], "worker": "w0", "carla_port": 2070, "gpu": 0, "tm_base": 9700, "svc_slot": null, "t": 1792859623.4568005}
+{"event": "end", "arm": "ours_tahS", "worker": "w0", "requeued": [94402], "t": 1792860377.250707}
+{"event": "start", "arm": "ours_tahS", "seeds": [94422], "worker": "w0", "carla_port": 2070, "gpu": 0, "tm_base": 9700, "svc_slot": null, "t": 1792860377.2508204}
+{"event": "end", "arm": "ours_tahS", "worker": "w1", "requeued": [], "t": 1792861436.1524215}
+{"event": "start", "arm": "ours_tahS", "seeds": [94402], "worker": "w1", "carla_port": 2260, "gpu": 1, "tm_base": 9730, "svc_slot": null, "t": 1792861436.1524982}
+{"event": "end", "arm": "ours_tahS", "worker": "w0", "requeued": [], "t": 1792862794.3571186}
+{"event": "end", "arm": "ours_tahS", "worker": "w1", "requeued": [], "t": 1792863708.7571929}
+{"event": "end", "arm": "ours_tahS", "worker": "w4", "requeued": [], "t": 1792865609.6569018}
+{"event": "end", "arm": "ours_tahS", "worker": "w3", "requeued": [], "t": 1792866309.058295}
+{"event": "end", "arm": "ours_tahS", "worker": "w2", "requeued": [], "t": 1792868186.356404}
+{"event": "plan", "seed": 10211, "block": 5, "n_units": 8, "order": [["ours_tahS", [94415, 94416, 94417, 94418, 94419]], ["ours_tahS", [94425, 94426, 94427, 94428, 94429]], ["ours_tahS", [94435, 94436, 94437, 94438, 94439]], ["ours_tahS", [94400, 94401, 94402, 94403, 94404]], ["ours_tahS", [94420, 94421, 94422, 94423, 94424]], ["ours_tahS", [94405, 94406, 94407, 94408, 94409]], ["ours_tahS", [94410, 94411, 94412, 94413, 94414]], ["ours_tahS", [94430, 94431, 94432, 94433, 94434]]], "t": 1792868282.657106}
+{"event": "start", "arm": "ours_tahS", "seeds": [94415, 94416, 94417, 94418, 94419], "worker": "w0", "carla_port": 2070, "gpu": 0, "tm_base": 9700, "svc_slot": null, "t": 1792868282.7543864}
+{"event": "end", "arm": "ours_tahS", "worker": "w0", "requeued": [], "t": 1792868282.7564797}
+{"event": "start", "arm": "ours_tahS", "seeds": [94425, 94426, 94427, 94428, 94429], "worker": "w0", "carla_port": 2070, "gpu": 0, "tm_base": 9700, "svc_slot": null, "t": 1792868282.7566235}
+{"event": "end", "arm": "ours_tahS", "worker": "w0", "requeued": [], "t": 1792868282.757597}
+{"event": "start", "arm": "ours_tahS", "seeds": [94435, 94436, 94437, 94438, 94439], "worker": "w0", "carla_port": 2070, "gpu": 0, "tm_base": 9700, "svc_slot": null, "t": 1792868282.7576928}
+{"event": "end", "arm": "ours_tahS", "worker": "w0", "requeued": [], "t": 1792868282.7586558}
+{"event": "start", "arm": "ours_tahS", "seeds": [94400, 94401, 94402, 94403, 94404], "worker": "w0", "carla_port": 2070, "gpu": 0, "tm_base": 9700, "svc_slot": null, "t": 1792868282.758752}
+{"event": "end", "arm": "ours_tahS", "worker": "w0", "requeued": [], "t": 1792868282.759704}
+{"event": "start", "arm": "ours_tahS", "seeds": [94420, 94421, 94422, 94423, 94424], "worker": "w0", "carla_port": 2070, "gpu": 0, "tm_base": 9700, "svc_slot": null, "t": 1792868282.759795}
+{"event": "start", "arm": "ours_tahS", "seeds": [94405, 94406, 94407, 94408, 94409], "worker": "w1", "carla_port": 2260, "gpu": 1, "tm_base": 9730, "svc_slot": null, "t": 1792868282.8523672}
+{"event": "end", "arm": "ours_tahS", "worker": "w1", "requeued": [], "t": 1792868282.8533783}
+{"event": "start", "arm": "ours_tahS", "seeds": [94410, 94411, 94412, 94413, 94414], "worker": "w1", "carla_port": 2260, "gpu": 1, "tm_base": 9730, "svc_slot": null, "t": 1792868282.853474}
+{"event": "end", "arm": "ours_tahS", "worker": "w1", "requeued": [], "t": 1792868282.85438}
+{"event": "start", "arm": "ours_tahS", "seeds": [94430, 94431, 94432, 94433, 94434], "worker": "w1", "carla_port": 2260, "gpu": 1, "tm_base": 9730, "svc_slot": null, "t": 1792868282.8544593}
+{"event": "end", "arm": "ours_tahS", "worker": "w0", "requeued": [], "t": 1792868282.8553443}
+{"event": "end", "arm": "ours_tahS", "worker": "w1", "requeued": [], "t": 1792868282.857232}

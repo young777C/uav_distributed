@@ -58,6 +58,9 @@ class ScoringInfo:
     target_color: str
     target_bp: str
     vis: Optional[tuple]
+    # 1024 HOW ladder: the target's TRUE world position at this tick, visible or not (filled by the perception only
+    # for arms with control.ex_source = oracle; reaches a method only through OracleHandle.true_world)
+    target_world: Optional[Tuple[float, float, float]] = None
 
 
 class OracleError(PermissionError):
@@ -81,6 +84,15 @@ class OracleHandle:
                               f"({sorted(self.allowed)})")
         self.calls[purpose] = self.calls.get(purpose, 0) + 1
         return -1 if self.__info is None else int(self.__info.true_idx)
+
+    def true_world(self, purpose):
+        """1024 HOW ladder: the target's true world position (np.ndarray (3,)) of the bound tick, None if unknown."""
+        if purpose not in self.allowed:
+            raise OracleError(f"GT channel {purpose!r} was not declared in the method's diagnostics "
+                              f"({sorted(self.allowed)})")
+        self.calls[purpose] = self.calls.get(purpose, 0) + 1
+        tw = None if self.__info is None else self.__info.target_world
+        return None if tw is None else np.asarray(tw, np.float64)
 
     def reset_calls(self):
         out, self.calls = self.calls, {}

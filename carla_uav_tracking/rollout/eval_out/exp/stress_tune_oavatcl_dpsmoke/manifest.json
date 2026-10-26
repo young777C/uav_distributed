@@ -1,0 +1,79 @@
+{
+ "git_commit": "a6f69de29fc629b4dec06379106101407075634f",
+ "git_dirty_diff_sha256": "583dc8d9102da7ee02ad36ca2217b0c7959a7c0c03245cc17390ff3706a006b3",
+ "git_dirty_files": 93,
+ "host": "dcs-20-04",
+ "python": "3.12.8",
+ "time": 1792903283.4556584,
+ "time_iso": "2026-10-25T00:41:23-0400",
+ "image": {
+  "name": "acot-uav-train:cu118-acot",
+  "id": "sha256:08dcad02975f6aecadbdf091199d3c341178207ee8c25b804676c0f695bd9869"
+ },
+ "runtime": "acot",
+ "files": {
+  "g2dp": {
+   "train/config_v5.yaml": "08fc471b2d489a216b73fba7aad83005f8bf22e5b12a562c9a79b0daf35c17eb",
+   "runs/stage2_v5/stage2_best.pt": "6465f91555798adeeef5af3213a463d88d99843d3714d354a73d56e93bdcc257",
+   "carla_uav_tracking/config/default.yaml": "b0f0c9a14f61fd8062b4c7cbdd6c9363fdff014b945224419f250b73d76d1e65",
+   "carla_uav_tracking/config/scenarios/mvp.yaml": "7af419e3ff5f0d25a0b42c7989ec410a1f359154aa353bdbb71917c57b793e8f",
+   "carla_uav_tracking/rollout/eval_out/opening_attr_cls.pt": "a5df3c4bc04c5915f285020f0ac312f02d2db30b69c9ee23f37c51584dbf0b9c",
+   "carla_uav_tracking/rollout/eval_out/opening_attr_ft.pt": "f315fb55d0cf57657246c4d482f08f39858d7d59909d8d547338f536aa0b78dc"
+  },
+  "g2dp_rep": {
+   "train/config_v5.yaml": "08fc471b2d489a216b73fba7aad83005f8bf22e5b12a562c9a79b0daf35c17eb",
+   "runs/stage2_v5/stage2_best.pt": "6465f91555798adeeef5af3213a463d88d99843d3714d354a73d56e93bdcc257",
+   "carla_uav_tracking/config/default.yaml": "b0f0c9a14f61fd8062b4c7cbdd6c9363fdff014b945224419f250b73d76d1e65",
+   "carla_uav_tracking/config/scenarios/mvp.yaml": "7af419e3ff5f0d25a0b42c7989ec410a1f359154aa353bdbb71917c57b793e8f",
+   "carla_uav_tracking/rollout/eval_out/opening_attr_cls.pt": "a5df3c4bc04c5915f285020f0ac312f02d2db30b69c9ee23f37c51584dbf0b9c",
+   "carla_uav_tracking/rollout/eval_out/opening_attr_ft.pt": "f315fb55d0cf57657246c4d482f08f39858d7d59909d8d547338f536aa0b78dc"
+  }
+ },
+ "workers": [
+  {
+   "id": "w0",
+   "carla_port": 2070,
+   "adapter": 0,
+   "gpu": 0,
+   "slot": 0,
+   "tm_base": 9700
+  },
+  {
+   "id": "w1",
+   "carla_port": 2260,
+   "adapter": 1,
+   "gpu": 1,
+   "slot": 1,
+   "tm_base": 9730
+  },
+  {
+   "id": "w2",
+   "carla_port": 2010,
+   "adapter": 2,
+   "gpu": 2,
+   "slot": 2,
+   "tm_base": 9760
+  },
+  {
+   "id": "w3",
+   "carla_port": 2090,
+   "adapter": 5,
+   "gpu": 5,
+   "slot": 3,
+   "tm_base": 9790
+  }
+ ],
+ "argv": {
+  "cmd": "eval",
+  "experiment": "acot/configs/experiments/stress_tune_oavatcl_dpsmoke.yaml",
+  "arms": null,
+  "seeds": null,
+  "dry_run": false,
+  "allow_test": false,
+  "workers": 4,
+  "carla_ports": "2070,2260,2010,2090",
+  "gpus": "0,1,2,5",
+  "overrides": [],
+  "fn": "<function cmd_eval at 0x7fee39454d60>"
+ }
+}

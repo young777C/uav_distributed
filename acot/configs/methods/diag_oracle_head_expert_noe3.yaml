@@ -1,0 +1,7 @@
+# 1024 HOW ladder R2 (acot_note/1024_how_ceiling_prereg.md): U1 flown by the omniscient EXPERT (GT + PID, as
+# diag_oracle_head_expert) WITHOUT the E3 look-away windows (control.expert_look_away false: the expert flies through them
+# like every self-flight arm; same 25 m look-alike centroid framing; target recovery allowed). Diagnostic (uses GT).
+name: diag_oracle_head_expert_noe3
+extends: diag_oracle_head_expert
+control: {expert_look_away: false}
+diagnostics: [oracle_head, expert_control]

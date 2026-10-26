@@ -1,0 +1,15 @@
+# 1020 auto-tune loop (acot-autotune, port of the av_perf_agent v11 workflow): the G3 recording. Recorded ONCE and
+# frozen (sha256 manifest in the auto-tune baseline snapshot): the re-ID baseline under expert flight on the dedicated
+# seed set autotune_g3 (93700–93779, Town05), full-episode act messages (record_act, 900 ticks). Every candidate is then
+# replayed open-loop on these messages (acot-autotune gates/replay.py); the expert's flight does not depend on the
+# identity decisions, so the replay equals a live expert-flight run of the candidate (checked per promotion by a live
+# spot check). dev-B stays reserved for the final audit (self-flight); test 950xx is never touched.
+name: autotune_g3_record
+protocol: sim_proxy_v2@3
+seeds: {set: autotune_g3, expect: 80}
+completeness: {require: allow_skipped, allow_skipped_reasons: ["target stationary"], pairing: intersection}
+schedule: {block: 5, seed: 10201, max_infra_attempts: 3}
+arms:
+  reidx_r0: {method: ext_reid_expert, role: diagnostic}
+collect: [ticks, trk, gt_access, scenario, record_act]
+infra: {runtime: acot, record_act_ticks: 900}

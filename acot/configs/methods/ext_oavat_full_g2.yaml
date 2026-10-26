@@ -1,0 +1,12 @@
+# 1024 External baseline, SYSTEM level (acot_note/1023_oavat_closedloop_plan.md v3): the OA-VAT FULL system (Sun et al.,
+# CVPR 2026; acot/runtime/oavat_full.py + oavat_closed.py) flies the drone with its own PID controller; same-perception
+# (protocol boxes replace YOLOE). Gain config G2 of the preregistered joint grid (§2.1): forward 0.20 m/s and yaw
+# 0.50 deg/s per command unit (±40 saturation → 8 m/s, 20 deg/s). Area setpoint = empirical median of OA-VAT's own
+# Track boxes on the stress_tune expert recordings (735 px² / 512²). Declared limits = the configured expert envelope
+# (carla_uav_tracking/config/default.yaml expert.velocity_limits: 12 m/s, 30 deg/s); the runtime asserts 40·g ≤ limit.
+name: ext_oavat_full_g2
+extends: _base
+identity:
+  head: oavat_full
+  oavat_full: {g_forward: 0.20, g_yaw: 0.50, target_area_ratio: 0.0028, area_tolerance_ratio: 0.20, max_speed_mps: 12.0,
+               max_yaw_dps: 30.0}

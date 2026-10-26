@@ -1,0 +1,39 @@
+{"event": "plan", "seed": 10201, "block": 5, "n_units": 16, "order": [["reidx_r0", [93735, 93736, 93737, 93738, 93739]], ["reidx_r0", [93760, 93761, 93762, 93763, 93764]], ["reidx_r0", [93730, 93731, 93732, 93733, 93734]], ["reidx_r0", [93725, 93726, 93727, 93728, 93729]], ["reidx_r0", [93775, 93776, 93777, 93778, 93779]], ["reidx_r0", [93770, 93771, 93772, 93773, 93774]], ["reidx_r0", [93750, 93751, 93752, 93753, 93754]], ["reidx_r0", [93710, 93711, 93712, 93713, 93714]], ["reidx_r0", [93745, 93746, 93747, 93748, 93749]], ["reidx_r0", [93740, 93741, 93742, 93743, 93744]], ["reidx_r0", [93755, 93756, 93757, 93758, 93759]], ["reidx_r0", [93700, 93701, 93702, 93703, 93704]], ["reidx_r0", [93720, 93721, 93722, 93723, 93724]], ["reidx_r0", [93715, 93716, 93717, 93718, 93719]], ["reidx_r0", [93705, 93706, 93707, 93708, 93709]], ["reidx_r0", [93765, 93766, 93767, 93768, 93769]]], "t": 1792481121.951856}
+{"event": "start", "arm": "reidx_r0", "seeds": [93735, 93736, 93737, 93738, 93739], "worker": "w0", "carla_port": 2010, "gpu": 1, "tm_base": 9700, "svc_slot": null, "t": 1792481121.9524295}
+{"event": "start", "arm": "reidx_r0", "seeds": [93760, 93761, 93762, 93763, 93764], "worker": "w1", "carla_port": 2050, "gpu": 3, "tm_base": 9730, "svc_slot": null, "t": 1792481121.9527812}
+{"event": "start", "arm": "reidx_r0", "seeds": [93730, 93731, 93732, 93733, 93734], "worker": "w2", "carla_port": 2060, "gpu": 4, "tm_base": 9760, "svc_slot": null, "t": 1792481121.9531431}
+{"event": "start", "arm": "reidx_r0", "seeds": [93725, 93726, 93727, 93728, 93729], "worker": "w3", "carla_port": 2070, "gpu": 7, "tm_base": 9790, "svc_slot": null, "t": 1792481121.9534512}
+{"event": "end", "arm": "reidx_r0", "worker": "w2", "requeued": [], "t": 1792483167.0685308}
+{"event": "start", "arm": "reidx_r0", "seeds": [93775, 93776, 93777, 93778, 93779], "worker": "w2", "carla_port": 2060, "gpu": 4, "tm_base": 9760, "svc_slot": null, "t": 1792483167.0687535}
+{"event": "end", "arm": "reidx_r0", "worker": "w0", "requeued": [], "t": 1792483177.012617}
+{"event": "start", "arm": "reidx_r0", "seeds": [93770, 93771, 93772, 93773, 93774], "worker": "w0", "carla_port": 2010, "gpu": 1, "tm_base": 9700, "svc_slot": null, "t": 1792483177.0126967}
+{"event": "end", "arm": "reidx_r0", "worker": "w3", "requeued": [], "t": 1792483197.1873467}
+{"event": "start", "arm": "reidx_r0", "seeds": [93750, 93751, 93752, 93753, 93754], "worker": "w3", "carla_port": 2070, "gpu": 7, "tm_base": 9790, "svc_slot": null, "t": 1792483197.1874242}
+{"event": "end", "arm": "reidx_r0", "worker": "w1", "requeued": [], "t": 1792483257.2558084}
+{"event": "start", "arm": "reidx_r0", "seeds": [93710, 93711, 93712, 93713, 93714], "worker": "w1", "carla_port": 2050, "gpu": 3, "tm_base": 9730, "svc_slot": null, "t": 1792483257.255898}
+{"event": "end", "arm": "reidx_r0", "worker": "w0", "requeued": [], "t": 1792484899.6206434}
+{"event": "start", "arm": "reidx_r0", "seeds": [93745, 93746, 93747, 93748, 93749], "worker": "w0", "carla_port": 2010, "gpu": 1, "tm_base": 9700, "svc_slot": null, "t": 1792484899.6208813}
+{"event": "end", "arm": "reidx_r0", "worker": "w2", "requeued": [], "t": 1792485095.3645616}
+{"event": "start", "arm": "reidx_r0", "seeds": [93740, 93741, 93742, 93743, 93744], "worker": "w2", "carla_port": 2060, "gpu": 4, "tm_base": 9760, "svc_slot": null, "t": 1792485095.3646715}
+{"event": "end", "arm": "reidx_r0", "worker": "w3", "requeued": [], "t": 1792485209.8801367}
+{"event": "start", "arm": "reidx_r0", "seeds": [93755, 93756, 93757, 93758, 93759], "worker": "w3", "carla_port": 2070, "gpu": 7, "tm_base": 9790, "svc_slot": null, "t": 1792485209.8803205}
+{"event": "end", "arm": "reidx_r0", "worker": "w1", "requeued": [], "t": 1792485300.0876534}
+{"event": "start", "arm": "reidx_r0", "seeds": [93700, 93701, 93702, 93703, 93704], "worker": "w1", "carla_port": 2050, "gpu": 3, "tm_base": 9730, "svc_slot": null, "t": 1792485300.0877802}
+{"event": "end", "arm": "reidx_r0", "worker": "w0", "requeued": [93747], "t": 1792486648.6202562}
+{"event": "start", "arm": "reidx_r0", "seeds": [93720, 93721, 93722, 93723, 93724], "worker": "w0", "carla_port": 2010, "gpu": 1, "tm_base": 9700, "svc_slot": null, "t": 1792486648.6204474}
+{"event": "end", "arm": "reidx_r0", "worker": "w1", "requeued": [93701], "t": 1792486752.5754628}
+{"event": "start", "arm": "reidx_r0", "seeds": [93715, 93716, 93717, 93718, 93719], "worker": "w1", "carla_port": 2050, "gpu": 3, "tm_base": 9730, "svc_slot": null, "t": 1792486752.5756912}
+{"event": "end", "arm": "reidx_r0", "worker": "w3", "requeued": [93759], "t": 1792486802.6431787}
+{"event": "start", "arm": "reidx_r0", "seeds": [93705, 93706, 93707, 93708, 93709], "worker": "w3", "carla_port": 2070, "gpu": 7, "tm_base": 9790, "svc_slot": null, "t": 1792486802.6432636}
+{"event": "end", "arm": "reidx_r0", "worker": "w2", "requeued": [], "t": 1792486908.1755621}
+{"event": "start", "arm": "reidx_r0", "seeds": [93765, 93766, 93767, 93768, 93769], "worker": "w2", "carla_port": 2060, "gpu": 4, "tm_base": 9760, "svc_slot": null, "t": 1792486908.175669}
+{"event": "end", "arm": "reidx_r0", "worker": "w0", "requeued": [], "t": 1792488776.3664725}
+{"event": "start", "arm": "reidx_r0", "seeds": [93701], "worker": "w0", "carla_port": 2010, "gpu": 1, "tm_base": 9700, "svc_slot": null, "t": 1792488776.3666608}
+{"event": "end", "arm": "reidx_r0", "worker": "w3", "requeued": [], "t": 1792488885.3240974}
+{"event": "start", "arm": "reidx_r0", "seeds": [93747], "worker": "w3", "carla_port": 2070, "gpu": 7, "tm_base": 9790, "svc_slot": null, "t": 1792488885.3241954}
+{"event": "end", "arm": "reidx_r0", "worker": "w2", "requeued": [], "t": 1792488975.620723}
+{"event": "start", "arm": "reidx_r0", "seeds": [93759], "worker": "w2", "carla_port": 2060, "gpu": 4, "tm_base": 9760, "svc_slot": null, "t": 1792488975.6208236}
+{"event": "end", "arm": "reidx_r0", "worker": "w1", "requeued": [], "t": 1792489024.019067}
+{"event": "end", "arm": "reidx_r0", "worker": "w0", "requeued": [], "t": 1792489213.926258}
+{"event": "end", "arm": "reidx_r0", "worker": "w3", "requeued": [], "t": 1792489317.910408}
+{"event": "end", "arm": "reidx_r0", "worker": "w2", "requeued": [], "t": 1792489409.3965213}

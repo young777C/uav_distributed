@@ -88,6 +88,7 @@ class StudentRolloutEnv:
     def __init__(self, scene: SceneManager, world, *, policy, scorer,
                  fps: int = 10, resolution=(512, 512), central_frac: float = 0.3,
                  fov_deg: float = 90.0, expert_control: bool = False,
+                 expert_look_away: bool = True,
                  predict_road: bool = False, road_oracle: bool = False,
                  waypoint_offsets_s=(1, 2, 4, 6), vis_raycast: bool = False,
                  retarget_tick: int | None = None, hires_k: int = 1):
@@ -116,6 +117,19 @@ class StudentRolloutEnv:
         # the drone with the EXPERT action (GT+PID, centers the target). Isolates "if framing
         # were perfect, does grounding/SR recover?" — tests the framing→grounding→SR chain.
         self._expert_control = bool(expert_control)
+        # 1020 stress scenario: environment.loss_events.expert_mode == "look_away" → E3 group out-of-frame windows
+        # under expert flight, and no target-anchored recovery framing (scene._no_target_recovery)
+        _le = (scene._config.get("environment", {}).get("loss_events", {}) or {})
+        _stress = bool(expert_control) and _le.get("enabled", False) and _le.get("expert_mode") == "look_away"
+        self._look_away = _stress and bool(expert_look_away)
+        if self._look_away:
+            scene._no_target_recovery = True
+            scene._centroid_radius_m = float(_le.get("centroid_radius_m", 25.0))
+        elif _stress:
+            # 1024 HOW ladder R2 (expert_look_away = False): the omniscient flight ceiling — the expert flies through
+            # the E3 windows like every self-flight arm (the windows stay planned and annotated, in_loss_window is
+            # unchanged), keeps the same 25 m look-alike centroid framing, and may servo the true target to recover it
+            scene._centroid_radius_m = float(_le.get("centroid_radius_m", 25.0))
         # 1003_dynamic-retarget-design.md §2.2/§5 S1: scripted single-event retarget, GT-driven
         # (no language yet). At this tick, if a visible distractor exists, swap it in as the new
         # target and flag Observation.retarget_event=True for exactly that tick.
@@ -244,10 +258,13 @@ class StudentRolloutEnv:
                 # =============================================================
                 self._scene.step_target(self._dt)
                 self._world.tick()
-                rgb = rgb_sensor.get_frame(timeout=0.5)               # frame(t) @ P(t)
+                # frame(t) @ P(t). 1020: 5 s (was 0.5 s): in synchronous mode a late frame is still frame(t) — under host
+                # load the 0.5 s wait aborted whole episodes (queue.Empty) without changing any frame that did arrive.
+                # 1022: 20 s — with 2 CARLA servers per GPU under host load ~130 the server still stalls > 5 s
+                rgb = rgb_sensor.get_frame(timeout=20.0)
                 rgb_hi = None
                 if hi_sensor is not None:
-                    rgb_hi = hi_sensor.get_frame(timeout=2.0)
+                    rgb_hi = hi_sensor.get_frame(timeout=20.0)
                     if step >= 12:                                     # opening over → stop the extra render
                         hi_sensor.destroy(); hi_sensor = None
                     if step not in (0, 6, 12):
@@ -300,8 +317,13 @@ class StudentRolloutEnv:
                 # expert-control probe: keep the policy's tid `info` for scoring, but drive
                 # the drone with the EXPERT action (well-framed) instead of the DiT's.
                 if self._expert_control:
-                    action, _ = self._scene.expert_action(
-                        tpos, drone_state.position, drone_state.yaw, True, elapsed)
+                    if self._look_away and in_loss:            # 1020 stress E3: the group leaves the frame
+                        action = self._scene.expert_look_away(tpos, drone_state.position, drone_state.yaw, elapsed)
+                    else:
+                        if self._look_away:
+                            self._scene.end_look_away()
+                        action, _ = self._scene.expert_action(
+                            tpos, drone_state.position, drone_state.yaw, True, elapsed)
 
                 # SCORE this tick against GT (hysteresis mis-follow etc. inside).
                 self._scorer.update(step=step, target_present=target_present,
@@ -318,7 +340,9 @@ class StudentRolloutEnv:
                     break
 
         except Exception as e:  # noqa: BLE001 — mirror recorder's episode-level guard
-            metadata["error"] = str(e)
+            import traceback as _tb      # 1020: type + traceback tail (str(e) alone is empty for queue.Empty / asserts)
+            metadata["error"] = "{}: {} | step {} | {}".format(type(e).__name__, e, step,
+                                                              " / ".join(_tb.format_exc().splitlines()[-6:])[-900:])
         finally:
             try:
                 rgb_sensor.destroy()

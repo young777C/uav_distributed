@@ -1,0 +1,13 @@
+# 1024 OA-VAT FULL closed loop — CARLA smoke (acot_note/1023_oavat_closedloop_plan.md v3 §6.5): G2 on one seed per
+# dev-S town (94000 Town05, 94040 Town01), run twice (arm g2_rep = the same method) to report closed-loop run-to-run
+# variability; checks non-zero actions, stable flight, gt_access, full episode time incl. CARLA. Not used for selection.
+name: stress_tune_oavatcl_smoke
+protocol: sim_proxy_v2@4
+seeds: {set: stress_tune, subset: [[94000, 94000], [94040, 94040]], expect: 2}
+completeness: {require: allow_skipped, allow_skipped_reasons: ["target stationary"], pairing: intersection}
+schedule: {block: 2, seed: 10242, max_infra_attempts: 2}
+arms:
+  g2:     {method: ext_oavat_full_g2}
+  g2_rep: {method: ext_oavat_full_g2}
+collect: [ticks, trk, gt_access, scenario, oavat_frames]
+infra: {runtime: acot, watchdog: {first_min: 60, stall_min: 40, max_restarts: 3}}

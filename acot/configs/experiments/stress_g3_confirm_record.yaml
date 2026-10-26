@@ -1,0 +1,13 @@
+# 1020 identity stress scenario (acot_note/1020_stress_scenario_design.md §2.4, §4): the G3-confirm recording of the
+# auto-tune loop on the stress scenario — recorded ONCE under expert flight (re-ID baseline, sim_proxy_v2@4 with the
+# T1 first-frame box), full-episode act messages; every candidate is replayed open-loop on it. The expert's flight
+# (cluster-centroid framing, E3 look-away windows) does not depend on the identity decisions.
+name: stress_g3_confirm_record
+protocol: sim_proxy_v2@4
+seeds: {set: stress_confirm, expect: 80}
+completeness: {require: allow_skipped, allow_skipped_reasons: ["target stationary"], pairing: intersection}
+schedule: {block: 5, seed: 10204, max_infra_attempts: 3}
+arms:
+  reidx: {method: ext_reid_expert, role: diagnostic}
+collect: [ticks, trk, gt_access, scenario, record_act]
+infra: {runtime: acot, record_act_ticks: 900, watchdog: {first_min: 40, stall_min: 25, max_restarts: 5}}

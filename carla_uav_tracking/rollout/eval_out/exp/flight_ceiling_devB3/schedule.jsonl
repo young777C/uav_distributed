@@ -1,0 +1,39 @@
+{"event": "plan", "seed": 10191, "block": 5, "n_units": 16, "order": [["u1x_r0", [93085, 93086, 93087, 93088, 93089]], ["u1x_r0", [93075, 93076, 93077, 93078, 93079]], ["stickyx_r0", [93075, 93076, 93077, 93078, 93079]], ["stickyx_r0", [93090, 93091, 93092, 93093, 93094]], ["u1x_r0", [93070, 93071, 93072, 93073, 93074]], ["u1x_r0", [93060, 93061, 93062, 93063, 93064]], ["u1x_r0", [93080, 93081, 93082, 93083, 93084]], ["stickyx_r0", [93080, 93081, 93082, 93083, 93084]], ["stickyx_r0", [93065, 93066, 93067, 93068, 93069]], ["u1x_r0", [93090, 93091, 93092, 93093, 93094]], ["u1x_r0", [93065, 93066, 93067, 93068, 93069]], ["stickyx_r0", [93085, 93086, 93087, 93088, 93089]], ["u1x_r0", [93095, 93096, 93097, 93098, 93099]], ["stickyx_r0", [93070, 93071, 93072, 93073, 93074]], ["stickyx_r0", [93095, 93096, 93097, 93098, 93099]], ["stickyx_r0", [93060, 93061, 93062, 93063, 93064]]], "t": 1792423361.418044}
+{"event": "start", "arm": "u1x_r0", "seeds": [93085, 93086, 93087, 93088, 93089], "worker": "w0", "carla_port": 2060, "gpu": 1, "tm_base": 9700, "svc_slot": null, "t": 1792423361.418492}
+{"event": "start", "arm": "u1x_r0", "seeds": [93075, 93076, 93077, 93078, 93079], "worker": "w1", "carla_port": 2070, "gpu": 2, "tm_base": 9730, "svc_slot": null, "t": 1792423361.4189527}
+{"event": "start", "arm": "stickyx_r0", "seeds": [93075, 93076, 93077, 93078, 93079], "worker": "w2", "carla_port": 2090, "gpu": 5, "tm_base": 9760, "svc_slot": null, "t": 1792423361.4191995}
+{"event": "start", "arm": "stickyx_r0", "seeds": [93090, 93091, 93092, 93093, 93094], "worker": "w3", "carla_port": 2230, "gpu": 7, "tm_base": 9790, "svc_slot": null, "t": 1792423361.419581}
+{"event": "start", "arm": "u1x_r0", "seeds": [93070, 93071, 93072, 93073, 93074], "worker": "w4", "carla_port": 2250, "gpu": 3, "tm_base": 9820, "svc_slot": null, "t": 1792423361.4199224}
+{"event": "end", "arm": "stickyx_r0", "worker": "w2", "requeued": [], "t": 1792425083.7805037}
+{"event": "start", "arm": "u1x_r0", "seeds": [93060, 93061, 93062, 93063, 93064], "worker": "w2", "carla_port": 2090, "gpu": 5, "tm_base": 9760, "svc_slot": null, "t": 1792425083.780636}
+{"event": "end", "arm": "u1x_r0", "worker": "w0", "requeued": [], "t": 1792425114.8095894}
+{"event": "start", "arm": "u1x_r0", "seeds": [93080, 93081, 93082, 93083, 93084], "worker": "w0", "carla_port": 2060, "gpu": 1, "tm_base": 9700, "svc_slot": null, "t": 1792425114.809768}
+{"event": "end", "arm": "u1x_r0", "worker": "w4", "requeued": [], "t": 1792425124.1062186}
+{"event": "start", "arm": "stickyx_r0", "seeds": [93080, 93081, 93082, 93083, 93084], "worker": "w4", "carla_port": 2250, "gpu": 3, "tm_base": 9820, "svc_slot": null, "t": 1792425124.106301}
+{"event": "end", "arm": "u1x_r0", "worker": "w1", "requeued": [], "t": 1792425184.0263808}
+{"event": "start", "arm": "stickyx_r0", "seeds": [93065, 93066, 93067, 93068, 93069], "worker": "w1", "carla_port": 2070, "gpu": 2, "tm_base": 9730, "svc_slot": null, "t": 1792425184.026451}
+{"event": "end", "arm": "stickyx_r0", "worker": "w3", "requeued": [], "t": 1792425194.3469872}
+{"event": "start", "arm": "u1x_r0", "seeds": [93090, 93091, 93092, 93093, 93094], "worker": "w3", "carla_port": 2230, "gpu": 7, "tm_base": 9790, "svc_slot": null, "t": 1792425194.347057}
+{"event": "end", "arm": "stickyx_r0", "worker": "w4", "requeued": [], "t": 1792427042.002131}
+{"event": "start", "arm": "u1x_r0", "seeds": [93065, 93066, 93067, 93068, 93069], "worker": "w4", "carla_port": 2250, "gpu": 3, "tm_base": 9820, "svc_slot": null, "t": 1792427042.0026975}
+{"event": "end", "arm": "u1x_r0", "worker": "w2", "requeued": [], "t": 1792427043.4767559}
+{"event": "start", "arm": "stickyx_r0", "seeds": [93085, 93086, 93087, 93088, 93089], "worker": "w2", "carla_port": 2090, "gpu": 5, "tm_base": 9760, "svc_slot": null, "t": 1792427043.4769037}
+{"event": "end", "arm": "u1x_r0", "worker": "w0", "requeued": [], "t": 1792427074.2446473}
+{"event": "start", "arm": "u1x_r0", "seeds": [93095, 93096, 93097, 93098, 93099], "worker": "w0", "carla_port": 2060, "gpu": 1, "tm_base": 9700, "svc_slot": null, "t": 1792427074.244725}
+{"event": "end", "arm": "stickyx_r0", "worker": "w1", "requeued": [], "t": 1792427211.1726732}
+{"event": "start", "arm": "stickyx_r0", "seeds": [93070, 93071, 93072, 93073, 93074], "worker": "w1", "carla_port": 2070, "gpu": 2, "tm_base": 9730, "svc_slot": null, "t": 1792427211.1727397}
+{"event": "end", "arm": "u1x_r0", "worker": "w3", "requeued": [], "t": 1792427284.3332634}
+{"event": "start", "arm": "stickyx_r0", "seeds": [93095, 93096, 93097, 93098, 93099], "worker": "w3", "carla_port": 2230, "gpu": 7, "tm_base": 9790, "svc_slot": null, "t": 1792427284.3333805}
+{"event": "end", "arm": "u1x_r0", "worker": "w4", "requeued": [93069], "t": 1792428733.2185965}
+{"event": "start", "arm": "stickyx_r0", "seeds": [93060, 93061, 93062, 93063, 93064], "worker": "w4", "carla_port": 2250, "gpu": 3, "tm_base": 9820, "svc_slot": null, "t": 1792428733.2187781}
+{"event": "end", "arm": "stickyx_r0", "worker": "w1", "requeued": [93074], "t": 1792428800.0575893}
+{"event": "start", "arm": "u1x_r0", "seeds": [93069], "worker": "w1", "carla_port": 2070, "gpu": 2, "tm_base": 9730, "svc_slot": null, "t": 1792428800.057677}
+{"event": "end", "arm": "u1x_r0", "worker": "w0", "requeued": [], "t": 1792428909.5891404}
+{"event": "start", "arm": "stickyx_r0", "seeds": [93074], "worker": "w0", "carla_port": 2060, "gpu": 1, "tm_base": 9700, "svc_slot": null, "t": 1792428909.5892}
+{"event": "end", "arm": "u1x_r0", "worker": "w1", "requeued": [93069], "t": 1792428942.9918082}
+{"event": "end", "arm": "stickyx_r0", "worker": "w2", "requeued": [], "t": 1792428944.084317}
+{"event": "start", "arm": "u1x_r0", "seeds": [93069], "worker": "w2", "carla_port": 2090, "gpu": 5, "tm_base": 9760, "svc_slot": null, "t": 1792428944.0843856}
+{"event": "end", "arm": "stickyx_r0", "worker": "w3", "requeued": [], "t": 1792429173.7010014}
+{"event": "end", "arm": "stickyx_r0", "worker": "w0", "requeued": [], "t": 1792429316.8081524}
+{"event": "end", "arm": "u1x_r0", "worker": "w2", "requeued": [], "t": 1792429371.8906832}
+{"event": "end", "arm": "stickyx_r0", "worker": "w4", "requeued": [], "t": 1792430719.4762185}

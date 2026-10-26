@@ -6,6 +6,7 @@ partial), GT-audit verdicts, experiment manifest. Results: <results_root>/<exper
 import json
 import os
 import re
+import shlex
 import subprocess
 import threading
 import time
@@ -21,11 +22,32 @@ from acot.infra.preflight import carla_up, check_runtime, check_static, gpu_free
 
 DONE = ("complete", "skipped")
 PRINT = threading.Lock()
+# pkill / pgrep -f read their pattern as an extended regex; a metacharacter in a client path could make the probe miss
+# the real client and "confirm" it stopped (codex R5). '.' only over-matches, which is safe here.
+REGEX_META = re.compile(r"[][(){}*+?|^$\\]")
+
+
+class BookkeepingError(RuntimeError):
+    """a per-seed status / attempt / GT-audit record could not be written: the run state is no longer trusted, so the
+    Dispatcher stops handing out units (codex R2, 10-19); `Run.reconcile` repairs what it can at the next start."""
+
+
+class ClientNotStopped(RuntimeError):
+    """the client of an abandoned part could not be confirmed stopped inside the CARLA container; its seeds are
+    quarantined (failed, final, not retried) so that no second client ever runs them concurrently."""
 
 
 def say(msg):
     with PRINT:
         print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
+
+
+def say_quiet(msg):
+    """diagnostics on a cleanup path must never raise (codex R3: a BrokenPipe there skipped the quarantine)."""
+    try:
+        say(msg)
+    except Exception:
+        pass
 
 
 def write_json(path, obj):
@@ -77,7 +99,15 @@ class Run:
         return "/workspace" + host_path[len(base):]
 
     def status(self, arm, seed):
-        return read_json(os.path.join(self.arm_dir(arm), "seeds", str(seed), "status.json"), {}) or {}
+        """the seed's status.json, overlaid by quarantine.json when present (codex R3: the client may still rewrite
+        status.json after a quarantine; quarantine.json is written only here and is never touched by the client)."""
+        sd = os.path.join(self.arm_dir(arm), "seeds", str(seed))
+        st = read_json(os.path.join(sd, "status.json"), {}) or {}
+        q = read_json(os.path.join(sd, "quarantine.json"))
+        if q is not None:
+            st.update(status="failed", reason=q.get("reason", "quarantined"), final=True, infra_retry=False,
+                      quarantined=True)
+        return st
 
     def done(self, arm, seed):
         st = self.status(arm, seed)
@@ -85,7 +115,8 @@ class Run:
 
     # ----------------------------------------------------------------------------------------------------- planning
     def workers(self, n):
-        """the first n CARLA servers that answer and n policy GPUs with free memory, leased for this run."""
+        """the first n CARLA servers that answer and n policy GPU slots with free memory, leased for this run. A GPU
+        listed k times in --gpus hosts up to k policy containers (lease gpu_<g>, then gpu_<g>.1, …)."""
         I, out = self.I, []
         ports = [s for s in I["carla_servers"]
                  if not any(lo <= s["port"] <= hi for lo, hi in I["reserved"]["carla_ports"])]
@@ -99,10 +130,12 @@ class Run:
                 break
             if not carla_up(I, s["port"]):
                 continue
-            g = next((g for g in gpus if g not in [w["gpu"] for w in out] and gpu_free_mib(g) >= 20000), None)
-            if g is None:
+            slot = next((i for i, g in enumerate(gpus) if i not in [w["slot"] for w in out]
+                         and gpu_free_mib(g) >= 20000), None)
+            if slot is None:
                 break
-            lease = Lease([f"carla_{s['port']}", f"gpu_{g}"], owner=self.R["name"])
+            g, dup = gpus[slot], gpus[:slot].count(gpus[slot])
+            lease = Lease([f"carla_{s['port']}", f"gpu_{g}" if dup == 0 else f"gpu_{g}.{dup}"], owner=self.R["name"])
             try:
                 lease.acquire()
             except RuntimeError as e:
@@ -121,8 +154,8 @@ class Run:
                 say("no free TM port block")
                 break
             k = len(out)
-            out.append({"id": f"w{k}", "carla_port": s["port"], "adapter": s["adapter"], "gpu": g, "tm_base": tm,
-                        "lease": lease})
+            out.append({"id": f"w{k}", "carla_port": s["port"], "adapter": s["adapter"], "gpu": g, "slot": slot,
+                        "tm_base": tm, "lease": lease})
         return out
 
     def plan(self, seeds, nworkers):
@@ -321,8 +354,17 @@ class Run:
                 break
             time.sleep(10)
         time.sleep(20)
-        docker.exec_py(c, f"import carla; cl = carla.Client('127.0.0.1', {P}); cl.set_timeout(180); cl.load_world('{town}')",
-                       python=py, timeout=240)
+        # 10-22: a fresh server under host load can need > 4 min for its first load_world; one slow preload used to
+        # retire the worker for the rest of the run (2030, 2050). Wait longer and retry once before giving up.
+        for attempt in range(2):
+            try:
+                docker.exec_py(c, f"import carla; cl = carla.Client('127.0.0.1', {P}); cl.set_timeout(360); "
+                                  f"cl.load_world('{town}')", python=py, timeout=420)
+                return
+            except subprocess.TimeoutExpired:
+                if attempt:
+                    raise
+                say(f"{w['id']}: preloading {town} on CARLA {P} timed out — retrying once")
 
     # -------------------------------------------------------------------------------------------------------- unit
     def run_unit(self, arm, w, seeds):
@@ -358,11 +400,18 @@ class Run:
                           env={"vis_raycast": proto["perception"]["occlusion"] == "raycast",
                                "hires_k": proto["frontend"]["opening"]["hires_k"],
                                "expert_control": meth["control"]["expert_control"],
+                               "expert_look_away": meth["control"].get("expert_look_away", True),   # 1024 HOW R2
                                "predict_road": meth["control"]["predict_road"],
                                "road_oracle": meth["control"]["road_oracle"],
                                "retarget_tick": proto["sim"]["retarget_tick"],
                                "determinism": dict(proto["sim"].get("env_determinism") or {})})
+            if proto["sim"].get("scenario", "mvp") != "mvp":   # 1020: non-default scenario file (mvp: as before)
+                client["scenario"] = proto["sim"]["scenario"]
             cj = os.path.join(d, "parts", f"{tag}.client.json")
+            for sd in pending:                                  # codex R4: an earlier attempt's audit record must
+                ga = os.path.join(d, "seeds", str(sd), "gt_access.json")   # never validate this attempt
+                if os.path.exists(ga):
+                    os.replace(ga, ga + f".stale_{tag}")
             write_json(cj, client)
             tm = w["tm_base"] + self.I["tm_ports"]["per_restart"] * restarts
             log = os.path.join(d, "logs", f"client_{tag}.log")
@@ -375,25 +424,141 @@ class Run:
             with open(log, "w") as fh:
                 proc = subprocess.Popen(cmd, stdout=fh, stderr=subprocess.STDOUT)
             hung, seen, last, limit = False, 0, time.time(), self.I["watchdog"]["first_min"] * 60
-            while proc.poll() is None:
-                time.sleep(10)
-                n = sum(1 for x in open(log, errors="ignore") if x.startswith("[acot] seed="))
-                if n > seen:
-                    seen, last, limit = n, time.time(), self.I["watchdog"]["stall_min"] * 60
-                    say(f"{arm}/{tag}: {n}/{len(pending)} done")
-                if time.time() - last > limit:
-                    hung = True
-                    say(f"{arm}/{tag}: HANG after {seen} seed(s) — killing the client")
-                    docker.sh(["docker", "exec", self.I["docker"]["carla_container"], "pkill", "-f",
-                               f"episode.py --client {self.ctr(cj)}"])
-                    proc.kill()
-                    break
-            proc.wait()
-            docker.rm(name, self.cprefix)                       # after close → the policy flushed its logs
-            self.post_part(arm, pending)
+            try:
+                while proc.poll() is None:
+                    time.sleep(10)
+                    n = sum(1 for x in open(log, errors="ignore") if x.startswith("[acot] seed="))
+                    if n > seen:
+                        seen, last, limit = n, time.time(), self.I["watchdog"]["stall_min"] * 60
+                        say(f"{arm}/{tag}: {n}/{len(pending)} done")
+                    # 10-22: a seed that still writes ticks is alive — slow self-flight episodes (> stall_min under
+                    # GPU sharing) were killed mid-way although progressing; stall = no new tick for `limit`
+                    tick_t = max((os.path.getmtime(p) for p in (os.path.join(self.arm_dir(arm), "seeds", str(s),
+                                  "ticks.jsonl") for s in pending) if os.path.exists(p)), default=0)
+                    if tick_t > last:
+                        last = tick_t
+                    if time.time() - last > limit:
+                        hung = True
+                        say(f"{arm}/{tag}: HANG after {seen} seed(s) — killing the client")
+                        break
+                if (hung or proc.poll() != 0) and not self.stop_part(proc, cj, name):   # a hang, or the docker exec
+                    raise ClientNotStopped(f"{arm}/{tag}: the client could not be confirmed stopped "     # ended
+                                           f"({'hang' if hung else f'docker exec rc {proc.poll()}'})")   # abnormally
+            except BaseException as e:                          # codex R1/R2 (10-19): never leave this part's client
+                stopped = not isinstance(e, ClientNotStopped) and self.stop_part(proc, cj, name)   # running when the
+                self.book(arm, pending, quarantine=None if stopped else "client termination unconfirmed")  # unit is
+                raise                                           # abandoned; book the interrupted part (or quarantine)
+            try:
+                docker.rm(name, self.cprefix, timeout=300)      # after close → the policy flushed its logs
+            except Exception as e:
+                say_quiet(f"{arm}/{tag}: docker rm {name}: {type(e).__name__}: {e}")
+            self.book(arm, pending)
             if hung or seen == 0:
                 restarts += 1
                 self.restart_carla(w, town)
+
+    def kill_client(self, cj, tries=(("-TERM", 5), ("-TERM", 10), ("-KILL", 5), ("-KILL", 10))):
+        """stop the part's client inside the CARLA container and CONFIRM it is gone; bounded (every docker call has a
+        timeout), escalating TERM → KILL. Confirmation needs an in-container probe that RAN (docker rc 0) and printed
+        pgrep's rc 1 (codex R3: a docker transport error must never read as 'gone'); the [e] keeps the probe's own
+        shell out of the match. → True only when confirmed."""
+        return self.kill_pattern(f"episode.py --client {self.ctr(cj)}", tries)
+
+    def kill_pattern(self, pat, tries=(("-TERM", 5), ("-TERM", 10), ("-KILL", 5), ("-KILL", 10))):
+        """kill_client for any `pkill -f` pattern starting with 'episode.py' (see kill_client). A pattern with a regex
+        metacharacter is never confirmed (→ False: quarantine / refuse)."""
+        if REGEX_META.search(pat):
+            say_quiet(f"kill_pattern: regex metacharacter in {pat!r} — termination cannot be confirmed")
+            return False
+        c = self.I["docker"]["carla_container"]
+        probe = f"pgrep -f {shlex.quote('[e]' + pat[1:])} >/dev/null; echo acot_probe_rc=$?"
+        for sig, wait_s in tries:
+            try:
+                docker.sh(["docker", "exec", c, "pkill", sig, "-f", pat], timeout=60)
+                time.sleep(wait_s)
+                p = docker.sh(["docker", "exec", c, "sh", "-c", probe], timeout=60)
+                if p.returncode == 0 and "acot_probe_rc=1" in (p.stdout or ""):
+                    return True
+            except Exception as e:
+                say_quiet(f"kill_client {pat}: {type(e).__name__}: {e}")
+        return False
+
+    def stop_part(self, proc, cj, name):
+        """teardown of one part (hang, abnormal exit or exception): the client in the CARLA container (verified), the
+        local docker-exec process, the policy container; bounded, every step attempted, never raises.
+        → True only when the client is confirmed gone."""
+        try:
+            stopped = self.kill_client(cj)
+        except Exception:
+            stopped = False
+        for step in (proc.kill, lambda: proc.wait(timeout=60), lambda: docker.rm(name, self.cprefix, timeout=120)):
+            try:
+                step()
+            except Exception as e:
+                say_quiet(f"stop_part {name}: {type(e).__name__}: {e}")
+        return stopped
+
+    def book(self, arm, seeds, quarantine=None):
+        """post_part, or (client not confirmed stopped) quarantine the part's unfinished seeds: failed, final, never
+        retried. Any write failure → BookkeepingError (the Dispatcher then stops handing out units)."""
+        try:
+            if quarantine is None:
+                return self.post_part(arm, seeds)
+            for s in seeds:
+                st = self.status(arm, s)
+                if st.get("status") not in DONE:         # unfinished now; quarantine.json overrides any later write
+                    sd = os.path.join(self.arm_dir(arm), "seeds", str(s))   # of the surviving client
+                    write_json(os.path.join(sd, "quarantine.json"), {"reason": quarantine, "t": time.time()})
+                    st = self.status(arm, s)
+                    st.setdefault("attempts", []).append({"status": "quarantined", "reason": quarantine})
+                    write_json(os.path.join(sd, "status.json"), st)
+        except Exception as e:
+            raise BookkeepingError(f"{arm} {seeds}: {type(e).__name__}: {e}") from e
+
+    def kill_orphans(self):
+        """codex R4: a client of THIS experiment still running inside the CARLA container (left by a crashed / killed
+        scheduler) must be confirmed gone before any of its seeds is reconciled or run again; the experiment lease
+        (run_experiment) guarantees no other live invocation owns such a client. → raises if not confirmed."""
+        bad = [p for p in [self.ctr(self.root)] + [self.ctr(self.arm_dir(a)) for a in self.R["arms"]]
+               if REGEX_META.search(p)]
+        if bad:                                          # codex R5: every client path must be matchable literally
+            raise ValueError(f"regex metacharacters in result paths {bad} — rename the experiment / arms "
+                             f"(client termination could not be confirmed)")
+        if not self.kill_pattern(f"episode.py --client {self.ctr(self.root)}/"):
+            raise ClientNotStopped(f"clients of {self.R['name']} in the CARLA container could not be confirmed stopped "
+                                   f"— refusing to start (stop them by hand, then resume)")
+
+    def reconcile(self):
+        """idempotent repair at the start and end of a run (codex R2): a `partial` left by a crashed run is booked as an
+        attempt (failed; final once the attempts are used up); a `complete` gets the GT-audit verdict re-applied."""
+        cap = int((self.R.get("schedule") or {}).get("max_infra_attempts", self.max_attempts))
+        uses_gt = {a: self.R["arms"][a]["uses_gt"] for a in self.R["arms"]}
+        for arm in self.R["arms"]:
+            for sd in self.R["seeds"]:
+                s = sd["seed"]
+                st = self.status(arm, s)
+                if st.get("quarantined"):
+                    raw = read_json(os.path.join(self.arm_dir(arm), "seeds", str(s), "status.json"), {}) or {}
+                    if raw.get("quarantined") and raw.get("status") == "failed" and raw.get("final"):
+                        continue
+                elif st.get("status") == "partial":
+                    st.setdefault("attempts", []).append({"status": "partial", "reason": "client died mid-episode (reconciled)"})
+                    st.update(status="failed", infra_retry=False, final=len(st["attempts"]) >= cap)
+                elif not (st.get("status") == "complete" and "gt_access" in self.R["collect"]):
+                    continue
+                elif (v := self.audit_verdict(arm, s, uses_gt[arm])) is not None:
+                    st.update(status="failed", reason=v, final=True)
+                else:
+                    continue
+                write_json(os.path.join(self.arm_dir(arm), "seeds", str(s), "status.json"), st)
+
+    def audit_verdict(self, arm, seed, uses):
+        g = read_json(os.path.join(self.arm_dir(arm), "seeds", str(seed), "gt_access.json"))
+        if g is None:
+            return "gt_access record missing"
+        if g["violations"] or (g["unknown_sites"] and not uses):
+            return "gt_access_violation"
+        return None
 
     def post_part(self, arm, seeds):
         """per-attempt bookkeeping + GT-audit verdicts for the seeds of a finished part."""
@@ -404,16 +569,15 @@ class Run:
                 continue
             if st["status"] == "partial":
                 st.setdefault("attempts", []).append({"status": "partial", "reason": "client died mid-episode"})
+                st["status"] = "failed"              # booked (codex R4): reconcile only ever charges UNbooked partials
             if st["status"] in ("partial", "failed") and self.R.get("schedule") and not st.get("final"):
                 st.update(status="failed", final=True, infra_retry=True)
             elif st["status"] in ("partial", "failed") and len(st.get("attempts", [])) >= self.max_attempts:
                 st.update(status="failed", final=True)
             if st["status"] == "complete" and "gt_access" in self.R["collect"]:
-                g = read_json(os.path.join(self.arm_dir(arm), "seeds", str(s), "gt_access.json"))
-                if g is None:
-                    st.update(status="failed", reason="gt_access record missing", final=True)
-                elif g["violations"] or (g["unknown_sites"] and not uses):
-                    st.update(status="failed", reason="gt_access_violation", final=True)
+                v = self.audit_verdict(arm, s, uses)
+                if v is not None:
+                    st.update(status="failed", reason=v, final=True)
             write_json(os.path.join(self.arm_dir(arm), "seeds", str(s), "status.json"), st)
 
     def finalize(self, arm, seed, status, reason, final=False):
@@ -442,6 +606,8 @@ class Dispatcher:
                     units.append({"arm": arm, "seeds": block[i:i + int(sch["block"])], "avoid": []})
         random.Random(int(sch["seed"])).shuffle(units)
         self.q, self.lock, self.log_lock, self.active = units, threading.Lock(), threading.Lock(), 0
+        self.retired = set()                   # workers whose unit raised (e.g. their CARLA restart failed); never reused
+        self.abort = False                     # set when bookkeeping / logging failed: hand out no further unit
         self.log = os.path.join(run.root, "schedule.jsonl")
         self._log({"event": "plan", "seed": int(sch["seed"]), "block": int(sch["block"]), "n_units": len(units),
                    "order": [[u["arm"], [s["seed"] for s in u["seeds"]]] for u in units]})
@@ -453,15 +619,23 @@ class Dispatcher:
 
     def _take(self, w):
         with self.lock:
+            if self.abort:
+                return None
             for i, u in enumerate(self.q):
                 if w["id"] not in u["avoid"]:
                     self.active += 1
                     return self.q.pop(i)
-            if self.q and all(set(x["id"] for x in self.W) <= set(u["avoid"]) for u in self.q):
-                dead, self.q = self.q, []
-                for u in dead:
-                    for s in u["seeds"]:
-                        self.run.finalize(u["arm"], s["seed"], "failed", "infra: failed on every worker", final=True)
+            live = set(x["id"] for x in self.W) - self.retired
+            if self.q and live and all(live <= set(u["avoid"]) for u in self.q):
+                try:
+                    for u in self.q:
+                        for s in u["seeds"]:
+                            self.run.finalize(u["arm"], s["seed"], "failed", "infra: failed on every worker", final=True)
+                    self.q = []
+                except Exception as e:                   # codex R3: a write failure here must stop the dispatch
+                    self.abort = True                    # (the queue is kept: the seeds stay resumable)
+                    say_quiet(f"dispatch ABORTED while finalizing: {type(e).__name__}: {e}")
+                    return None
             return None if (not self.q and self.active == 0) else False
 
     def work(self, w):
@@ -472,30 +646,70 @@ class Dispatcher:
             if u is False:
                 time.sleep(10)
                 continue
-            slot = self.run.acquire_service(u["arm"])
-            w["svc_slot"] = slot
-            self._log({"event": "start", "arm": u["arm"], "seeds": [s["seed"] for s in u["seeds"]], "worker": w["id"],
-                       "carla_port": w["carla_port"], "gpu": w["gpu"], "tm_base": w["tm_base"], "svc_slot": slot})
-            try:
-                self.run.run_unit(u["arm"], w, u["seeds"])
+            crashed, retire, retry = None, True, []      # retired unless the unit's lifecycle ends normally
+            try:                                         # codex R1/R2 (10-19): `active` is released on EVERY path
+                slot = self.run.acquire_service(u["arm"])
+                w["svc_slot"] = slot
+                try:
+                    self._log({"event": "start", "arm": u["arm"], "seeds": [s["seed"] for s in u["seeds"]],
+                               "worker": w["id"], "carla_port": w["carla_port"], "gpu": w["gpu"],
+                               "tm_base": w["tm_base"], "svc_slot": slot})
+                    try:
+                        self.run.run_unit(u["arm"], w, u["seeds"])
+                    except BookkeepingError:
+                        raise
+                    except Exception as e:       # 10-19: an exception (CARLA restart / preload timeout) used to kill
+                        crashed = e              # the thread with `active` never decremented → every worker waited
+                        say(f"{w['id']}: unit {u['arm']} {[s['seed'] for s in u['seeds']]} raised "
+                            f"{type(e).__name__}: {e} — re-queueing its unfinished seeds and retiring this worker")
+                finally:
+                    self.run.release_service(slot)
+                retry = self._requeue(u, w, crashed)
+                self._log({"event": "end", "arm": u["arm"], "worker": w["id"],
+                           "requeued": [s["seed"] for r in retry for s in r["seeds"]],
+                           **({"crashed": f"{type(crashed).__name__}: {crashed}", "retired": True} if crashed else {})})
+                retire = crashed is not None
+            except BaseException as e:                   # bookkeeping / logging failed (or an interrupt): the run
+                with self.lock:                          # state is no longer trusted → no further unit is handed out
+                    self.abort = True
+                say(f"{w['id']}: dispatch ABORTED — {type(e).__name__}: {e} (resume after fixing; statuses are "
+                    f"reconciled at the next start)")
+                raise
             finally:
-                self.run.release_service(slot)
-            retry = []
-            for s in u["seeds"]:
-                st = self.run.status(u["arm"], s["seed"])
-                if st.get("status") == "failed" and st.get("infra_retry"):
-                    n = len(st.get("attempts", []))
-                    if n < self.max_att:
-                        st.update(final=False, infra_retry=False)
-                        write_json(os.path.join(self.run.arm_dir(u["arm"]), "seeds", str(s["seed"]), "status.json"), st)
-                        retry.append({"arm": u["arm"], "seeds": [s], "avoid": u["avoid"] + [w["id"]]})
-                    else:
-                        st.update(reason=(st.get("reason") or "") + f" | infra: {n} attempts")
-                        write_json(os.path.join(self.run.arm_dir(u["arm"]), "seeds", str(s["seed"]), "status.json"), st)
-            with self.lock:
-                self.q.extend(retry)
-                self.active -= 1
-            self._log({"event": "end", "arm": u["arm"], "worker": w["id"], "requeued": [r["seeds"][0]["seed"] for r in retry]})
+                with self.lock:
+                    self.q.extend(retry)
+                    self.active -= 1
+                    if retire:
+                        self.retired.add(w["id"])
+            if retire:
+                return
+
+    def _requeue(self, u, w, crashed):
+        """retry units for the unit's seeds: an infra failure (booked by post_part; after a crash run_unit has already
+        stopped its client and booked the interrupted part, or quarantined it) → single-seed retry avoiding this worker,
+        up to max_infra_attempts; after a crash, seeds that did not run in this unit (no status, or a resumable
+        failed status from an earlier run) → one unit, no attempt charged. A `partial` here means the booking did not
+        happen → BookkeepingError (never re-run uncharged)."""
+        retry, rest = [], []
+        for s in u["seeds"]:
+            st = self.run.status(u["arm"], s["seed"])
+            if st.get("status") == "failed" and st.get("infra_retry"):
+                n = len(st.get("attempts", []))
+                if n < self.max_att:
+                    st.update(final=False, infra_retry=False)
+                    write_json(os.path.join(self.run.arm_dir(u["arm"]), "seeds", str(s["seed"]), "status.json"), st)
+                    retry.append({"arm": u["arm"], "seeds": [s], "avoid": u["avoid"] + [w["id"]]})
+                else:
+                    st.update(reason=(st.get("reason") or "") + f" | infra: {n} attempts")
+                    write_json(os.path.join(self.run.arm_dir(u["arm"]), "seeds", str(s["seed"]), "status.json"), st)
+            elif st.get("status") == "partial":
+                raise BookkeepingError(f"{u['arm']} seed {s['seed']}: still partial after its part was booked")
+            elif crashed is not None and not (st.get("status") in DONE or
+                                              (st.get("status") == "failed" and st.get("final"))):
+                rest.append(s)
+        if rest:
+            retry.append({"arm": u["arm"], "seeds": rest, "avoid": u["avoid"] + [w["id"]]})
+        return retry
 
 
 def runtime_problems(R, runtime):
@@ -533,12 +747,14 @@ def run_experiment(a):
     if not W:
         print("no worker available (CARLA server up + free GPU + lease)")
         return 2
+    exp_lease = None
     try:
         errs = check_runtime(R, W)
         if errs:
             print("preflight (runtime) failed:\n  " + "\n  ".join(errs))
             return 2
-        os.makedirs(run.root, exist_ok=True)
+        exp_lease = Lease([f"exp_{R['name']}"], owner=R["name"]).acquire()   # codex R4: one live invocation per
+        os.makedirs(run.root, exist_ok=True)                                 # experiment
         files = {name: provenance.referenced_files(arm) for name, arm in R["arms"].items()}
         write_json(os.path.join(run.root, "experiment.resolved.json"), R)
         image = R["infra"]["docker"]["policy_image_acot" if run.runtime == "acot" else "policy_image"]
@@ -546,6 +762,8 @@ def run_experiment(a):
                                                                  files=files, workers=[{k: v for k, v in w.items() if k != "lease"} for w in W],
                                                                  argv=vars(a)))
         run.write_specs()
+        run.kill_orphans()                               # codex R4: no client of a crashed earlier run survives
+        run.reconcile()                                  # codex R2: repair what a crashed earlier run left behind
         if R.get("schedule"):
             work = Dispatcher(run, W).work
         else:
@@ -568,9 +786,12 @@ def run_experiment(a):
             t.start()
         for t in threads:
             t.join()
+        run.reconcile()
     finally:
         for w in W:
             w["lease"].release()
+        if exp_lease is not None:
+            exp_lease.release()
     summary = {}
     for arm in R["arms"]:
         for s in R["seeds"]:

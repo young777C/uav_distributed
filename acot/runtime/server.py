@@ -55,13 +55,17 @@ class Runtime:
         P, M = arm["protocol"], arm["method"]
         self.frontend = Frontend(P, device, vlm=vlm, log=log)
         self.perception = SimProxyPerception(P, self.frontend.image_cfg, M["control"]["shuffle_seed"],
-                                             self.frontend.dino, device)
+                                             self.frontend.dino, device,
+                                             target_world=M["control"]["ex_source"] == "oracle")
         self.policy = AcotPolicy(P, M, self.frontend, device, services=services, log=log)
         self.oracle = OracleHandle(arm["uses_gt"]) if arm["uses_gt"] else None
         self.info = self.dets = None
         self.frame_perc_ms = 0.0
         sh = P["frontend"]["opening"].get("shared")
-        self.shared = json.load(open(os.path.join(REPO, sh["file"]))) if sh else None    # {seed: {step: actor}}
+        # {seed: {step: actor}} | "gt_target" (1020 T1: the target, actor −1, at every opening tick of every seed)
+        self.shared = ("gt_target" if sh.get("gt_target") else json.load(open(os.path.join(REPO, sh["file"])))) \
+            if sh else None
+        self.open_steps = int(P["frontend"]["opening"]["window"]) * int(P["sim"]["s2_period"])
         self.seed = None
 
     def reset(self, seed=None, repeat=0):
@@ -107,9 +111,12 @@ class Runtime:
     def shared_slot(self, step):
         """1006 §3.4: the harness (not the method) maps the reference actor of this opening tick to the current slot;
         the policy only receives the slot index. None = not a shared-opening tick."""
-        if self.shared is None or self.seed is None:
+        if self.shared is None or (self.seed is None and self.shared != "gt_target"):
             return None
-        actor = (self.shared.get(str(self.seed)) or {}).get(str(int(step)))
+        if self.shared == "gt_target":
+            actor = -1 if int(step) < self.open_steps else None
+        else:
+            actor = (self.shared.get(str(self.seed)) or {}).get(str(int(step)))
         if actor is None:
             return None
         if self.dets is None or self.info is None:
@@ -193,7 +200,14 @@ def main():
     services = dict(spec.get("services") or {})
     if "dam4sam" in services and services["dam4sam"].get("instances"):
         services["dam4sam"] = services["dam4sam"]["instances"][a.service_slot]
-    rt = Runtime(arm, services, a.device)
+    if arm["method"]["identity"]["head"] == "oavat_full":      # 1024: OA-VAT's own loop flies (oavat_closed.py)
+        from acot.runtime.oavat_closed import OavatClosedRuntime
+        rt = OavatClosedRuntime(arm, services, a.device)
+    else:
+        rt = Runtime(arm, services, a.device)
+    if "oavat_frames" in collect and not hasattr(rt, "frame_log"):
+        print("[acot-server] FATAL: collect oavat_frames needs identity.head oavat_full", flush=True)
+        sys.exit(3)
     if "tah_dagger" in collect and getattr(rt.policy.head, "name", None) != "tah":
         print("[acot-server] FATAL: collect tah_dagger needs the TAH identity head", flush=True)
         sys.exit(3)
@@ -210,7 +224,8 @@ def main():
         "image": os.environ.get("ACOT_IMAGE", ""), "image_id": os.environ.get("ACOT_IMAGE_ID", ""), "versions": vers,
         "gpu": torch.cuda.get_device_name(0) if torch.cuda.is_available() else None, "t": time.time()})
 
-    S = {"seed": None, "ticks": None, "trk": None, "rec": None, "rec_n": 0, "dag": None, "dag_last": None}
+    S = {"seed": None, "ticks": None, "trk": None, "rec": None, "rec_n": 0, "dag": None, "dag_last": None,
+         "ofr": None}
     rec_max = int(spec.get("record_act_ticks", 120))
 
     def seed_dir(seed):
@@ -232,7 +247,7 @@ def main():
                 "oracle_calls": calls, "raw_reads": reads,
                 "violations": [r for r in outside if r["kind"] != "label"],
                 "unknown_sites": [], "fence": {"structural": True, "raw_audit": True}})
-        for k in ("ticks", "trk", "rec"):
+        for k in ("ticks", "trk", "rec", "ofr"):
             if S[k] is not None:
                 S[k].close()
                 S[k] = None
@@ -259,6 +274,8 @@ def main():
             S["ticks"] = open(os.path.join(d, "ticks.jsonl"), "w")
         if "trk" in collect:
             S["trk"] = open(os.path.join(d, "trk.jsonl"), "w")
+        if "oavat_frames" in collect:
+            S["ofr"] = open(os.path.join(d, "oavat_frames.jsonl"), "w")
         if "record_act" in collect:
             S["rec"], S["rec_n"] = open(os.path.join(d, "act_record.pkl"), "wb"), 0
             pickle.dump({"cmd": "reset", "seed": S["seed"]}, S["rec"])
@@ -273,6 +290,11 @@ def main():
             S["rec_n"] += 1
         gt = A.wrap_gt_candidates(msg["gt_candidates"]) if A.AUDIT.enabled else msg["gt_candidates"]
         dec = rt.step(msg, gt)
+        if S["ofr"] is not None and rt.frame_log:                          # 1024 oavat_full: per-frame record
+            for r in rt.frame_log:
+                S["ofr"].write(json.dumps(dict(r, seed=S["seed"])) + "\n")
+            S["ofr"].flush()
+            rt.frame_log.clear()
         if dec.trace is not None:
             was, A.AUDIT.enabled = A.AUDIT.enabled, False
             try:

@@ -1,0 +1,15 @@
+# 1024 OA-VAT FULL closed loop: preregistered gain grid (acot_note/1023_oavat_closedloop_plan.md v2 §4). Frozen tuning
+# seeds = the first 3 complete stress_tune recordings of each dev-S town (Town05 94000/94001/94003, Town01
+# 94040-94042), SELF-flight. Selection: highest per-episode mean TR90; ties (< 0.005) → per-episode M1, then the smaller
+# gain. dev-S / test are never used for selection.
+name: stress_tune_oavatcl_grid
+protocol: sim_proxy_v2@4
+seeds: {set: stress_tune, subset: [[94000, 94001], [94003, 94003], [94040, 94042]], expect: 6}
+completeness: {require: allow_skipped, allow_skipped_reasons: ["target stationary"], pairing: intersection}
+schedule: {block: 6, seed: 10241, max_infra_attempts: 3}
+arms:
+  g1: {method: ext_oavat_full_g1}
+  g2: {method: ext_oavat_full_g2}
+  g3: {method: ext_oavat_full_g3}
+collect: [ticks, trk, gt_access, scenario, oavat_frames]
+infra: {runtime: acot, watchdog: {first_min: 60, stall_min: 40, max_restarts: 5}}

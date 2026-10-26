@@ -1,0 +1,8 @@
+# 1024 OA-VAT FULL closed loop WITH the occlusion-aware planner (OA-VAT's diffusion policy; checkpoint released
+# 2026-10-20, HF Harry2222/follow-dp-unrealcv dp_unrealcv_20k_ep40.ckpt) — acot_note/1023_oavat_closedloop_plan.md v4 §10.
+# = ext_oavat_full_g1 + planner on (simulation clock, command hold over a planner step, vz dropped as in OA-VAT's planar
+# UnrealCV evaluation). The planner's yaw is clipped at 60 units: 60·0.25 = 15 deg/s.
+name: ext_oavat_full_g1_dp
+extends: ext_oavat_full_g1
+identity:
+  oavat_full: {dp: true, max_yaw_dps_dp: 30.0}

@@ -1,0 +1,17 @@
+# 1020 identity stress scenario: SELF-FLIGHT closed-loop baselines on dev-S (acot_note/1020_stress_scenario_design.md
+# §2.4; 40 seeds Town05 94400–94419 + Town01 94420–94439, never shown to the auto-tune agents). The paper-protocol
+# M1 / commitment-correct / TR90 of the baselines on the stress scenario, and the stored references of the stress
+# auto-tune run's final audit (U1 = upper bound, re-ID = baseline, never-switch = null, Ours-CV, OA-VAT).
+name: stress_devS_selfflight
+protocol: sim_proxy_v2@4
+seeds: {set: stress_devS, expect: 40}
+completeness: {require: allow_skipped, allow_skipped_reasons: ["target stationary"], pairing: intersection}
+schedule: {block: 5, seed: 10211, max_infra_attempts: 3}
+arms:
+  u1:     {method: diag_oracle_head, role: diagnostic}
+  reid:   {method: ext_reid}
+  sticky: {method: null_sticky}
+  ours:   {method: ours_cv}
+  oavat:  {method: ext_oavat_dinov2}
+collect: [ticks, trk, gt_access, scenario]
+infra: {runtime: acot, watchdog: {first_min: 60, stall_min: 40, max_restarts: 5}}   # self-flight ≈ 20 min / episode

@@ -1,0 +1,7 @@
+# 1019 §6.2 P1 (flight ceiling): U1 (diag_oracle_head) with the drone flown by the EXPERT (GT + PID; client-side,
+# carla_uav_tracking/rollout/env.py) after the policy has acted. The identity head, commitment and scorer run unchanged;
+# only the flight is replaced. Diagnostic (uses GT).
+name: diag_oracle_head_expert
+extends: diag_oracle_head
+control: {expert_control: true}
+diagnostics: [oracle_head, expert_control]

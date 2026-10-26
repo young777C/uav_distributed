@@ -15,7 +15,7 @@ from acot.config.seeds import SeedRegistry
 
 METHOD_TOPS = ("control", "identity", "filter", "oracle_absent", "diagnostics", "accept_provenance_gaps")
 ABLATION_SCOPE = {"opening": ("frontend.opening",), "frontend": ("frontend",), "perception": ("perception",)}
-GT_EX_SOURCES = ("cv", "cv_gated", "zerovel", "zerovel_gated", "road")
+GT_EX_SOURCES = ("cv", "cv_gated", "zerovel", "zerovel_gated", "road", "oracle")
 
 
 class ResolveError(ValueError):
@@ -52,8 +52,9 @@ def derived_privileged(proto):
     if p["identity_keys"] == "sim":
         out.append("identity_keys_sim_actor_ids")
     out.append("where_world_gt_matched_box" if p["where_localisation"] == "gt_matched_box" else "where_world_gt_committed_id")
-    if proto["frontend"]["opening"].get("shared"):
-        out.append("shared_opening_actor")
+    sh = proto["frontend"]["opening"].get("shared")
+    if sh:
+        out.append("first_frame_target_box" if sh.get("gt_target") else "shared_opening_actor")
     return out
 
 
@@ -105,7 +106,7 @@ def normalize_method(m, user_keys, where):
     """drop identity sections the head does not read and filter fields when the filter is off; enforce required fields."""
     ident = m["identity"]
     active = S.HEAD_SECTIONS[ident["head"]]
-    for sec in ("tah", "reid", "assoc", "dam4sam", "attrbind", "oavat", "deepsort", "ocsort"):
+    for sec in ("tah", "reid", "assoc", "dam4sam", "attrbind", "oavat", "deepsort", "ocsort", "oavat_full"):
         if sec in active:
             if sec not in ident:
                 raise ResolveError(f"{where}: head {ident['head']} needs identity.{sec}")
@@ -251,8 +252,10 @@ def resolve_arm(protocol, name, arm, cli_overrides=()):
                                        for k in applied):
         proto["privileged_perception"] = derived_privileged(proto)
     sh = proto["frontend"]["opening"].get("shared")
-    if sh and not os.path.exists(os.path.join(ROOT, sh["file"])):
-        raise ResolveError(f"{where}: shared opening file {sh['file']} does not exist")
+    if sh and not sh.get("gt_target") and not (sh.get("file") and os.path.exists(os.path.join(ROOT, sh["file"]))):
+        raise ResolveError(f"{where}: shared opening file {sh.get('file')} does not exist")
+    if sh and sh.get("gt_target") and sh.get("file"):
+        raise ResolveError(f"{where}: shared opening: gt_target and file are exclusive")
     S.validate(method, S.METHOD, where + ".method")
     S.validate(proto, S.PROTOCOL, where + ".protocol")
     check_protocol(proto, where)

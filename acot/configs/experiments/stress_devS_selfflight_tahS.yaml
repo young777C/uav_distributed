@@ -1,0 +1,12 @@
+# 1024 dev-S self-flight confirmation of the stress TAH retrain (acot_note/1023_stress_baselines.md §6): Ours-CV with
+# only the TAH weights replaced (ours_cv_tahS), same protocol / seeds / schedule as stress_devS_selfflight → paired per
+# seed with its u1 / reid / sticky / ours / oavat arms.
+name: stress_devS_selfflight_tahS
+protocol: sim_proxy_v2@4
+seeds: {set: stress_devS, expect: 40}
+completeness: {require: allow_skipped, allow_skipped_reasons: ["target stationary"], pairing: intersection}
+schedule: {block: 5, seed: 10211, max_infra_attempts: 3}
+arms:
+  ours_tahS: {method: ours_cv_tahS}
+collect: [ticks, trk, gt_access, scenario]
+infra: {runtime: acot, watchdog: {first_min: 60, stall_min: 40, max_restarts: 5}}   # self-flight ≈ 20 min / episode

@@ -1,0 +1,54 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Stress Replay</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+body{font:13px system-ui;background:#111;color:#ddd;margin:12px}
+select,button{background:#222;color:#ddd;border:1px solid #444;padding:3px 8px}
+#grid{display:flex;flex-wrap:wrap;gap:12px;margin-top:10px}
+.cell{background:#1a1a1a;padding:6px;border-radius:4px}
+.cell h4{margin:0 0 4px}.m{color:#999;font-size:12px;max-width:520px}
+canvas{background:#000;display:block}
+.legend span{margin-right:12px}
+</style></head><body>
+<div>
+ seed <select id="seed"></select>
+ <button id="play">▶/⏸</button>
+ t=<span id="tv">0</span>s <input id="sl" type="range" min="0" max="0" value="0" style="width:420px">
+ speed <select id="spd"><option>0.5</option><option selected>1</option><option>2</option><option>4</option></select>
+</div>
+<div id="desc" style="margin:6px 0"></div>
+<div class="legend"><span style="color:#3f3">■ 真目标(gt)</span><span style="color:#f33">■ 承诺(committed)</span>
+<span style="color:#fc0">■ 语言预测(pred)</span><span style="color:#888">■ 其他车</span>
+<span>目标不可见时无绿框(遮挡)</span></div>
+<div id="grid"></div>
+<script>
+const S=512,$=id=>document.getElementById(id);let D=null,T=[],ti=0,playing=false;
+async function j(u){return (await fetch(u)).json()}
+(async()=>{const ix=await j('/api/index');document.title='Replay '+ix.exp;
+ for(const s in ix.seeds){const o=document.createElement('option');o.value=s;o.textContent=s+' ['+ix.seeds[s].join(',')+']';$('seed').append(o)}
+ $('seed').onchange=load;load()})();
+async function load(){D=await j('/api/seed?seed='+$('seed').value);const sc=D.scenario;
+ $('desc').textContent='目标: '+sc.target_desc+' | 场景: '+sc.strategy+' | 相似 '+sc.num_similar+' 干扰 '+sc.num_distractors;
+ const ts=new Set();for(const m in D.methods)D.methods[m].trk.forEach(r=>ts.add(r.t));
+ T=[...ts].sort((a,b)=>a-b);$('sl').max=T.length-1;ti=0;$('grid').innerHTML='';
+ for(const m in D.methods){const c=document.createElement('div');c.className='cell';const e=D.methods[m].ep;
+  c.innerHTML='<h4>'+m+(e.success?' ✔':'')+'</h4><canvas width='+S+' height='+S+' id="c_'+m+'" style="width:360px;height:360px"></canvas><div class=m id="i_'+m+'"></div>'
+  +'<div class=m>切换 '+e.id_switches+' | 跟踪 '+e.track_seconds+'s | 居中 '+(e.centering_rate??0).toFixed(2)+' | 承诺正确(可见) '+e.correct_committed_vis+' | 重捕获 '+e.reacquire_success_rate+'/'+e.reacquire_attempts+'</div>';
+  $('grid').append(c)}
+ draw()}
+function last(a,t){let r=null;for(const x of a){if(x.t<=t)r=x;else break}return r}
+function draw(){if(!D)return;const t=T[ti];$('tv').textContent=(t/10).toFixed(1);$('sl').value=ti;
+ for(const m in D.methods){const d=D.methods[m],cv=$('c_'+m),g=cv.getContext('2d');g.clearRect(0,0,S,S);
+  g.strokeStyle='#222';g.strokeRect(0,0,S,S);const tr=last(d.trk,t),tk=last(d.ticks,t);let info='';
+  if(tr&&t-tr.t<=12){tr.tid.forEach((id,i)=>{const [u,v]=tr.uv[i],s=tr.sz[i],tgt=tr.gt[i]===-1;
+    const com=tk&&tk.committed===id,pr=tk&&tk.pred===id;
+    g.lineWidth=tgt?3:1;g.strokeStyle=tgt?'#3f3':'#888';g.strokeRect(u-s/2,v-s/2,s,s);
+    if(com){g.lineWidth=2;g.strokeStyle='#f33';g.strokeRect(u-s/2-4,v-s/2-4,s+8,s+8)}
+    if(pr){g.lineWidth=2;g.strokeStyle='#fc0';g.setLineDash([4,3]);g.strokeRect(u-s/2-8,v-s/2-8,s+16,s+16);g.setLineDash([])}
+    g.fillStyle='#ccc';g.font='14px sans-serif';g.fillText(id,u-s/2,v-s/2-10)});
+   const tg=tr.tid[tr.gt.indexOf(-1)];
+   info='目标 id='+(tg??'不可见')+(tk?' | 承诺 '+tk.committed+' | 预测 '+tk.pred+' | conf '+(tk.conf??0).toFixed(2)+(tk.pgif?' | pgif '+tk.pgif:'')+(tk.committed===tg?' ✔':tg===undefined?'':' ✘'):'')}
+  else info='(无此刻跟踪数据)';$('i_'+m).textContent=info}}
+$('sl').oninput=e=>{ti=+e.target.value;draw()};$('play').onclick=()=>playing=!playing;
+setInterval(()=>{if(playing&&T.length){ti=(ti+1)%T.length;draw()}},100);
+setInterval(()=>{},1e9);
+</script></body></html>

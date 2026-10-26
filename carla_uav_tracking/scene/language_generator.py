@@ -116,6 +116,15 @@ COLOR_ANCHORS = {
 # name -> CARLA 'color' attribute string "R,G,B"
 COLOR_RGB = {n: f"{r},{g},{b}" for n, (r, g, b) in COLOR_ANCHORS.items()}
 PALETTE = list(COLOR_ANCHORS)
+# 1020 stress scenario: adjacent colours for NEAR-CLONES (same model, a colour a human may confuse at UAV range)
+NEAR_COLORS = {
+    "red": ["dark red", "orange"], "dark red": ["red", "brown"], "blue": ["royal blue", "light blue"],
+    "royal blue": ["blue", "dark blue"], "dark blue": ["royal blue", "black"], "light blue": ["blue", "silver"],
+    "green": ["dark green"], "dark green": ["green", "black"], "white": ["silver", "beige"],
+    "silver": ["white", "gray"], "gray": ["silver", "black"], "black": ["dark blue", "gray"],
+    "orange": ["red", "gold"], "yellow": ["gold"], "gold": ["yellow", "orange"], "beige": ["white", "gold"],
+    "brown": ["dark red", "beige"], "purple": ["royal blue", "dark red"],
+}
 _ACHROMATIC = ("black", "white", "gray", "silver")
 
 
@@ -268,7 +277,37 @@ class LanguageGenerator:
             return self._compose_same_shape(num_distractors, min_similar, rng)
         if strategy == "distinct":
             return self._compose_distinct(target_class, num_distractors, rng)
+        if strategy in ("clone_heavy", "clone_light"):
+            return self._compose_clone(num_distractors, strategy, rng)
         return self._compose_same_color(num_distractors, min_similar, rng)  # default
+
+    def _compose_clone(self, n: int, strategy: str, rng) -> dict:
+        """1020 stress scenario (acot_note/1020_stress_scenario_design.md §2.1): CLONES = the target's blueprint AND
+        colour (appearance-indistinguishable), NEAR-CLONES = the target's blueprint in an adjacent colour (fine-grained
+        appearance only). clone_heavy: 2-3 clones; clone_light: 1 clone + 1-2 near-clones. The rest are fillers of
+        other models. Every look-alike is `similar` (placed in the target's cluster band, kept co-visible)."""
+        color = rng.choice([c for c in PALETTE if NEAR_COLORS.get(c)])
+        target_bp = rng.choice(CARS)
+        if strategy == "clone_heavy":
+            n_clone, n_near = rng.randint(2, 3), 0
+        else:
+            n_clone, n_near = 1, rng.randint(1, 2)
+        n_clone = min(n_clone, n)
+        n_near = min(n_near, n - n_clone)
+        distractors = [{"bp": target_bp, "color": color, "cls": "car", "similar": True, "clone": True}
+                       for _ in range(n_clone)]
+        near = NEAR_COLORS[color]
+        distractors += [{"bp": target_bp, "color": near[i % len(near)], "cls": "car", "similar": True,
+                         "clone": False, "near_clone": True} for i in range(n_near)]
+        distractors += self._fillers(n - n_clone - n_near, exclude={target_bp}, rng=rng)
+        for d in distractors:
+            d["desc"] = self.describe(d["bp"], d.get("color"), d["cls"])
+        return {
+            "target": {"bp": target_bp, "color": color, "cls": "car",
+                       "desc": self.describe(target_bp, color, "car")},
+            "distractors": distractors, "strategy": strategy,
+            "num_similar": n_clone + n_near, "num_clones": n_clone, "num_near_clones": n_near,
+        }
 
     def _compose_same_color(self, n: int, min_similar: int, rng) -> dict:
         color = rng.choice(PALETTE)

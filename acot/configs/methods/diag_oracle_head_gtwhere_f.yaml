@@ -1,0 +1,9 @@
+# 1024 HOW ladder R1f (acot_note/1024_how_ceiling_prereg.md): R1 (U1 + true target state at every S2 tick + DiT) with the
+# waypoints re-projected into the CURRENT camera pose at the CURRENT step on every frame (control.wp_every_frame) —
+# current-frame waypoints as in DiT training; positions are still S2-sampled and CV-extrapolated ≤ 0.5 s (the expert
+# gets fresh state every frame). R1f − R1 = the waypoint cadence / reference-frame staleness of the deployed S1/S2
+# split (an ordered-intervention gap, prereg §1). Diagnostic (uses GT).
+name: diag_oracle_head_gtwhere_f
+extends: diag_oracle_head_gtwhere
+control: {wp_every_frame: true}
+diagnostics: [oracle_head, ex_source_gt]

@@ -40,6 +40,7 @@ class VehicleTarget:
         role_name: str = "target_vehicle",
         tm_port: int = 8000,
         speed_diff: float | None = None,
+        lane_change: bool = False,
     ):
         bp = world.get_blueprint_library().find(blueprint_name)
         if bp is None:
@@ -105,8 +106,10 @@ class VehicleTarget:
             try:
                 if speed_diff is not None:
                     tm.vehicle_percentage_speed_difference(self._vehicle, float(speed_diff))
-                # Stay in-lane & orderly (no weaving); recycling provides the dynamics.
-                tm.auto_lane_change(self._vehicle, False)
+                self._speed_diff_set = None if speed_diff is None else float(speed_diff)
+                # Stay in-lane & orderly (no weaving); recycling provides the dynamics. 1020 stress E1: a clone may
+                # change lanes so that a faster clone overtakes the target instead of queueing behind it.
+                tm.auto_lane_change(self._vehicle, bool(lane_change))
                 tm.distance_to_leading_vehicle(self._vehicle, 2.5)
             except (RuntimeError, AttributeError):
                 pass

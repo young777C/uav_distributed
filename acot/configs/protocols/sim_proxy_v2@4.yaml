@@ -1,0 +1,22 @@
+# Sim-proxy perception protocol v2, version 4 (1020, acot_note/1020_stress_scenario_design.md): = sim_proxy_v2@3 on
+# the identity STRESS scenario + the T1 opening.
+#   - scenario stress_v1 (carla_uav_tracking/config/scenarios/stress_v1.yaml): same-model same-colour CLONES and
+#     near-clones, E1 clone crossing / overtaking, E2 overhead occlusion, E3 group out-of-frame windows (expert flight:
+#     look-away, no target-anchored recovery framing), geometry-free instruction (T2 condition);
+#   - T1 opening: the harness gives every arm the TARGET as the reference actor at every opening tick
+#     (frontend.opening.shared.gt_target; privileged input `first_frame_target_box`) — identity maintenance among
+#     clones from a given first-frame box (SOT-style). The language opening (T2) is the same protocol with
+#     `ablation: opening` dropping frontend.opening.shared.
+# The commitment rule (commit_k 5), perception, tracker, scorer and determinism are those of @3. Frozen: any change =
+# a new version file.
+extends: sim_proxy_v2@3
+name: sim_proxy_v2
+version: 4
+aliases: []
+description: sim_proxy_v2@3 on the identity stress scenario (clones, crossing, occlusion, group out-of-frame) + T1 opening
+sim:
+  scenario: stress_v1
+frontend:
+  opening: {shared: {gt_target: true}}
+privileged_perception: [cand_box_gt_projection, cand_depth_gt, occlusion_raycast_gt, task_vehicle_set,
+                        where_world_gt_matched_box, first_frame_target_box]

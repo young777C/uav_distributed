@@ -46,7 +46,14 @@ class AcotPolicy:
         self.ablate = C["ablate"]
         self.commit_k = int(C["commit_k"])
         self.frame_gain = float(C["frame_gain"])
+        self.expert_flown = bool(C.get("expert_control", False))   # 1020: the DiT action is unused (see act)
         self.absent_where = C.get("absent_where", "ear")
+        # 1024 HOW ladder: track (deployable) | oracle (diagnostic R1: z_ex from the TRUE target position every S2 tick)
+        self.ex_source = C["ex_source"]
+        # 1024 HOW ladder R1f: re-project the estimator's waypoints into the CURRENT camera pose at the CURRENT step on
+        # every frame (absent = false: the S2 tick's camera-frame waypoints are held for the whole S2 period)
+        self.wp_every_frame = bool(C.get("wp_every_frame", False))
+        self.z_ex_est = False                          # the current z_ex came from the estimator (not the EAR sample)
         self.conf_tau = float(I["conf_tau"])
         self.kind = I["head"]
         if self.kind == "tah":
@@ -110,6 +117,7 @@ class AcotPolicy:
     # ------------------------------------------------------------------------------------------------------- state
     def reset(self):
         self.z_ex = self.z_im = self.vlm_ctx = self.ctx_mask = None
+        self.z_ex_est = False
         self.logits = np.zeros(0, np.float32)
         self.pred_slot = -1
         self.pred_conf = 0.0
@@ -171,17 +179,30 @@ class AcotPolicy:
                 self._reseed("ear", inp.step)
                 self.z_ex = flow_matching.sample(fe.ear, self.vlm_ctx, self.ctx_mask, k=fe.K, steps=fe.steps,
                                                  proprio=prop)
+            self.z_ex_est = False
             self.z_im, _ = fe.iar(ctx_layers, self.ctx_mask)
             if self.ablate == "iar":
                 self.z_im = torch.zeros_like(self.z_im)
             trace = self._identity(inp, inp.detections, oracle)
             self.dets = inp.detections
             if self.ablate != "ear":
-                self._where(inp)
+                self._where(inp, oracle)
             self._sync()
             trace["t_s2_ms"] = round(1000 * (time.perf_counter() - t_s2), 2)        # 1006 §4.2 cost ②
+        elif getattr(self, "wp_every_frame", False) and getattr(self, "z_ex_est", False) and self.estimator.seen:
+            # 1024 R1f: the held waypoints, re-expressed in this frame's camera pose at this step (CV from the last
+            # estimator update ≤ one S2 period ago) — what the DiT saw in training (current-frame waypoints)
+            wp = self.estimator.predict_wp(inp.campose, inp.step, mode="cv")
+            if wp is not None:
+                self.z_ex = torch.from_numpy(wp)[None].to(self.device)
         self._reseed("dit", inp.step)
-        act = action_sample(fe.dit, self.z_ex, self.z_im, self.vlm_ctx, prop, self.ctx_mask, fe.H, fe.A, fe.steps)
+        if self.expert_flown:
+            # 1020: under expert flight the client replaces this action by the expert's — the per-frame DiT sample is
+            # unused, so it is skipped (as the auto-tune replay does: live ≡ replay 150/150 ticks). The DiT has its
+            # own per-step reseed, so no other random stream moves.
+            act = torch.zeros(1, fe.H, fe.A, device=self.device)
+        else:
+            act = action_sample(fe.dit, self.z_ex, self.z_im, self.vlm_ctx, prop, self.ctx_mask, fe.H, fe.A, fe.steps)
         a0 = act[0, 0].float().cpu().numpy()
         dx, dy, dz, dyaw = (a0[:4] * fe.a_scale).tolist()
         search = float(a0[4] > 0.5)
@@ -203,6 +224,9 @@ class AcotPolicy:
                 t_id = time.perf_counter()
                 self.head.no_detections()             # the tracker steps on every tick (predict, no measurement)
                 tr0.update(self._mot_trace(), t_identity_ms=round(1000 * (time.perf_counter() - t_id), 3))
+            elif self.kind == "dam4sam" and self.head.every_frame and self.head.inited:
+                self.head.advance(inp.rgb)            # 1024 every-frame DAM4SAM: an empty S2 frame still reaches its
+                #                                       memory, as the non-S2 frames do (default every_frame=false: as before)
             self.logits, self.pred_slot, self.pred_conf = np.zeros(0, np.float32), -1, 0.0
             return tr0
         n = len(dets)
@@ -437,15 +461,29 @@ class AcotPolicy:
         u, v, _ = pr
         return bool(0 <= u < self.W and 0 <= v < self.H)
 
-    def _where(self, inp):
+    def _where(self, inp, oracle=None):
         """commit (confident picks only), then fly toward the committed key's matched box (CV waypoints); when the
         committed key has no box this tick the EAR sample stays (legacy deploy-v2 behaviour) unless
-        control.absent_where = cv: then the estimator extrapolates the last confident position at constant velocity."""
+        control.absent_where = cv: then the estimator extrapolates the last confident position at constant velocity.
+        control.ex_source = oracle (1024 HOW ladder R1, diagnostic): the commitment runs unchanged (it is still what
+        the scorer reads), but the estimator is fed the TRUE target position at every S2 tick, visible or not, so the
+        DiT receives CV waypoints from true S2-sampled positions (held between S2 ticks unless wp_every_frame)."""
         confident = self.pred_conf >= self.conf_tau
         if confident:
             self._update_commit()
         cw = self._committed_world()
         self.frame_cw = cw if (confident and cw is not None) else None
+        if getattr(self, "ex_source", "track") == "oracle":
+            tw = oracle.true_world("ex_source_gt")
+            if tw is None or tw.shape != (3,) or not np.all(np.isfinite(tw)):
+                # diagnostic arm: a missing true state must fail the episode, never silently fall back to EAR / CV
+                raise RuntimeError(f"ex_source=oracle: no finite true target position at step {inp.step}: {tw!r}")
+            self.estimator.update(tw, inp.step)
+            wp = self.estimator.predict_wp(inp.campose, inp.step, mode="cv")
+            if wp is not None:
+                self.z_ex = torch.from_numpy(wp)[None].to(self.device)
+                self.z_ex_est = True
+            return
         if cw is not None:
             if confident and self._in_frame(cw, inp.campose):
                 self.estimator.update(cw, inp.step)
@@ -453,7 +491,9 @@ class AcotPolicy:
                 wp = self.estimator.predict_wp(inp.campose, inp.step, mode="cv")
                 if wp is not None:
                     self.z_ex = torch.from_numpy(wp)[None].to(self.device)
+                    self.z_ex_est = True
         elif self.absent_where == "cv" and self.committed is not None and self.estimator.seen:
             wp = self.estimator.predict_wp(inp.campose, inp.step, mode="cv")
             if wp is not None:
                 self.z_ex = torch.from_numpy(wp)[None].to(self.device)
+                self.z_ex_est = True

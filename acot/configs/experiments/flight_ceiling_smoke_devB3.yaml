@@ -1,0 +1,11 @@
+# 1019 §6.2 P1 smoke (2 dev-B seeds): expert control under the acot runtime end to end. Not used for any decision.
+name: flight_ceiling_smoke_devB3
+protocol: sim_proxy_v2@3
+seeds: {set: dev2, subset: [[93060, 93061]], expect: 2}
+completeness: {require: allow_skipped, allow_skipped_reasons: ["target stationary"], pairing: intersection}
+schedule: {block: 5, seed: 10192, max_infra_attempts: 3}
+arms:
+  u1x_r0:     {method: diag_oracle_head_expert, role: diagnostic}
+  stickyx_r0: {method: null_sticky_expert, role: diagnostic}
+collect: [ticks, trk, gt_access, scenario]
+infra: {runtime: acot}

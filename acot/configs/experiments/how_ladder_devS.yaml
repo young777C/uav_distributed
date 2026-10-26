@@ -1,0 +1,18 @@
+# 1024 HOW-ceiling ladder (acot_note/1024_how_ceiling_prereg.md, revised after codex R1): U1 identity on dev-S self flight
+# (40 seeds Town05 94400–94419 + Town01 94420–94439; 94423 target stationary → skipped), four ordered interventions
+# paired by seed (E3 look-away executed in none of them):
+#   r0 = deployable WHERE (CV when absent) + DiT          r1  = true target state at S2 ticks + DiT
+#   r1f = r1 + waypoints re-projected every frame + DiT   r2  = omniscient expert reference (no E3)
+# record_act (first act message only): the raw tick-0 world of every arm → the outcome-blind clean-seed set.
+name: how_ladder_devS
+protocol: sim_proxy_v2@4
+seeds: {set: stress_devS, expect: 40}
+completeness: {require: allow_skipped, allow_skipped_reasons: ["target stationary"], pairing: intersection}
+schedule: {block: 5, seed: 10242, max_infra_attempts: 3}
+arms:
+  r0_cv:        {method: diag_oracle_head_cv, role: diagnostic}
+  r1_gtwhere:   {method: diag_oracle_head_gtwhere, role: diagnostic}
+  r1f_gtwhere:  {method: diag_oracle_head_gtwhere_f, role: diagnostic}
+  r2_expert:    {method: diag_oracle_head_expert_noe3, role: diagnostic}
+collect: [ticks, trk, gt_access, scenario, record_act]
+infra: {runtime: acot, record_act_ticks: 1, watchdog: {first_min: 60, stall_min: 40, max_restarts: 5}}   # ≈ 25–30 min / self-flight episode

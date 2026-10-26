@@ -1,0 +1,16 @@
+# 1021 stress scenario TAH retrain (user decision: identity head only; acot_note/1020_stress_scenario_design.md).
+# = tah_relm_fast_a (stage A: same architecture / hyper-parameters / group_phases) + the stress scenario's on-policy
+# DAgger of Ours-CV (clones, crossings, group out-of-frame, T1 opening) as an extra input; best epoch selected on the
+# held-out STRESS DAgger split (stress_train_val, never trained on). Why it may help where earlier same-distribution
+# retrains regressed: the stress data contain the failure the paper targets (same-model same-colour clones, long gaps,
+# tracker ID swaps) that the original data never showed.
+#   python -m acot train acot/configs/recipes/tah_relm_stress.yaml --gpu G seed=N name=tah_relm_stress_sN
+kind: tah_ckpt
+name: tah_relm_stress
+trainer: tah_relm
+inputs: [artefact:tah_seq_v5_fov90_fast, artefact:tah_dagger_v1_reencoded, artefact:tah_dagger_stress_train]
+val_inputs: [artefact:tah_dagger_stress_val]
+hparams: {epochs: 60, lr: 0.0003, val_frac: 0.15, rel: true, motion: true, aug: true, fnoise: 0.05, pjit: 0.02, wd: 0.0001,
+          group_phases: true}
+seed: 0
+save_last: true

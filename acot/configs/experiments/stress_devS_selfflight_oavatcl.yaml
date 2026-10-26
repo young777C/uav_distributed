@@ -1,0 +1,15 @@
+# 1024 OA-VAT FULL closed loop on dev-S (acot_note/1023_oavat_closedloop_plan.md v4 §5 / §10): the grid-selected gain
+# config G* = G2 (stress_tune_oavatcl_grid, 2026-10-25 00:33: TR90 G1 0.657 / G2 0.820 / G3 0.680) WITH the occlusion-
+# aware planner (main table), the same WITHOUT it (ablation), and the untuned native-unit reference N0 (planner off);
+# same protocol / seeds / schedule as stress_devS_selfflight → paired per seed with its arms and the _mot / _tahS arms.
+name: stress_devS_selfflight_oavatcl
+protocol: sim_proxy_v2@4
+seeds: {set: stress_devS, expect: 40}
+completeness: {require: allow_skipped, allow_skipped_reasons: ["target stationary"], pairing: intersection}
+schedule: {block: 5, seed: 10211, max_infra_attempts: 3}
+arms:
+  oavatcl_dp:  {method: ext_oavat_full_g2_dp}
+  oavatcl_sel: {method: ext_oavat_full_g2}
+  oavatcl_n0:  {method: ext_oavat_full_n0}
+collect: [ticks, trk, gt_access, scenario, oavat_frames]
+infra: {runtime: acot, watchdog: {first_min: 60, stall_min: 40, max_restarts: 5}}

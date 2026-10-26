@@ -1,0 +1,16 @@
+# 1019 §9 (pre-registered 2026-10-19, before any run of these arms; acot_note/1019_metric_protocol_discussion.md §9):
+# WHERE while the committed key has no box — constant-velocity extrapolation (ours_absent_cv) vs the EAR sample (current
+# Ours). New arms cv_r0 / cv_r1 = ours_absent_cv with the current Ours conf_tau 0.05; the Ours side is the existing
+# opt1_screen_devB3/tau005 (r0) and opt2a_screen_devB3/tau005_r1 (r1) — same protocol @3, seeds and config hashes
+# (003a4d85d8e8 / b310e36231c2, re-checked 10-19). Seed-paired, each side the mean of r0 and r1.
+# Primary ΔTR90 (CV − Ours), secondary ΔM1; looks at 10 / 20 / 40 seeds (§9.2), analysis runs/where_cv/where_cv.py.
+name: where_cv_devB3
+protocol: sim_proxy_v2@3
+seeds: {set: dev2, subset: [[93060, 93099]], expect: 40}
+completeness: {require: allow_skipped, allow_skipped_reasons: ["target stationary"], pairing: intersection}
+schedule: {block: 2, seed: 10193, max_infra_attempts: 3}   # block 2: a 10-seed look keeps 7 workers busy
+arms:
+  cv_r0: {method: ours_absent_cv, role: ablation, override: {identity.conf_tau: 0.05}}
+  cv_r1: {method: ours_absent_cv, role: ablation, repeat: 1, override: {identity.conf_tau: 0.05}}
+collect: [ticks, trk, gt_access, scenario]
+infra: {runtime: acot}

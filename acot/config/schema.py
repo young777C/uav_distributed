@@ -81,7 +81,7 @@ def validate(obj, schema, path="$"):
 # ---------------------------------------------------------------------------------------------------------------- protocol
 PRIVILEGED = ("cand_box_gt_projection", "cand_depth_gt", "occlusion_raycast_gt", "task_vehicle_set",
               "where_world_gt_matched_box", "identity_keys_sim_actor_ids", "where_world_gt_committed_id",
-              "shared_opening_actor")
+              "shared_opening_actor", "first_frame_target_box")
 PROTOCOL = {
     "name": STR, "version": INT, "extends": Opt(STR), "aliases": Opt(listof(STR)), "description": Opt(STR),
     "camera": {"fov_deg": FLOAT, "width": INT, "height": INT, "fps": INT},
@@ -118,7 +118,9 @@ PROTOCOL = {
                     "handoff": Opt(enum("legacy", "uniform")),
                     # 1006 §3.4 shared opening (mechanism tables): reference actor per opening tick, from a reference
                     # run (acot/analysis/shared_opening.py); privileged input `shared_opening_actor`
-                    "shared": Opt({"file": STR}),
+                    # 1020 stress protocol T1: gt_target = the reference actor is the TARGET at every opening tick
+                    # (the first-frame target box, given to every arm); privileged input `first_frame_target_box`
+                    "shared": Opt({"file": Opt(STR), "gt_target": Opt(BOOL)}),
                     "attr": Opt({"ckpt_lin": STR, "ckpt_ft": STR, "wm": FLOAT, "wc": FLOAT, "wq": FLOAT, "ft": FLOAT}),
                     "zoom": Opt({"scale": FLOAT, "R": INT, "spotlight": BOOL})}},
     "scorer": {"commit_k": INT, "t_fail_s": FLOAT, "central_frac": FLOAT, "primary": enum("committed", "lenient", "strict")},
@@ -127,11 +129,12 @@ PROTOCOL = {
 
 # ------------------------------------------------------------------------------------------------------------------ method
 HEADS = ("xattn", "attrbind", "reid", "oracle", "assoc", "dam4sam", "tah", "fusion", "sticky", "oavat", "deepsort",
-         "ocsort")
+         "ocsort", "oavat_full")
 # head → identity sub-sections it reads (the parameter-usage matrix; inactive sections are dropped at resolve time)
 HEAD_SECTIONS = {"xattn": (), "attrbind": ("attrbind",), "reid": ("reid",), "oracle": (), "assoc": ("assoc",),
                  "dam4sam": ("dam4sam",), "tah": ("tah",), "fusion": ("tah", "dam4sam"), "sticky": (),
-                 "oavat": ("oavat",), "deepsort": ("deepsort",), "ocsort": ("ocsort",)}
+                 "oavat": ("oavat",), "deepsort": ("deepsort",), "ocsort": ("ocsort",),
+                 "oavat_full": ("oavat_full",)}
 FILTER_FIELDS = {"filter_kind": enum("bayes", "resid", "tempered", null=True), "resid_decay": FLOAT,
                  "absent_hold": BOOL, "absent_max": INT, "conf_window": INT, "gate_memory": BOOL, "gate_tah": BOOL,
                  "gate_dam": BOOL, "naive": BOOL, "alpha": opt(DICT), "q_lo": FLOAT, "q_hi": FLOAT, "eps_switch": FLOAT,
@@ -149,12 +152,20 @@ DIAGNOSTICS = ("gallery_seed_gt", "reanchor_oracle", "warmup_oracle", "event_ove
                "predict_road", "expert_control", "retarget")
 METHOD = {
     "name": STR, "extends": Opt(STR), "description": Opt(STR),
-    "control": {"ex_source": enum("ear", "cv", "cv_gated", "zerovel", "zerovel_gated", "road", "track"),
+    # ex_source oracle (1024 HOW ladder R1, acot runtime only, diagnostic ex_source_gt): CV waypoints from the TRUE
+    # target position at every S2 tick, visible or not
+    "control": {"ex_source": enum("ear", "cv", "cv_gated", "zerovel", "zerovel_gated", "road", "track", "oracle"),
                 "frame_gain": FLOAT, "commit_k": INT, "ablate": enum("ear", "iar", null=True), "shuffle_seed": INT,
                 "expert_control": BOOL, "predict_road": BOOL, "road_oracle": BOOL,
                 # WHERE when the committed key has no box this tick: ear = keep the EAR sample (absent = ear, legacy);
                 # cv = constant-velocity extrapolation of the committed target's last confident position
-                "absent_where": Opt(enum("ear", "cv"))},
+                "absent_where": Opt(enum("ear", "cv")),
+                # 1024 HOW ladder R2: under expert_control, execute the scenario's E3 look-away windows (absent = true,
+                # the 1020 behaviour); false = the expert flies through them (as every self-flight arm does)
+                "expert_look_away": Opt(BOOL),
+                # 1024 HOW ladder R1f (acot runtime only; absent = false): between S2 ticks, re-project the estimator's
+                # waypoints into the current camera pose at the current step on every frame
+                "wp_every_frame": Opt(BOOL)},
     "identity": {
         "head": enum(*HEADS),
         "memory_seed": enum("committed", "gt"),
@@ -183,7 +194,15 @@ METHOD = {
                          "n_init": INT}),
         "ocsort": Opt({"every_frame": BOOL, "det_thresh": FLOAT, "max_age": INT, "min_hits": INT, "iou_threshold": FLOAT, "delta_t": INT,
                        "asso_func": enum("iou", "giou", "ciou", "diou", "ct_dist"), "inertia": FLOAT,
-                       "use_byte": BOOL})},
+                       "use_byte": BOOL}),
+        # 1024 OA-VAT FULL system, closed loop (acot/runtime/oavat_closed.py; acot_note/1023_oavat_closedloop_plan.md):
+        # OA-VAT's own controller flies; command units → m/s (g_forward, on cmd[1]) and deg/s (g_yaw, on cmd[3]);
+        # target_area_ratio / area_tolerance_ratio = drone_control's area setpoint (empirical for our camera)
+        "oavat_full": Opt({"g_forward": FLOAT, "g_yaw": FLOAT, "target_area_ratio": FLOAT,
+                           "area_tolerance_ratio": FLOAT, "max_speed_mps": FLOAT, "max_yaw_dps": FLOAT,
+                           # 1024 the occlusion-aware planner (OA-VAT's diffusion policy, released 2026-10-20) on/off;
+                           # its yaw is clipped at dp_yaw_max = 60 units (not 40) → its own declared yaw limit
+                           "dp": Opt(BOOL), "max_yaw_dps_dp": Opt(FLOAT)})},
     "filter": dict({"mode": enum("off", "observe", "rule", "learned", "filter")},
                    **{k: Opt(v) for k, v in FILTER_FIELDS.items()}),
     "oracle_absent": enum("off", "abstain", "hygiene"),
@@ -193,7 +212,7 @@ METHOD = {
 
 # -------------------------------------------------------------------------------------------------------------- experiment
 COLLECTORS = ("ticks", "trk", "gt_access", "scenario", "tah_dagger", "dagger", "opening_snapshots", "actor_labels",
-              "dam4sam_diag", "record_act")
+              "dam4sam_diag", "record_act", "oavat_frames")
 EXPERIMENT = {
     "name": STR, "description": Opt(STR), "protocol": STR, "prereg_ref": Opt(STR),
     "seeds": {"set": STR, "subset": Opt(listof(listof(INT))), "expect": Opt(INT)},

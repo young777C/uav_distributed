@@ -1,0 +1,50 @@
+# 1020 identity STRESS scenario (acot_note/1020_stress_scenario_design.md), loaded instead of mvp.yaml by protocol
+# sim_proxy_v2@4 (sim.scenario: stress_v1). Merged onto default.yaml (NOT onto mvp): everything mvp sets is repeated
+# here. Batch 1 = clones + E1 crossing + E2 overhead occlusion + E3 group out-of-frame; E4 (route split) = batch 2.
+environment:
+  max_duration_seconds: 90         # = protocol episode_steps 900 @ 10 Hz: loss windows must fall inside the episode
+  towns: ["Town01", "Town02", "Town03", "Town04", "Town05", "Town10HD"]
+  max_occluded_seconds: 10         # (as occlusion_heavy) the target may cross a bridge and re-emerge
+  loss_events:                     # E3: group out-of-frame windows under expert flight (rollout/env.py look_away)
+    enabled: true
+    expert_mode: look_away         # the expert hovers and turns the camera away from the {target + similar} cluster
+    per_episode: 2
+    dur_range: [6.0, 12.0]         # ≥ 6 s: the long gaps re-ID recovers only 10-25 % of today
+    centroid_radius_m: 25.0        # expert framing: target + look-alikes within 25 m (no target-anchored recovery)
+    min_start_s: 15.0
+    end_margin_s: 15.0
+
+scene:
+  num_distractors: [5, 8]
+  min_similar_distractors: 2
+  distractor_ahead_bias: 0.75
+  target_class_weights:            # cars only (as mvp)
+    car: 1.0
+    motorcycle: 0.0
+    bicycle: 0.0
+    scooter: 0.0
+    pedestrian: 0.0
+  similarity_strategy_weights:     # 40 % clone-heavy, 40 % clone-light, 20 % legacy control (mvp mix)
+    clone_heavy: 0.40
+    clone_light: 0.40
+    same_color_diff_shape: 0.08
+    same_shape_diff_color: 0.08
+    distinct: 0.04
+  clone_dynamics:                  # E1: clones drive faster / slower than the target and may change lanes
+    enabled: true
+    speed_offset_pct: [12.0, 22.0]
+    lane_change: true
+  instruction:
+    geometry: false                # T2 language condition: colour + model only (no position / heading / distance)
+
+occlusion:                         # E2: spawn the target so it drives under overhead structures (occluder cache)
+  enabled: true
+  bias_fraction: 0.5
+  max_cover_span_m: 40.0
+
+target:
+  maneuver:                        # OFF (as mvp)
+    sudden_stop_prob: 0.0
+    sharp_turn_prob: 0.0
+    acceleration_prob: 0.0
+    u_turn_prob: 0.0

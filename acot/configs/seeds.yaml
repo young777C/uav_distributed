@@ -45,6 +45,12 @@ seedsets:
     purpose: dev
     description: second dev block (1004 ablation design dev 93000–93019; opening snapshot benchmark 93000–93099)
     blocks: [{town: Town05, ranges: [[93000, 93099]]}]
+  autotune_g3:
+    purpose: dev
+    description: >-
+      1020 auto-tune loop (acot-autotune, v11 port) G3 set — recorded ONCE under expert flight (re-ID), every candidate
+      is replayed open-loop on the same recording; dev-B stays for the final audit, test 950xx is never touched
+    blocks: [{town: Town05, ranges: [[93700, 93779]]}]
   heldout_opening:
     purpose: heldout
     description: closed-loop opening validation blocks (v1/head 93100–239, v2 –379, v3 –519, v4 –659); now spent
@@ -62,3 +68,65 @@ seedsets:
     purpose: test
     locked: true
     blocks: [{town: Town10HD, ranges: [[95000, 95039]]}]
+  # ---- 1020 identity stress scenario (sim_proxy_v2@4 / stress_v1; acot_note/1020_stress_scenario_design.md §2.4) ----
+  # Town03 is the ONLY town never used for training (Stage-2 / DAgger / opening data cover 01/02/04/05/10HD): it is
+  # in the locked unseen-town test only — never in tune / confirm / audit.
+  stress_tune:
+    purpose: dev
+    description: stress G3-tune (auto-tune loop, per-seed evidence visible to the agents), recorded under expert flight
+    blocks:
+      - {town: Town05, ranges: [[94000, 94039]]}
+      - {town: Town01, ranges: [[94040, 94079]]}
+      - {town: Town10HD, ranges: [[94080, 94119]]}
+  stress_confirm:
+    purpose: heldout
+    description: stress G3-confirm (promotion re-check; agents see pass / fail only), recorded under expert flight
+    blocks:
+      - {town: Town02, ranges: [[94200, 94239]]}
+      - {town: Town04, ranges: [[94240, 94279]]}
+  stress_devS:
+    purpose: dev
+    description: stress final audit in SELF-flight (closed loop, never shown to the agents)
+    blocks:
+      - {town: Town05, ranges: [[94400, 94419]]}
+      - {town: Town01, ranges: [[94420, 94439]]}
+  stress_smoke:
+    purpose: dev
+    description: stress scenario smoke (event trigger / truncation / skip rates), 5 per town
+    blocks:
+      - {town: Town05, ranges: [[94900, 94904]]}
+      - {town: Town01, ranges: [[94905, 94909]]}
+      - {town: Town02, ranges: [[94910, 94914]]}
+      - {town: Town04, ranges: [[94915, 94919]]}
+      - {town: Town10HD, ranges: [[94920, 94924]]}
+  stress_test_seen:
+    purpose: test
+    locked: true
+    description: stress test, seen towns (paper main table, r = 2)
+    blocks:
+      - {town: Town05, ranges: [[94600, 94639]]}
+      - {town: Town10HD, ranges: [[94640, 94679]]}
+  stress_test_unseen:
+    purpose: test
+    locked: true
+    description: stress test, UNSEEN town Town03 (paper main table, r = 2)
+    blocks: [{town: Town03, ranges: [[94800, 94879]]}]
+  # 1021 stress scenario TAH retrain (user decision: identity head only): training / validation split on the SEEN
+  # towns, disjoint from every stress evaluation set (tune / confirm / devS / test) and from the earlier train sets
+  stress_train:
+    purpose: train
+    description: on-policy DAgger of Ours-CV on the stress scenario (collect tah_dagger) — TAH retrain data
+    blocks:
+      - {town: Town05, ranges: [[99000, 99023]]}
+      - {town: Town01, ranges: [[99024, 99047]]}
+      - {town: Town02, ranges: [[99048, 99071]]}
+      - {town: Town04, ranges: [[99072, 99095]]}
+      - {town: Town10HD, ranges: [[99096, 99119]]}
+  stress_train_val:
+    purpose: train
+    description: held-out DAgger episodes for best-epoch selection of the stress TAH retrain (never trained on)
+    blocks:
+      - {town: Town05, ranges: [[99200, 99209]]}
+      - {town: Town01, ranges: [[99210, 99219]]}
+      - {town: Town02, ranges: [[99220, 99229]]}
+      - {town: Town04, ranges: [[99230, 99239]]}

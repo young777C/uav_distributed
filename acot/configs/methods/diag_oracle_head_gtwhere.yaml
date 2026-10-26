@@ -1,0 +1,9 @@
+# 1024 HOW ladder R1 (acot_note/1024_how_ceiling_prereg.md): U1 + PERFECT target state — z_ex = constant-velocity
+# waypoints from the TRUE target position at every S2 tick, visible or not (control.ex_source oracle,
+# acot/runtime/policy.py _where) — flown by the same DiT. The identity head and the commitment run unchanged (the scorer
+# reads the commitment). One rung of an ORDERED intervention ladder (prereg §1), not a pure-controller bound.
+# Diagnostic (uses GT).
+name: diag_oracle_head_gtwhere
+extends: diag_oracle_head
+control: {ex_source: oracle}
+diagnostics: [oracle_head, ex_source_gt]

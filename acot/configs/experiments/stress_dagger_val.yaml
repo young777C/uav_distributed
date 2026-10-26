@@ -1,0 +1,13 @@
+# 1021 stress scenario TAH retrain data (user decision: retrain the identity head only): on-policy DAgger of the
+# deployed Ours (ours_cv, self-flight, T1 opening, protocol @4) on the val split; collect tah_dagger = per S2 tick
+# the TAH inputs + GT labels (written to disk only). Merged by python -m acot prep acot/configs/prep/tah_dagger_stress_val.yaml
+name: stress_dagger_val
+protocol: sim_proxy_v2@4
+# 10-23 user decision: first round = 20 val seeds (5 per town)
+seeds: {set: stress_train_val, subset: [[99200, 99204], [99210, 99214], [99220, 99224], [99230, 99234]], expect: 20}
+completeness: {require: allow_skipped, allow_skipped_reasons: ["target stationary"], pairing: intersection}
+schedule: {block: 5, seed: 10222, max_infra_attempts: 3}
+arms:
+  dag: {method: ours_cv, role: main}
+collect: [ticks, tah_dagger, scenario]
+infra: {runtime: acot, watchdog: {first_min: 60, stall_min: 40, max_restarts: 5}}

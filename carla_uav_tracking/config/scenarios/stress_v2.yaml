@@ -1,0 +1,107 @@
+# 1026 identity STRESS scenario v2 (user decision 10-26): more losses for every method. Diagnosis on 177 stress_v1
+# expert episodes: the target sat still 40-63 % of the time (obeys lights, queues), ≤ 2.6 ≥45° turns per episode,
+# the occluder anchors were 4 m spans (lamp-post arms, ~0.4 s) once in the first 3-5 s. Changes vs stress_v1:
+#   · town difficulty tiers (metadata): easy Town01/02 (open view), hard Town03/04/05/10HD
+#   · scene actors (target + clones + distractors) run lights / signs, short light cycles, lane changes, urban speeds
+#     8-11 m/s with anti-gridlock (scene.kinematics.unjam), ambient ring-spawned away from the convoy
+#   · clone E1 speed offsets kept under the kinematics speeds (clone_speed_offset)
+#   · planned convoy route (scene.route_plan, scene/route_planner.py): turn-biased, through 2-3 overhead occluder
+#     runs of 12-60 m anywhere along the 90 s, handed to every scene vehicle via TM.set_path
+# Everything else (clones, E1, E3 look-away windows, T2 instruction, camera) = stress_v1.
+environment:
+  max_duration_seconds: 90
+  towns: ["Town01", "Town02", "Town03", "Town04", "Town05", "Town10HD"]
+  town_tiers:
+    easy: ["Town01", "Town02"]
+    hard: ["Town03", "Town04", "Town05", "Town10HD"]
+  max_occluded_seconds: 10
+  loss_events:
+    enabled: true
+    expert_mode: look_away
+    per_episode: 2
+    dur_range: [6.0, 12.0]
+    centroid_radius_m: 25.0
+    min_start_s: 15.0
+    end_margin_s: 15.0
+
+scene:
+  num_distractors: [5, 8]
+  min_similar_distractors: 2
+  distractor_ahead_bias: 0.75
+  target_class_weights:
+    car: 1.0
+    motorcycle: 0.0
+    bicycle: 0.0
+    scooter: 0.0
+    pedestrian: 0.0
+  similarity_strategy_weights:
+    clone_heavy: 0.40
+    clone_light: 0.40
+    same_color_diff_shape: 0.08
+    same_shape_diff_color: 0.08
+    distinct: 0.04
+  clone_dynamics:
+    enabled: true
+    speed_offset_pct: [12.0, 22.0]
+    lane_change: true
+  instruction:
+    geometry: false
+  # --- 1026 v2: no stationary convoy ---
+  scene_actors_ignore_lights: 100.0
+  scene_actors_lane_change: true
+  traffic_lights: {green_s: 6.0, yellow_s: 2.0, red_s: 2.0}
+  ambient:
+    vehicles: 40
+    radius: 200
+    spawn_mode: ring
+    ring_m: [30.0, 200.0]
+  kinematics:
+    actor_speed_mps: [8.0, 11.0]
+    distractor_jitter_mps: 0.5
+    clone_speed_offset: true
+    ambient_speed_mps: [8.0, 11.0]
+    evade_speed_mps: 10.0
+    unjam:
+      still_mps: 0.3
+      radius_m: 80.0
+      actor_still_s: 5
+      blocker_still_s: 8
+      ambient_still_s: 12
+      ambient_visible_still_s: 25
+      truncate_stuck_s: 40
+  # --- 1026 v2: planned route (turns + occluders) ---
+  route_plan:
+    enabled: true
+    cache_dir: /data/occ_cache
+    step_m: 2.0
+    min_clear: 2.0
+    max_clear: 22.0
+    anchor_search: 24             # best of 24 random spawn points by a quick plan score
+    anchor_walks: 40
+    planner:
+      length_m: 1300.0            # warm-up 9 s + 90 s at 8-11 m/s
+      n_walks: 300
+      turn_w: 4.0                 # junction branch weight for a ≥45° turn vs straight
+      min_span_m: 12.0
+      max_span_m: 60.0
+      min_enter_m: 25.0
+      max_occ: 3
+      max_turns: 8
+
+occlusion:                         # stress_v1's spawn-anchor bias is replaced by the planned route
+  enabled: false
+
+target:
+  maneuver:
+    sudden_stop_prob: 0.0
+    sharp_turn_prob: 0.0
+    acceleration_prob: 0.0
+    u_turn_prob: 0.0
+
+uav:
+  expert_policy:
+    pid_params:
+      kp_xy: [0.9, 1.2]            # as mvp_moving_fast: keep up with 8-13 m/s actors
+    velocity_limits:
+      xy_max: 15.0
+      strict: true

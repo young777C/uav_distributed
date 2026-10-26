@@ -1,0 +1,6 @@
+# 1019 §6.2 P1 (flight ceiling): the never-switch null (null_sticky) with the drone flown by the EXPERT (GT + PID;
+# client-side, carla_uav_tracking/rollout/env.py). The identity head, commitment and scorer run unchanged. Diagnostic.
+name: null_sticky_expert
+extends: null_sticky
+control: {expert_control: true}
+diagnostics: [expert_control]

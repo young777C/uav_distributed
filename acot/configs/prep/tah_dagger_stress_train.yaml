@@ -1,0 +1,4 @@
+# 1021 stress scenario: merge the on-policy DAgger of Ours-CV (stress_train) → dagger artefact
+kind: dagger
+name: tah_dagger_stress_train
+source: {experiment: acot/configs/experiments/stress_dagger_train.yaml, arm: dag}

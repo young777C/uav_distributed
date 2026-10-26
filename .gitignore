@@ -26,3 +26,4 @@ carla_uav_tracking/rollout/eval_out/acot_l3_legacy_labels/
 carla_uav_tracking/rollout/eval_out/*.partial
 carla_uav_tracking/rollout/eval_out/*.pt
 carla_uav_tracking/rollout/eval_out/*.npz
+carla_uav_tracking/rollout/eval_out/replay_videos/

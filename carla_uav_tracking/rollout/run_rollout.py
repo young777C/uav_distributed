@@ -29,10 +29,12 @@ from rollout.metrics import RolloutScorer  # noqa: E402
 from rollout.remote_policy import RemotePolicy  # noqa: E402
 
 
-def load_config():
+def load_config(scenario="mvp"):
     with open(os.path.join(_CARLA_PKG, "config", "default.yaml")) as f:
         cfg = yaml.safe_load(f)
-    scen = os.path.join(_CARLA_PKG, "config", "scenarios", "mvp.yaml")
+    scen = os.path.join(_CARLA_PKG, "config", "scenarios", scenario + ".yaml")
+    if scenario != "mvp" and not os.path.exists(scen):
+        raise FileNotFoundError(scen)
     if os.path.exists(scen):
         with open(scen) as f:
             _merge(cfg, yaml.safe_load(f) or {})

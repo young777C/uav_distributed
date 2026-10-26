@@ -24,6 +24,7 @@ from scene.scene_manager import SceneManager  # noqa: E402
 FINGERPRINT = ("seed", "target_type", "target_class", "target_blueprint", "target_color", "target_desc", "strategy",
                "num_similar", "num_distractors", "distractors", "uav_start_altitude", "weather", "language",
                "occlusion_biased", "camera_pitch")
+FINGERPRINT_STRESS = ("num_clones", "num_near_clones", "loss_windows")
 
 
 def write_json(path, obj):
@@ -39,12 +40,15 @@ def main():
     a = ap.parse_args()
     c = json.load(open(a.client))
     sc, ev = c["scorer"], c["env"]
-    cfg = load_config()
+    scenario = c.get("scenario", "mvp")              # 1020: protocol sim.scenario (absent = mvp, as before)
+    cfg = load_config(scenario)
     towns = cfg.setdefault("environment", {}).setdefault("towns", [])
     if c["town"] not in towns:
         towns.append(c["town"])
     client = carla.Client("127.0.0.1", int(c["carla_port"]))
-    client.set_timeout(60.0)
+    # 1023: 60 s → 300 s — under host load ~100 (other users' builds) load_world / reload_world took > 60 s and every
+    # part died before its first seed (the scheduler's stall watchdog still bounds a truly hung simulator)
+    client.set_timeout(300.0)
     world = client.load_world(c["town"])
     print(f"[acot] map={world.get_map().name} policy={c['policy_host']}:{c['policy_port']} seeds={c['seeds']}",
           flush=True)
@@ -84,6 +88,7 @@ def main():
             env = StudentRolloutEnv(scene, world, policy=policy, scorer=scorer, fps=c["fps"],
                                     resolution=tuple(c["resolution"]), central_frac=sc["central_frac"],
                                     fov_deg=c["fov_deg"], expert_control=ev["expert_control"],
+                                    expert_look_away=ev.get("expert_look_away", True),
                                     predict_road=ev["predict_road"] or ev["road_oracle"], road_oracle=ev["road_oracle"],
                                     vis_raycast=ev["vis_raycast"], hires_k=ev["hires_k"],
                                     retarget_tick=ev["retarget_tick"])
@@ -100,13 +105,22 @@ def main():
                 status, reason = "complete", None
             write_json(os.path.join(d, "episode.json"), summary)
             m = box.get("meta") or {}
-            write_json(os.path.join(d, "scenario.json"), dict({k: m.get(k) for k in FINGERPRINT},
-                                                              map=world.get_map().name, town=c["town"]))
+            fp = dict({k: m.get(k) for k in FINGERPRINT}, map=world.get_map().name, town=c["town"])
+            if scenario != "mvp":                         # 1020 stress scenario: clone composition + E3 windows
+                fp.update(scenario=scenario, **{k: m.get(k) for k in FINGERPRINT_STRESS})
+            write_json(os.path.join(d, "scenario.json"), fp)
             st.update(status=status, reason=reason, t_end=time.time(),
                       attempts=st["attempts"] + [{"worker": c["worker"], "part": c["part"], "status": status,
                                                   "reason": reason}])
             write_json(os.path.join(d, "status.json"), st)
             print(f"[acot] seed={seed} status={status}" + (f" reason={reason[:120]}" if reason else ""), flush=True)
+            # 1023: a broken policy channel (reply timeout / closed socket) leaves the request-reply stream out of
+            # step — every later seed of this part then failed at step 0 (KeyError 'pred_slot', a stale reset reply)
+            # and burned its attempts. Stop the part; the scheduler restarts the unit with a fresh server.
+            if status == "failed" and reason and any(m in reason for m in ("timed out", "socket closed", "ConnectionError",
+                                                                "ConnectionReset", "BrokenPipe", "KeyError: 'pred_slot'")):
+                print("[acot] policy channel broken — aborting the rest of this part", flush=True)
+                return 2
     finally:
         policy.close()
     return 0

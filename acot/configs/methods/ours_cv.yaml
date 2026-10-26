@@ -1,0 +1,8 @@
+# Ours-CV (2026-10-19, baseline of the V1–V5 revision, acot_note/1019_v1v5_revision.md): ours_final + constant-velocity
+# WHERE while the committed key has no box (ours_absent_cv, adopted by the pre-registered where_cv_devB3 decision,
+# 1019 §9.3) + the current Ours commitment threshold conf_tau 0.05 (opt2a). Same resolved settings as the where_cv_devB3
+# arms cv_r0 / cv_r1 (which reach them via an experiment override).
+name: ours_cv
+extends: ours_absent_cv
+identity:
+  conf_tau: 0.05

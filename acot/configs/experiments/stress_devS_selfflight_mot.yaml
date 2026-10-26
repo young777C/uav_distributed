@@ -1,0 +1,16 @@
+# 1023 DeepSORT / OC-SORT SELF-FLIGHT on dev-S (completes the paper's self-flight table, acot_note/1023_stress_baselines.md
+# §3): protocol, seeds, completeness and schedule seed as stress_devS_selfflight (paired by seed with its 5 arms); the two
+# official MOT trackers at 10 Hz as in the 1016 integration (ext_deepsort / ext_ocsort, acot/runtime/head_mot.py).
+# record_act: the per-frame act messages (target + distractor world states, camera pose) of the whole episode — the
+# check of the env-side determinism across arms (1023: the tick-0 worlds of stress_devS_selfflight differed between
+# arms on 14 / 39 seeds; ~0.4 GB per episode).
+name: stress_devS_selfflight_mot
+protocol: sim_proxy_v2@4
+seeds: {set: stress_devS, expect: 40}
+completeness: {require: allow_skipped, allow_skipped_reasons: ["target stationary"], pairing: intersection}
+schedule: {block: 5, seed: 10211, max_infra_attempts: 3}
+arms:
+  deepsort: {method: ext_deepsort}
+  ocsort:   {method: ext_ocsort}
+collect: [ticks, trk, gt_access, scenario, record_act]
+infra: {runtime: acot, record_act_ticks: 900, watchdog: {first_min: 60, stall_min: 40, max_restarts: 5}}

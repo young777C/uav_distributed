@@ -1,0 +1,7 @@
+# 1020 auto-tune G3 recording arm: the re-ID baseline (ext_reid) with the drone flown by the EXPERT (GT + PID;
+# client-side, carla_uav_tracking/rollout/env.py). Under expert flight the observation stream does not depend on the
+# identity decisions, so the act messages recorded here are replayed open-loop for every auto-tune candidate.
+name: ext_reid_expert
+extends: ext_reid
+control: {expert_control: true}
+diagnostics: [expert_control]

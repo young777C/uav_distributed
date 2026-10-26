@@ -1,0 +1,8 @@
+# 1025 External baseline (module substitution, B layer): DAM4SAM with the SAM2.1++ Hiera-SMALL backbone, fed every
+# camera frame (10 Hz) — the version compared in the paper (user 10-25: only the small version is compared; the L run
+# was stopped). Same as ext_dam4sam_ef except the backbone; the backbone is set by the service's --model (sam21pp-S),
+# `model` here records it in the config hash (the runtime does not pass it to the service).
+name: ext_dam4sam_s_ef
+extends: ext_dam4sam_ef
+identity:
+  dam4sam: {model: sam21pp-S}
